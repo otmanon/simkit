@@ -2,9 +2,9 @@
 import scipy as sp
 import numpy as np
 
-from .volume import volume
-from .deformation_jacobian import deformation_jacobian
-from .polar_svd import polar_svd
+from simkit import volume
+from simkit import deformation_jacobian
+from simkit import polar_svd
 
 
 

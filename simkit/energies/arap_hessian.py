@@ -3,10 +3,9 @@ import igl
 import scipy as sp
 import numpy as np
 
-from .deformation_jacobian import deformation_jacobian
-from .rotation_gradient import rotation_gradient_F
-from .volume import volume
-
+from simkit import volume
+from simkit import rotation_gradient_F
+from simkit import deformation_jacobian
 
 def arap_hessian(**kwargs):
     

@@ -1,11 +1,9 @@
 import scipy as sp
 import numpy as np
 
-from .pairwise_displacement import pairwise_displacement
+from simkit import pairwise_displacement
 
-
-
-def contact_springs_plane_gradient(X, k, p, n, M=None):
+def contact_springs_plane_energy(X, k, p, n, M=None):
     """
     Compute the energy of the contact springs with the ground plane.
     
@@ -25,44 +23,32 @@ def contact_springs_plane_gradient(X, k, p, n, M=None):
     if M is None:
         M = sp.sparse.identity(X.shape[0])
 
-    gradient =  np.zeros(X.shape)
-
-
+    energy_density =  np.zeros(X.shape[0])
     # if the contact point is above the ground plane, the energy is 0
     if p.ndim==1:
         p = p[None, :]
     D = pairwise_displacement(X, p)
     offset = D @ n
-
     # if the contact point is above the ground plane, the energy is 0
-    under_ground_plane = (offset < 0).flatten() 
-    
     under_ground_plane = (offset < 0).flatten() 
     num_contacts = under_ground_plane.sum()
     dim = X.shape[1]
-    if np.sum(under_ground_plane) > 0:
-            
+    if num_contacts > 0:
         m = M.diagonal()
         m = m * under_ground_plane
         MI = sp.sparse.diags(m[under_ground_plane])
 
         # r = offset[under_ground_plane] * n
-        # gradient[under_ground_plane, :] = ((MI @ r )) * k
-
         contacting_inds = np.where(under_ground_plane)[0][:, None]
         I = np.tile(np.arange(num_contacts)[:, None], (1, dim))
         J = dim*contacting_inds +  np.arange(dim)[None, :]
         V = np.tile(n, (num_contacts, 1))
         N = sp.sparse.csc_matrix((V.flatten(), (I.flatten(), J.flatten())), (num_contacts, X.shape[0]* dim))
 
+        x = (X).reshape(-1, 1)
+        error = N @ x -  (V[:, None, :] @ p.T[None, :, :])[:, 0]
+        energy_density[under_ground_plane] = 0.5 * ((MI @ error ) * error).sum(axis=1) * k
 
-        x = X.reshape(-1, 1)
 
-        NM = N.T @ MI
-        NMN = NM @ N
-        
-        gradient = k* (NMN @ x - NM @ ((V[:, None, :] @ p.T[None, :, :])[:, 0]))
-
-    gradient = gradient.reshape(-1, 1)
-
-    return gradient
+    energy = energy_density.sum()
+    return energy

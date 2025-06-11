@@ -103,7 +103,7 @@ d = np.zeros(T.shape[0])
 g = B.T @ gravity_force(X, T, a=-9.8, rho=1e3).reshape(-1, 1)
 
 
-fI = np.unique(igl.boundary_facets(T))
+fI = np.unique(igl.boundary_facets(T)[0])
 cfI = farthest_point_sampling(X[fI, :], nc)
 cI = fI[cfI]
 

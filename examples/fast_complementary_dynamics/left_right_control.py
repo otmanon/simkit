@@ -3,7 +3,7 @@ import igl
 import polyscope as ps
 import numpy as np
 import scipy as sp
-import gpytoolbox as gpy
+import gpytoolbox as gpy # TODO: do we want gpy as a dependency?
 import matplotlib.pyplot as plt
 from pathlib import Path
 import shutil
@@ -154,7 +154,7 @@ class CoDyLeftRightWorld():
         J = lbs_jacobian(X, np.ones((X.shape[0], 1)))
 
         # momentum leaking matrix
-        bI = np.unique(igl.boundary_facets(T))
+        bI = np.unique(igl.boundary_facets(T)[0])
         d = diffuse_field(X, T, bI, np.ones((bI.shape[0], 1)), dt=1, normalize=True)
         # d = (d - d.min()) / (d.max() - d.min())
         D =  sp.sparse.diags((1 - d).flatten())

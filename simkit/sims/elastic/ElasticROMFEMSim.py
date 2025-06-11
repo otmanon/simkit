@@ -2,19 +2,17 @@ import igl
 import numpy as np
 import scipy as sp
 
-from ...solvers import NewtonSolver, NewtonSolverParams
-from ... import ympr_to_lame
-from ... import elastic_energy_z, elastic_gradient_dz, elastic_hessian_d2z, ElasticEnergyZPrecomp
-from ... import quadratic_energy, quadratic_gradient, quadratic_hessian
-from ... import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
-from ... import volume
-from ... import massmatrix
-from ... import deformation_jacobian, quadratic_hessian, selection_matrix
+from simkit.solvers import NewtonSolver, NewtonSolverParams
+from simkit import ympr_to_lame
+from simkit import volume
+from simkit import massmatrix
+from simkit import deformation_jacobian, selection_matrix
+from simkit.energies import elastic_energy_z, elastic_gradient_dz, elastic_hessian_d2z, ElasticEnergyZPrecomp
+from simkit.energies import quadratic_energy, quadratic_gradient, quadratic_hessian
+from simkit.energies import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
 
-
-
-from ..Sim import  *
-from ..State import State
+from simkit.sims.Sim import *
+from simkit.sims.State import State
 
 class ElasticROMFEMState(State):
 
