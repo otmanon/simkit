@@ -1,11 +1,9 @@
-from types import NoneType
-import igl
 import scipy as sp
 import numpy as np
 
-from simkit import volume
-from simkit import rotation_gradient_F
-from simkit import deformation_jacobian
+from ..volume import volume
+from ..deformation_jacobian import deformation_jacobian
+from ..rotation_gradient import rotation_gradient_F
 
 def arap_hessian(**kwargs):
     
