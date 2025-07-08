@@ -1,9 +1,7 @@
 import scipy as sp
 import numpy as np
 
-from .pairwise_displacement import pairwise_displacement
-
-
+from simkit import pairwise_displacement
 
 def contact_springs_plane_hessian(X, k, p, n, M=None):
     """

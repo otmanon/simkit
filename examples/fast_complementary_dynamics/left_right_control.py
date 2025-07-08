@@ -3,7 +3,7 @@ import igl
 import polyscope as ps
 import numpy as np
 import scipy as sp
-import gpytoolbox as gpy
+import gpytoolbox as gpy # TODO: do we want gpy as a dependency?
 import matplotlib.pyplot as plt
 from pathlib import Path
 import shutil
@@ -58,7 +58,7 @@ class PinLeftRightWorld():
         Q0, b0= dirichlet_penalty(self.bI, bc, X.shape[0], self.gamma)
         BQB = B.T @ Q0 @ B
 
-        sim_params = FastCoDySimParams(ym = 1e8, rho=1e3, Q0=BQB)
+        sim_params = FastCoDySimParams(ym = 1e5, rho=1e3, Q0=BQB)
         sim_params.solver_p.max_iter = 10
         sim = FastCoDySim(X, T,  J, B, l, sim_params)
 
@@ -154,7 +154,7 @@ class CoDyLeftRightWorld():
         J = lbs_jacobian(X, np.ones((X.shape[0], 1)))
 
         # momentum leaking matrix
-        bI = np.unique(igl.boundary_facets(T))
+        bI = np.unique(igl.boundary_facets(T)[0])
         d = diffuse_field(X, T, bI, np.ones((bI.shape[0], 1)), dt=1, normalize=True)
         # d = (d - d.min()) / (d.max() - d.min())
         D =  sp.sparse.diags((1 - d).flatten())
@@ -170,7 +170,7 @@ class CoDyLeftRightWorld():
         B = orthonormalize(B, M=Mv)
 
         [_cI, _cW, l] = spectral_cubature(X, T, W, 20, return_labels=True)
-        sim_params = FastCoDySimParams(ym = 1e8, rho=1e3)
+        sim_params = FastCoDySimParams(ym = 1e5, rho=1e3)
         sim_params.solver_p.max_iter = 10
         sim = FastCoDySim(X, T,  J, B, l, sim_params)
 
@@ -309,45 +309,45 @@ class CoDyLeftRightWorld():
 # world_cd = CoDyLeftRightWorld(X, T)
 # video_path = os.path.join(dir, "results", "cody_left_right.mp4")
 # [Zs, Ps] = world_cd.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-# # world_cd.render( Zs, Ps, path=video_path)
+# world_cd.render( Zs, Ps, path=video_path)
 
 # video_path = os.path.join(dir, "results", "rig_left_right.mp4")
-# # world_cd.render_rig( Ps, path=video_path)
+# world_cd.render_rig( Ps, path=video_path)
 
 # bI = center_indices(X, 0.1)[1]
 # world_pin = PinLeftRightWorld(X, T)
 # video_path = os.path.join(dir, "results", "pin_0.1_left_right.mp4")
 # [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-# # world_pin.render( Zs, Ps, path=video_path)
+# world_pin.render( Zs, Ps, path=video_path)
 
 # bI = center_indices(X, 0.4)[1]
 # world_pin = PinLeftRightWorld(X, T, bI=bI)
 # video_path = os.path.join(dir, "results", "pin_0.4_left_right.mp4")
 # [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-# # world_pin.render( Zs, Ps, path=video_path)
+# world_pin.render( Zs, Ps, path=video_path)
 
 
 
-# [X, T] = gpy.regular_square_mesh(40, 5)
-# X[:, 1] *= 0.1
-# Y = X.copy()
-# X[:, 0] = -Y[:, 1]
-# X[:, 1] = Y[:, 0]
-# X = normalize_and_center(X)
+[X, T] = gpy.regular_square_mesh(40, 5)
+X[:, 1] *= 0.1
+Y = X.copy()
+X[:, 0] = -Y[:, 1]
+X[:, 1] = Y[:, 0]
+X = normalize_and_center(X)
 
-# world_cd = CoDyLeftRightWorld(X, T)
-# video_path = os.path.join(dir, "results", "beam_cody_left_right.mp4")
-# [Zs, Ps] = world_cd.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-# # world_cd.render( Zs, Ps, path=video_path)
+world_cd = CoDyLeftRightWorld(X, T)
+video_path = os.path.join(dir, "results", "beam_cody_left_right.mp4")
+[Zs, Ps] = world_cd.simulate_periodic_x(num_timesteps=300, period=150, a=3)
+world_cd.render( Zs, Ps, path=video_path)
 # video_path = os.path.join(dir, "results", "beam_rig_left_right.mp4")
 # world_cd.render_rig( Ps, path=video_path)
 
 
-# bI = center_indices(X, 0.1)[1]
-# world_pin = PinLeftRightWorld(X, T)
-# video_path = os.path.join(dir, "results", "beam_pin_0.1_left_right.mp4")
-# [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-# # world_pin.render( Zs, Ps, path=video_path)
+bI = center_indices(X, 0.1)[1]
+world_pin = PinLeftRightWorld(X, T)
+video_path = os.path.join(dir, "results", "beam_pin_0.1_left_right.mp4")
+[Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
+world_pin.render( Zs, Ps, path=video_path)
 
 # bI = center_indices(X, 0.4)[1]
 # world_pin = PinLeftRightWorld(X, T, bI=bI)
@@ -356,47 +356,47 @@ class CoDyLeftRightWorld():
 # world_pin.render( Zs, Ps, path=video_path)
 
 
-[X, _, _, T, _, _] = igl.read_obj(dir + "/../../data/2d/cthulu/cthulu.obj")
-X = X[:, :2]
-X = normalize_and_center(X)
-X*=1.25
-bI = center_indices(X, 0.1)[1]
-world_pin = PinLeftRightWorld(X, T, bI=bI)
-video_path = os.path.join(dir, "results", "cthulu_center_pin_0.1_left_right.mp4")
-[Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-world_pin.render( Zs, Ps, path=video_path)
+# [X, _, _, T, _, _] = igl.read_obj(dir + "/../../data/2d/cthulu/cthulu.obj")
+# X = X[:, :2]
+# X = normalize_and_center(X)
+# X*=1.25
+# bI = center_indices(X, 0.1)[1]
+# world_pin = PinLeftRightWorld(X, T, bI=bI)
+# video_path = os.path.join(dir, "results", "cthulu_center_pin_0.1_left_right.mp4")
+# [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
+# world_pin.render( Zs, Ps, path=video_path)
 
 
-[X, _, _, T, _, _] = igl.read_obj(dir + "/../../data/2d/cthulu/cthulu.obj")
-X = X[:, :2]
-X = normalize_and_center(X)
-X*=1.25
-bI = center_top_indices(X, 0.1)[1]
-world_pin = PinLeftRightWorld(X, T, bI=bI)
-video_path = os.path.join(dir, "results", "cthulu_center_top_pin_0.1_left_right.mp4")
-[Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-world_pin.render( Zs, Ps, path=video_path)
-
-
-
-[X, _, _, T, _, _] = igl.read_obj(dir + "/../../data/2d/cthulu/cthulu.obj")
-X = X[:, :2]
-X = normalize_and_center(X)
-X*=1.25
-bI = top_indices(X, 0.1)[1]
-world_pin = PinLeftRightWorld(X, T, bI=bI)
-video_path = os.path.join(dir, "results", "cthulu_top_pin_0.1_left_right.mp4")
-[Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-world_pin.render( Zs, Ps, path=video_path)
+# [X, _, _, T, _, _] = igl.read_obj(dir + "/../../data/2d/cthulu/cthulu.obj")
+# X = X[:, :2]
+# X = normalize_and_center(X)
+# X*=1.25
+# bI = center_top_indices(X, 0.1)[1]
+# world_pin = PinLeftRightWorld(X, T, bI=bI)
+# video_path = os.path.join(dir, "results", "cthulu_center_top_pin_0.1_left_right.mp4")
+# [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
+# world_pin.render( Zs, Ps, path=video_path)
 
 
 
+# [X, _, _, T, _, _] = igl.read_obj(dir + "/../../data/2d/cthulu/cthulu.obj")
+# X = X[:, :2]
+# X = normalize_and_center(X)
+# X*=1.25
+# bI = top_indices(X, 0.1)[1]
+# world_pin = PinLeftRightWorld(X, T, bI=bI)
+# video_path = os.path.join(dir, "results", "cthulu_top_pin_0.1_left_right.mp4")
+# [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
+# world_pin.render( Zs, Ps, path=video_path)
 
-[X, _, _, T, _, _] = igl.read_obj(dir + "/../../data/2d/cthulu/cthulu.obj")
-X = X[:, :2]
-X = normalize_and_center(X)
-X*=1.25
-world_pin = CoDyLeftRightWorld(X, T)
-video_path = os.path.join(dir, "results", "cthulu_cd_left_right.mp4")
-[Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-world_pin.render( Zs, Ps, path=video_path)
+
+
+
+# [X, _, _, T, _, _] = igl.read_obj(dir + "/../../data/2d/cthulu/cthulu.obj")
+# X = X[:, :2]
+# X = normalize_and_center(X)
+# X*=1.25
+# world_pin = CoDyLeftRightWorld(X, T)
+# video_path = os.path.join(dir, "results", "cthulu_cd_left_right.mp4")
+# [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
+# world_pin.render( Zs, Ps, path=video_path)

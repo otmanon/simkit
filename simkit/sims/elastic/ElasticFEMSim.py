@@ -2,21 +2,16 @@ import igl
 import numpy as np
 import scipy as sp
 
-
-from ...solvers import NewtonSolver, NewtonSolverParams
-from ... import ympr_to_lame
-from ... import elastic_energy_x, elastic_gradient_dx, elastic_hessian_d2x
-from ... import quadratic_energy, quadratic_gradient, quadratic_hessian
-from ... import deformation_jacobian
-from ... import kinetic_energy, kinetic_gradient, kinetic_hessian
-from ... import volume
-
-from ... import massmatrix
-
-
-from ..Sim import  *
-from ..State import State
-
+from simkit import volume
+from simkit import massmatrix
+from simkit import ympr_to_lame
+from simkit import deformation_jacobian
+from simkit.solvers import NewtonSolver, NewtonSolverParams
+from simkit.energies import kinetic_energy, kinetic_gradient, kinetic_hessian
+from simkit.energies import elastic_energy_x, elastic_gradient_dx, elastic_hessian_d2x
+from simkit.energies import quadratic_energy, quadratic_gradient, quadratic_hessian
+from simkit.sims.Sim import *
+from simkit.sims.State import State
 
 class ElasticFEMState(State):
 

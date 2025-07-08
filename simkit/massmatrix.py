@@ -30,5 +30,5 @@ def massmatrix(X, T, rho : None | float | np.ndarray = 1):
     vv = ( Av_t @ m )/ T.shape[1]
 
 
-    M = sp.sparse.diags(vv.flatten()) * rho
+    M = sp.sparse.diags(vv.flatten()) 
     return M

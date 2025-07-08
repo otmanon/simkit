@@ -1,8 +1,6 @@
 import scipy as sp
 import numpy as np
-from .pairwise_distance import pairwise_distance
-
-
+from simkit import pairwise_distance
 
 def contact_springs_sphere_hessian(X, k, p, r, M=None):
     """

@@ -2,31 +2,29 @@ import numpy as np
 import igl
 import polyscope as ps
 import scipy as sp
-from simkit import deformation_jacobian, massmatrix, volume
-from simkit.pairwise_displacement import pairwise_displacement
-from simkit.polyscope import view_displacement_modes, view_scalar_modes
-from simkit.selection_matrix import selection_matrix
-from simkit.sims.elastic import *
-from simkit.dirichlet_penalty import dirichlet_penalty
-from simkit.grad import grad
-from simkit.gravity_force import gravity_force
+
+from simkit import (
+    deformation_jacobian,
+    volume,
+    selection_matrix,
+    dirichlet_penalty,
+    gravity_force,
+    stretch,
+    symmetric_stretch_map,
+    skinning_eigenmodes,
+    spectral_cubature,
+    project_into_subspace,
+)
+from simkit.polyscope import (
+    view_clusters,
+    view_cubature,
+    view_displacement_modes,
+    view_scalar_modes)
+from simkit.filesystem import get_data_directory
 from simkit.sims.elastic import ElasticROMMFEMSim, ElasticROMMFEMSimParams, ElasticROMFEMSim, ElasticROMFEMSimParams
-from simkit.stretch import stretch
-from simkit.symmetric_stretch_map import symmetric_stretch_map
-from simkit.skinning_eigenmodes import skinning_eigenmodes
-from simkit.spectral_cubature import spectral_cubature
-from simkit.average_onto_simplex import average_onto_simplex
-from simkit.polyscope.view_clusters import view_clusters
-from simkit.polyscope.view_cubature import view_cubature
-from simkit.pairwise_distance import pairwise_distance
-from simkit.volume import volume
-from simkit.project_into_subspace import project_into_subspace
 
-
-# [X, _, _, T, _, _] = igl.read_obj("./data/2d/cthulu/cthulu.obj")
-# X = X[:, 0:2]
-
-
+[X, _, _, T, _, _] = igl.readOBJ(get_data_directory() + "2d/cthulu/cthulu.obj")
+X = X[:, 0:2]
 
 X = X / max(X.max(axis=0) - X.min(axis=0))
 

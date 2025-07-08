@@ -7,18 +7,19 @@ from .massmatrix import massmatrix
 
 from .eigs import eigs
 
+import igl 
 def skinning_eigenmodes(X, T, k, mu=1, bI=None, Aeq=None):
 
     M = massmatrix(X, T)
     L = dirichlet_laplacian(X, T, mu=mu)
-
+    # L = igl.cotmatrix(X, T)
     if bI is not None:
         assert(isinstance(bI, np.ndarray))
         Ii = np.setdiff1d(np.arange(X.shape[0]), bI)
         L = L[Ii, :][:, Ii]
         M = sp.sparse.diags(M.diagonal()[Ii,], 0)
         
-        [E, Wi] = sp.sparse.linalg.eigs(L, k=k, M=M, which='LM', sigma=1e-12)
+        [E, Wi] = sp.sparse.linalg.eigs(L, k=k, M=M, which='LM', sigma=0)
         Wi = Wi.real
         E = E.real
         W = np.zeros((X.shape[0], k))
@@ -30,12 +31,12 @@ def skinning_eigenmodes(X, T, k, mu=1, bI=None, Aeq=None):
 
         # [E, W] = eigs(H, k, M=K)
 
-        [E, W] = sp.sparse.linalg.eigs(H, k=k, M=K, which='LM', sigma=1e-12)
+        [E, W] = sp.sparse.linalg.eigs(H, k=k, M=K, which='LM', sigma=0)
         E = E.real
         W = W.real
         W = W[:X.shape[0], :]
     else:
-        [E, W] = sp.sparse.linalg.eigs(L, k=k, M=M, which='LM', sigma=1e-12)
+        [E, W] = sp.sparse.linalg.eigs(L, k=k, M=M, which='LM', sigma=0)
         
 
         E = E.real

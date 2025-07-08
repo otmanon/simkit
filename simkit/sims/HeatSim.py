@@ -26,15 +26,15 @@ from simkit.project_into_subspace import project_into_subspace
     
 class HeatSimParams():
 
-    def __init__(self, sigma, dt, Q0=None, b0=None):
+    def __init__(self, sigma, dt, rho=1, Q0=None, b0=None):
 
         self.sigma = sigma
         self.dt = dt
 
         self.Q0 = Q0
         self.b0 = b0
+        self.rho = rho
         
-
 class HeatSim():
     
         def __init__(self, X, T, p : HeatSimParams, B=None):
@@ -49,7 +49,7 @@ class HeatSim():
             self.B = B 
             
             self.L = B.T @  dirichlet_laplacian(X, T, mu=p.sigma) @ B
-            self.M = B.T @ massmatrix(X,  T) @ B
+            self.M = B.T @ massmatrix(X,  T, p.rho) @ B
 
             if p.Q0 is None:
                 self.Q = sp.sparse.csc_matrix((B.shape[1], B.shape[1]))
@@ -60,8 +60,6 @@ class HeatSim():
                 self.b = np.zeros((B.shape[1], 1))
             else:
                 self.b = B.T @ self.p.b0
-
-
 
             self.sim_params = p
 
@@ -104,6 +102,7 @@ class HeatSim():
             # constraint energy hessian
             quadratic = quadratic_hessian(self.Q)
 
+
             hessian = smooth + kinetic + quadratic
 
             return hessian 
@@ -111,7 +110,6 @@ class HeatSim():
         def step(self, u, Q_ext=None, b_ext=None):
 
             self.y = u.copy()
-
             # add to current Q_ext
             if Q_ext is not None:
                 if self.p.Q0 is None:
@@ -129,11 +127,14 @@ class HeatSim():
                 
                 self.b = self.B.T @ self.b
         
-
             H = self.hessian(u)
             g = self.gradient(u)
 
-            d = sp.sparse.linalg.spsolve(H, -g)
+
+            if sp.sparse.issparse(H):
+                d = sp.sparse.linalg.spsolve(H, -g)
+            else:
+                d = np.linalg.solve(H, -g)
             if d.ndim == 1:
                 d = d[:, None]
 
