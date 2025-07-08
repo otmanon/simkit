@@ -2,21 +2,18 @@ import igl
 import numpy as np
 import scipy as sp
 
-
-from ...solvers import NewtonSolver, NewtonSolverParams
-from ... import symmetric_stretch_map
-from ... import ympr_to_lame
-from ... import stretch, stretch_gradient_dx
-from ... import elastic_energy_S, elastic_gradient_dS, elastic_hessian_d2S
-from ... import quadratic_energy, quadratic_gradient, quadratic_hessian
-from ... import kinetic_energy, kinetic_gradient, kinetic_hessian
-from ... import volume
-from ... import massmatrix
-from ... import deformation_jacobian
-
-
-from ..Sim import  *
-from ..State import State
+from simkit import symmetric_stretch_map
+from simkit import ympr_to_lame
+from simkit import stretch, stretch_gradient_dx
+from simkit import volume
+from simkit import massmatrix
+from simkit import deformation_jacobian
+from simkit.sims.Sim import Sim
+from simkit.sims.State import State
+from simkit.solvers import NewtonSolver, NewtonSolverParams
+from simkit.energies import elastic_energy_S, elastic_gradient_dS, elastic_hessian_d2S
+from simkit.energies import quadratic_energy, quadratic_gradient, quadratic_hessian
+from simkit.energies import kinetic_energy, kinetic_gradient, kinetic_hessian
 
 class ElasticMFEMState(State):
 
@@ -110,6 +107,7 @@ class ElasticMFEMSim(Sim):
             assert(p.b0.shape[0] == x.shape[0])
             self.b = self.p.b0.reshape(-1, 1)
 
+        print ('self Q shape', self.Q.shape, 'self b shape', self.b.shape)
 
         # should also build the solver parameters
         if isinstance(p.solver_p, NewtonSolverParams):
@@ -165,6 +163,8 @@ class ElasticMFEMSim(Sim):
         F = (self.J @ x).reshape(-1, dim, dim)
         S = s.reshape(-1, dim * (dim + 1) // 2)
         X = x.reshape(-1, dim)
+
+        print ('self Q shape', self.Q.shape, 'self b shape', self.b.shape)
 
         g_x = kinetic_gradient(x, self.y, self.Mv, self.p.h) \
                 + quadratic_gradient(x, self.Q, self.b) \
@@ -257,6 +257,8 @@ class ElasticMFEMSim(Sim):
         x : (n*d, 1) numpy array
             Next positions of the pinned pendulum system
         """
+        print('self Q shape', self.Q.shape, 'self b shape', self.b.shape)
+        print('Q_ext shape', Q_ext.shape if Q_ext is not None else None, 'b_ext shape', b_ext.shape if b_ext is not None else None)
 
         self.dynamic_precomp(x, x_dot, Q_ext, b_ext)
 

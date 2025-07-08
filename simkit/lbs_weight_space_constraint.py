@@ -1,5 +1,7 @@
 import scipy as sp
 import numpy as np
+
+from simkit.remove_redundant_columns import remove_redundant_columns
 from .orthonormalize import orthonormalize
 from .massmatrix import massmatrix
 def lbs_weight_space_constraint(V, T, C):
@@ -41,6 +43,6 @@ def lbs_weight_space_constraint(V, T, C):
 
     M = massmatrix(V, T)
     
-    W2 = orthonormalize(W.T).T
+    W2 = remove_redundant_columns(W.T, M=M).T
 
     return W2

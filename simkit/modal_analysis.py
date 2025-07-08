@@ -1,8 +1,7 @@
 import scipy as sp
 import numpy as np
 
-
-from .arap_hessian import arap_hessian
+from simkit.energies import arap_hessian
 from .massmatrix import massmatrix
 from .eigs import eigs
 

@@ -32,9 +32,9 @@ class Frame():
         self.V = A[:, :-1] @ self.V0
 
         self.qu.set_UVC(self.V[:, 0], self.V[:, 1])
-        self.qu.set_offsets((self.X[:, 0], self.X[:, 1]))
+        self.qu.set_offsets(self.X)
 
-        self.sc.set_offsets((self.X[:, 0], self.X[:, 1]))
+        self.sc.set_offsets((self.X))
         return
 
     def remove(self):

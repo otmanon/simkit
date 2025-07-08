@@ -51,6 +51,7 @@ def view_displacement_modes(X, T, W, a=0.1, period=24, path=None, edge_width=1, 
         ps.screenshot(dirstem + "/" + str(0).zfill(4) + ".png", transparent_bg=False)
     count = 1
 
+    ps.set_give_focus_on_show(True)
     while True:
         if path is not None:
             ps.screenshot(dirstem + "/" + str(count).zfill(4) + ".png", transparent_bg=False)

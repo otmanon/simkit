@@ -15,7 +15,7 @@ class TriangleMesh():
         self.pc = PolyCollection(triangles, facecolors=facecolors, edgecolor=edgecolors, linewidth = linewidths, linewidths=linewidths)
         plt.gca().add_collection(self.pc)
 
-        self.E = igl.boundary_facets(T)
+        self.E = igl.boundary_facets(T)[0]
         self.E = self.E.reshape(-1, 2)
         self.outline = Curve(X, self.E, color=black, linewidth=outlinewidth)
         return

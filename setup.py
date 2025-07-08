@@ -9,6 +9,7 @@ setup(
     author_email='otman.benchekroun@mail.utoronto.ca',
     license='MIT',
     packages=['simkit'],
+    python_requires='>=3.10',
     install_requires=['scipy',
                       'numpy',
                       'polyscope',

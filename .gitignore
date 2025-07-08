@@ -9,3 +9,5 @@
 *.pyc
 
 .vscode/
+
+*.egg-info
