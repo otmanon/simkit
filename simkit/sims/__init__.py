@@ -1,6 +1,2 @@
-from .Sim import Sim
+from . import elastic
 
-from .State import State
-
-
-from .pinned_pendulum import *

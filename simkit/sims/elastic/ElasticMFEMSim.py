@@ -2,18 +2,19 @@ import igl
 import numpy as np
 import scipy as sp
 
-from simkit import symmetric_stretch_map
-from simkit import ympr_to_lame
-from simkit import stretch, stretch_gradient_dx
-from simkit import volume
-from simkit import massmatrix
-from simkit import deformation_jacobian
-from simkit.sims.Sim import Sim
-from simkit.sims.State import State
-from simkit.solvers import NewtonSolver, NewtonSolverParams
-from simkit.energies import elastic_energy_S, elastic_gradient_dS, elastic_hessian_d2S
-from simkit.energies import quadratic_energy, quadratic_gradient, quadratic_hessian
-from simkit.energies import kinetic_energy, kinetic_gradient, kinetic_hessian
+from ... import symmetric_stretch_map
+from ... import ympr_to_lame
+from ... import stretch
+from ...stretch_gradient import stretch_gradient_dx
+from ... import volume
+from ... import massmatrix
+from ... import deformation_jacobian
+from ..Sim import Sim
+from ..State import State
+from ...solvers import NewtonSolver, NewtonSolverParams
+from ...energies import elastic_energy_S, elastic_gradient_dS, elastic_hessian_d2S
+from ...energies import quadratic_energy, quadratic_gradient, quadratic_hessian
+from ...energies import kinetic_energy, kinetic_gradient, kinetic_hessian
 
 class ElasticMFEMState(State):
 

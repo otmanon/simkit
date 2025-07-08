@@ -6,20 +6,20 @@ import scipy as sp
 import os
 
 from simkit.solvers import NewtonSolver, NewtonSolverParams
-from simkit import ympr_to_lame
-from simkit import stretch, stretch_gradient_dz
-from simkit import volume
-from simkit import massmatrix
-from simkit import backtracking_line_search
-from simkit import deformation_jacobian, project_into_subspace, selection_matrix
-from simkit import project_into_subspace
-from simkit import symmetric_stretch_map
-from simkit.energies import elastic_energy_S, elastic_gradient_dS, elastic_hessian_d2S
-from simkit.energies import quadratic_energy, quadratic_gradient, quadratic_hessian
-from simkit.energies import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
-from simkit.sims.Sim import *
-from simkit.sims.State import State
-from simkit.solvers.Solver import Solver, SolverParams
+from ... import ympr_to_lame
+from ... import stretch
+from ...stretch_gradient import stretch_gradient_dz
+from ... import volume
+from ... import massmatrix
+from ... import backtracking_line_search
+from ... import deformation_jacobian, project_into_subspace, selection_matrix
+from ... import project_into_subspace
+from ... import symmetric_stretch_map
+from ...energies import elastic_energy_S, elastic_gradient_dS, elastic_hessian_d2S
+from ...energies import quadratic_energy, quadratic_gradient, quadratic_hessian
+from ...energies import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
+from ...sims.Sim import *
+from ...solvers.Solver import Solver, SolverParams
 
 class SQPMFEMSolverParams(SolverParams):
 

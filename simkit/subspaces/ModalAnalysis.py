@@ -17,7 +17,7 @@ from ..polyscope.view_displacement_modes import view_displacement_modes
 from ..farthest_point_sampling import farthest_point_sampling
 from ..selection_matrix import selection_matrix
 from ..massmatrix import massmatrix
-from ..modal_analysis import modal_analysis
+from ..linear_modal_analysis import linear_modal_analysis
 from ..orthonormalize import orthonormalize
 from ..spectral_cubature import spectral_cubature
 
@@ -90,7 +90,7 @@ class ModalAnalysis():
     def compute_subspace(self, X, T, params):
                 
         dim = X.shape[1]
-        [ E,  B] = modal_analysis(X, T, k=params.m)
+        [ E,  B] = linear_modal_analysis(X, T, k=params.m)
 
         # concatenate
         B = np.concatenate([B, X.reshape(-1, 1)], axis=1)

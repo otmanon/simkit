@@ -1,19 +1,17 @@
 import numpy as np
 import scipy as sp
 
-from simkit.cluster_grouping_matrices import cluster_grouping_matrices
-from simkit.pairwise_displacement import pairwise_displacement
-from simkit.polar_svd import polar_svd
-from simkit.project_into_subspace import project_into_subspace
-from simkit.selection_matrix import selection_matrix
+from ...cluster_grouping_matrices import cluster_grouping_matrices
+from ...polar_svd import polar_svd
+from ...project_into_subspace import project_into_subspace
+from ...selection_matrix import selection_matrix
 
 from ...clustered_plastic_stretch_tensor import clustered_plastic_stretch_tensor
 from ...fast_sandwich_transform_clustered import fast_sandwich_transform_clustered
 from ...solvers import BlockCoordSolver, BlockCoordSolverParams
-from ... import ympr_to_lame
-from ... import volume
-from ... import massmatrix
-from ... import deformation_jacobian
+from ...volume import volume
+from ...massmatrix import massmatrix
+from ...deformation_jacobian import deformation_jacobian
 
 
 class ModalMuscleSimParams():
@@ -39,13 +37,13 @@ class ModalMuscleSimParams():
 
 class ModalMuscleSim():
 
-    def __init__(self, X : np.ndarray, T : np.ndarray, B : np.ndarray, D : np.ndarray, l=None, d=None, cI=None, plane_normal=None, plane_pos = None, params : ModalMuscleSimParams = ModalMuscleSimParams()):
+    def __init__(self, X : np.ndarray, T : np.ndarray, B : np.ndarray, D : np.ndarray, l=None, d=None, cI=None, plane_normal=None, plane_pos = None, sim_params : ModalMuscleSimParams = ModalMuscleSimParams()):
 
         
         dim = X.shape[1]
         self.dim = dim
 
-        self.params = params
+        self.sim_params = sim_params
         
         # preprocess some quantities
         self.X = X
@@ -75,7 +73,7 @@ class ModalMuscleSim():
         
         vol = volume(X, T)
 
-        mu = self.params.mu
+        mu = self.sim_params.mu
         if isinstance(mu, float) or isinstance(mu, int):
             mu = np.ones((T.shape[0], 1)) * mu
 
@@ -95,14 +93,14 @@ class ModalMuscleSim():
 
         self.AMuPJB_full =  PAMue @ J @ B
 
-        Mv = sp.sparse.kron(massmatrix(X, T, rho=params.rho), sp.sparse.identity(dim))
+        Mv = sp.sparse.kron(massmatrix(X, T, rho=sim_params.rho), sp.sparse.identity(dim))
         self.BLB_passive = B.T @ L_passive @ B 
         self.BMB = B.T @ Mv @ B
         self.BMy = B.T @ Mv @ X.reshape(-1, 1)
 
 
         ######### active muscle force 
-        gamma = self.params.gamma
+        gamma = self.sim_params.gamma
         if isinstance(gamma, float) or isinstance(gamma, int):
             gamma = np.ones((T.shape[0], 1)) * gamma
         Gamma = sp.sparse.diags(gamma.flatten())
@@ -124,7 +122,7 @@ class ModalMuscleSim():
 
 
         ######### contact forces
-        if params.contact:
+        if sim_params.contact:
             if plane_normal is None:
                 plane_normal = np.zeros((dim, 1))
                 plane_normal[1] = 1
@@ -158,32 +156,32 @@ class ModalMuscleSim():
             self.num_contact_points = cI.shape[0] + 1
             
 
-        if params.Q0 is None:
+        if sim_params.Q0 is None:
             self.Q = np.zeros((B.shape[1], B.shape[1])) #sp.sparse.csc_matrix((B.shape[1], B.shape[1]))
         else:
-            self.Q = self.params.Q0
-        if params.b0 is None:
+            self.Q = self.sim_params.Q0
+        if sim_params.b0 is None:
             self.b = np.zeros((B.shape[1], 1))
         else:
-            assert(params.b0.shape[0] == B.shape[-1])
-            self.b = self.params.b0.reshape(-1, 1)
+            assert(sim_params.b0.shape[0] == B.shape[-1])
+            self.b = self.sim_params.b0.reshape(-1, 1)
 
         self.recompute_system()
 
         # should also build the solver parameters
-        assert(isinstance(params.solver_p, BlockCoordSolverParams))
-        self.solver = BlockCoordSolver(self.global_step, self.local_step, params.solver_p)
+        assert(isinstance(sim_params.solver_p, BlockCoordSolverParams))
+        self.solver = BlockCoordSolver(self.global_step, self.local_step, sim_params.solver_p)
         
         return
 
     def recompute_system(self):
 
-        self.H = self.BLB_passive + self.BLB_active + self.BMB / self.params.h**2 + self.Q
+        self.H = self.BLB_passive + self.BLB_active + self.BMB / self.sim_params.h**2 + self.Q
 
 
         self.chol_H = sp.linalg.cho_factor(self.H)
 
-        if self.params.contact:
+        if self.sim_params.contact:
             JeQi = sp.linalg.cho_solve(self.chol_H, self.Je.T).T
             JcQi = sp.linalg.cho_solve(self.chol_H, self.Jc.T).T
             self.JeQi =  JeQi
@@ -199,22 +197,22 @@ class ModalMuscleSim():
         self.a = a.copy()
         
         self.z_curr = z.copy()
-        self.z_prev = z - self.params.h * z_dot
-        self.y = z + self.params.h * z_dot
+        self.z_prev = z - self.sim_params.h * z_dot
+        self.y = z + self.sim_params.h * z_dot
 
         # same for b
         if b_ext is not None:
-            if self.params.b0 is None:
+            if self.sim_params.b0 is None:
                 self.b = b_ext
             else:
-                self.b = b_ext + self.params.b0
+                self.b = b_ext + self.sim_params.b0
         
         self.dynamic_precomp_done = True
 
 
     def global_step(self, z : np.ndarray, local_vars: np.ndarray):
 
-        k = self.BMB @ self.y / self.params.h**2
+        k = self.BMB @ self.y / self.sim_params.h**2
         
         passive_dofs = self.num_passive_clusters * (self.dim**2)
         r_passive = local_vars[:passive_dofs]
@@ -227,7 +225,7 @@ class ModalMuscleSim():
 
 
         f = k + e_passive + e_active - self.b
-        if self.params.contact:
+        if self.sim_params.contact:
             f_contact = self.contact_projection(z, f)            
             f = f + f_contact
             
@@ -263,7 +261,7 @@ class ModalMuscleSim():
     
     def contact_projection(self, z : np.ndarray, f:np.ndarray):
 
-        z_dot_tent = (sp.linalg.cho_solve(self.chol_H, f)   - self.z_curr) / self.params.h
+        z_dot_tent = (sp.linalg.cho_solve(self.chol_H, f)   - self.z_curr) / self.sim_params.h
         P = (self.Je @ (z) ).reshape(-1, self.dim) # contact positions
 
         # D = pairwise_displacement(P, self.plane_pos.T)
@@ -294,12 +292,12 @@ class ModalMuscleSim():
             vel_t = vel_in_contact[:, 0]
 
             v = np.zeros((num_contacts, self.dim))
-            v[:, 0] = (1.0 - self.params.alpha) * vel_t
+            v[:, 0] = (1.0 - self.sim_params.alpha) * vel_t
 
             p = (JeI @ self.z_curr).reshape(-1, self.dim)
             local_f = (L @ f).reshape(-1, self.dim)
             
-            b = (v*self.params.h + p - local_f).reshape(-1, 1)
+            b = (v*self.sim_params.h + p - local_f).reshape(-1, 1)
 
             if L.shape[0] >= L.shape[1]:
                 LTL= L.T @ L
@@ -328,7 +326,7 @@ class ModalMuscleSim():
     
     def rest_state(self):
 
-        Mv = sp.sparse.kron(massmatrix(self.X, self.T, rho=self.params.rho), sp.sparse.identity(self.dim))
+        Mv = sp.sparse.kron(massmatrix(self.X, self.T, rho=self.sim_params.rho), sp.sparse.identity(self.dim))
         z = project_into_subspace( self.X.reshape(-1, 1), self.B,
                         M=Mv, BMB=self.BMB, BMy=self.BMy)# 
 

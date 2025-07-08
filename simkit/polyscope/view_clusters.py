@@ -39,8 +39,9 @@ def view_clusters(X, T, l, pI=None, path=None, eye_pos=None, eye_target=None,):
     if eye_pos is not None and eye_target is not None:
         ps.look_at(eye_pos, eye_target)
     ps.frame_tick()
-    ps.screenshot(path, transparent_bg=False)
-    
-    # ps.show()
+    if path is not None:
+        ps.screenshot(path, transparent_bg=False)
+    else:
+        ps.show()
 
     return
