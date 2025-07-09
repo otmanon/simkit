@@ -1,1 +1,4 @@
 from .get_data_directory import get_data_directory
+from .compute_with_cache_check import compute_with_cache_check
+from .mp4_to_gif import mp4_to_gif
+from .video_from_image_dir import video_from_image_dir
