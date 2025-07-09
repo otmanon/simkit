@@ -1,5 +1,5 @@
 
-from .ElasticFEMSim import ElasticFEMSim, ElasticFEMSimParams, ElasticFEMState
+from .ElasticFEMSim import ElasticFEMSim, ElasticFEMSimParams
 
 from .ElasticMFEMSim import ElasticMFEMSim, ElasticMFEMSimParams, ElasticMFEMState
 

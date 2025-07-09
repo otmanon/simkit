@@ -1,9 +1,7 @@
-# submodules
-from . import sims
-from . import energies
-from . import matplotlib
-from . import polyscope
-from . import filesystem
+
+
+from .pairwise_distance import pairwise_distance
+from .pairwise_displacement import pairwise_displacement
 
 from .backtracking_line_search import backtracking_line_search
 from .ympr_to_lame import ympr_to_lame
@@ -17,9 +15,7 @@ from .linear_modal_analysis import linear_modal_analysis
 from .massmatrix import massmatrix
 from .dirichlet_penalty import dirichlet_penalty
 from .grad import grad
-from .volume import volume
 from .project_into_subspace import project_into_subspace
-from .pairwise_displacement import pairwise_displacement
 from .farthest_point_sampling import farthest_point_sampling
 from .volume import volume
 from .deformation_jacobian import deformation_jacobian
@@ -33,3 +29,13 @@ from .stretch_gradient import *
 from .stretch import stretch
 from .subspace_rotation import subspace_rotation
 from .limit_actuation_dirichlet_energy import limit_actuation_dirichlet_energy
+from .shape_outlines import *
+from .volume import volume
+from .closed_polyline import closed_polyline
+from .psd_project import psd_project
+# submodules
+from . import sims
+from . import energies
+from . import matplotlib
+from . import polyscope
+from . import filesystem
