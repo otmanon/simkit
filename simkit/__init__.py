@@ -3,6 +3,7 @@ from . import sims
 from . import energies
 from . import matplotlib
 from . import polyscope
+from . import filesystem
 
 from .backtracking_line_search import backtracking_line_search
 from .ympr_to_lame import ympr_to_lame
