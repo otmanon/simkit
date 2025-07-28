@@ -5,7 +5,7 @@ from ..pairwise_displacement import pairwise_displacement
 
 
 
-def contact_springs_plane_hessian(X, k, p, n, M=None):
+def contact_springs_plane_hessian(X, k, p, n, M=None, return_contact_inds=False):
     """
     Compute the energy of the contact springs with the ground plane.
     
@@ -35,6 +35,7 @@ def contact_springs_plane_hessian(X, k, p, n, M=None):
     under_ground_plane = (offset < 0).flatten() 
     num_contacts = under_ground_plane.sum()
     dim = X.shape[1]
+    contacting_inds = None
     H = sp.sparse.csc_matrix((X.shape[0]*X.shape[1], X.shape[0]*X.shape[1]))
     if np.sum(under_ground_plane) > 0:
         m = M.diagonal()
@@ -51,4 +52,7 @@ def contact_springs_plane_hessian(X, k, p, n, M=None):
         NMN = NM @ N
 
         H = k  * NMN
-    return H
+    if return_contact_inds:
+        return H, contacting_inds
+    else:
+        return H

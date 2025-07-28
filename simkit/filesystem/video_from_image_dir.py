@@ -1,221 +1,55 @@
-# import os
-
-# import cv2
-
-
-# def video_from_image_dir(
-#     image_folder, video_name=None, fps=60, width=None, height=None, mogrify=False
-# ):
-#     """Make a video from a folder of images."""
-#     if video_name is None:
-#         video_name = os.path.join(image_folder, "video.mp4")
-
-#     if os.path.exists(image_folder):
-#         images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
-
-#         if not images:
-#             print("No PNG images found in the specified folder.")
-#             return
-
-#         # Sort the images based on their filenames (assuming filenames are integers)
-#         images.sort(key=lambda x: int(x.split(".")[0]))
-
-#         frame = cv2.imread(os.path.join(image_folder, images[0]))
-#         h, w, layers = frame.shape
-
-#         if height is None or width is None:
-#             height = h
-#             width = w
-
-#         video = cv2.VideoWriter(
-#             video_name, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height)
-#         )
-
-#         for image in images:
-#             img_path = os.path.join(image_folder, image)
-
-#             # Read the image using cv2.IMREAD_UNCHANGED to handle images with an alpha channel
-#             img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
-
-#             if mogrify:
-#                 if img.shape[2] == 4:  # If image has alpha channel
-#                     alpha_channel = img[:, :, 3]
-#                     img[alpha_channel < 10] = [
-#                         255,
-#                         255,
-#                         255,
-#                         255,
-#                     ]  # Set transparent pixels to white
-
-#                     # also set all black to white
-#                     img[
-#                         (img[:, :, 0] < 10) & (img[:, :, 1] < 10) & (img[:, :, 2] < 10)
-#                     ] = [255, 255, 255, 255]
-
-#             if img.shape[2] == 4:  # If image has alpha channel
-#                 img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
-
-#             # Resize the image
-#             img = cv2.resize(img, (width, height))
-
-#             # If the image has an alpha channel, remove it to avoid potential issues
-#             if img.shape[-1] == 4:
-#                 img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-
-#             video.write(img)
-
-#         cv2.destroyAllWindows()
-#         video.release()
-#     else:
-#         print(f"The specified image folder '{image_folder}' does not exist.")
-
-# import cv2
-# import os
-# import numpy as np
-
-# def apply_gamma_correction(image, gamma=2.2):
-#     """Apply gamma correction to the image to adjust brightness."""
-#     inv_gamma = 1.0 / gamma
-#     table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
-#     return cv2.LUT(image, table)
-
-# def video_from_image_dir(
-#     image_folder, video_name=None, fps=60, width=None, height=None, mogrify=False, gamma_correction=False
-# ):
-#     """Make a video from a folder of images."""
-#     if video_name is None:
-#         video_name = os.path.join(image_folder, "video.mp4")
-
-#     if os.path.exists(image_folder):
-#         images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
-
-#         if not images:
-#             print("No PNG images found in the specified folder.")
-#             return
-
-#         images.sort(key=lambda x: int(x.split(".")[0]))
-
-#         frame = cv2.imread(os.path.join(image_folder, images[0]))
-#         h, w, layers = frame.shape
-
-#         if height is None or width is None:
-#             height = h
-#             width = w
-
-#         video = cv2.VideoWriter(
-#             video_name, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height)
-#         )
-
-#         for image in images:
-#             img_path = os.path.join(image_folder, image)
-#             img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
-
-#             if mogrify:
-#                 if img.shape[2] == 4:  # If image has an alpha channel
-#                     alpha_channel = img[:, :, 3]
-#                     img[alpha_channel < 10] = [255, 255, 255, 255]
-#                     img[
-#                         (img[:, :, 0] < 10) & (img[:, :, 1] < 10) & (img[:, :, 2] < 10)
-#                     ] = [255, 255, 255, 255]
-
-#             if img.shape[2] == 4:  # If image has alpha channel
-#                 img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
-
-#             img = cv2.resize(img, (width, height))
-
-#             if gamma_correction:
-#                 img = apply_gamma_correction(img, gamma=2.2)
-
-#             video.write(img)
-
-#         video.release()
-#         cv2.destroyAllWindows()
-#     else:
-#         print(f"The specified image folder '{image_folder}' does not exist.")
-
-
-
-import cv2
 import os
-import numpy as np
 import subprocess
+import glob
 
-def apply_gamma_correction(image, gamma=2.2):
-    """Apply gamma correction to the image to adjust brightness."""
-    inv_gamma = 1.0 / gamma
-    table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
-    return cv2.LUT(image, table)
-
-def preprocess_images(image_folder, output_folder, mogrify=False, gamma_correction=False):
-    """Preprocess images in the folder (mogrify, gamma correction) and save them to output folder."""
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-
-    images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
-
-    if not images:
-        print("No PNG images found in the specified folder.")
-        return
-
-    images.sort(key=lambda x: int(x.split(".")[0]))
-
-    for i, image in enumerate(images):
-        img_path = os.path.join(image_folder, image)
-        img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
-
-        if mogrify:
-            if img.shape[2] == 4:  # If image has an alpha channel
-                alpha_channel = img[:, :, 3]
-                img[alpha_channel < 10] = [255, 255, 255, 255]
-                img[(img[:, :, 0] < 10) & (img[:, :, 1] < 10) & (img[:, :, 2] < 10)] = [255, 255, 255, 255]
-
-        if img.shape[2] == 4:  # If image has alpha channel
-            img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
-
-        if gamma_correction:
-            img = apply_gamma_correction(img, gamma=2.2)
-
-        # Save preprocessed image to the output folder
-        output_img_path = os.path.join(output_folder, f"{i:04d}.png")
-        cv2.imwrite(output_img_path, img)
-
-def create_video_with_ffmpeg(image_folder, video_name, fps=60):
-    """Use ffmpeg to create a video from the preprocessed images."""
-    # Construct the ffmpeg command
-    ffmpeg_command = [
-        "ffmpeg",
-        "-r", str(fps),  # Frame rate
-        "-f", "image2",  # Image sequence input
-        "-i", os.path.join(image_folder, "%04d.png"),  # Input images as numbered sequence
-        "-vcodec", "libx264",  # Use the H.264 codec
-        "-crf", "25",  # Quality setting
-        "-pix_fmt", "yuv420p",  # Pixel format
-        video_name  # Output video name
-    ]
-    
-    # Run the ffmpeg command
-    subprocess.run(ffmpeg_command)
-
-# Main function
 def video_from_image_dir(
-    image_folder, video_name=None, fps=60, width=None, height=None, mogrify=False, gamma_correction=False
+    image_folder, video_name=None, fps=60, width=None, height=None, mogrify=False
 ):
-    """Preprocess images, then use ffmpeg to create the video."""
+    """Make a video from a folder of images using ffmpeg."""
     if video_name is None:
         video_name = os.path.join(image_folder, "video.mp4")
+    else:
+        # Ensure video_name has .mp4 extension
+        if not video_name.endswith('.mp4'):
+            video_name = os.path.splitext(video_name)[0] + '.mp4'
 
-    output_folder = os.path.join(image_folder, "preprocessed")
+    if os.path.exists(image_folder):
+        # Get all PNG images and sort them
+        images = sorted([img for img in os.listdir(image_folder) if img.endswith(".png")])
 
-    # Preprocess the images first
-    preprocess_images(image_folder, output_folder, mogrify=mogrify, gamma_correction=gamma_correction)
+        if not images:
+            print("No PNG images found in the specified folder.")
+            return
 
-    # Create the video using ffmpeg
-    create_video_with_ffmpeg(output_folder, video_name, fps)
+        # Get dimensions from first image if not specified
+        if width is None or height is None:
+            # Use ffprobe to get image dimensions
+            first_image = os.path.join(image_folder, images[0])
+            cmd = ['ffprobe', '-v', 'error', '-select_streams', 'v:0',
+                   '-show_entries', 'stream=width,height', '-of', 'csv=p=0', first_image]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            width, height = map(int, result.stdout.strip().split(','))
 
-# # Example usage
-# video_from_image_dir(
-#     image_folder="path_to_your_image_folder",
-#     video_name="output_video.mp4",
-#     fps=30,
-#     gamma_correction=True
-# )
+        # Ensure the output directory exists
+        os.makedirs(os.path.dirname(os.path.abspath(video_name)), exist_ok=True)
+
+        # Create ffmpeg command
+        cmd = [
+            'ffmpeg',
+            '-y',  # Overwrite output file if it exists
+            '-framerate', str(fps),
+            '-i', os.path.join(image_folder, '%04d.png'),  # Input pattern
+            '-filter_complex', f'[0]format=rgba[fg];color=white:s={width}x{height}[bg];[bg][fg]overlay=shortest=1',
+            '-c:v', 'libx264',
+            '-pix_fmt', 'yuv420p',
+            '-crf', '23',
+            os.path.abspath(video_name)  # Use absolute path for output
+        ]
+
+        try:
+            subprocess.run(cmd, check=True, capture_output=True)
+            print(f"Video created successfully as {video_name}")
+        except subprocess.CalledProcessError as e:
+            print(f"Error creating video: {e.stderr.decode()}")
+    else:
+        print(f"The specified image folder '{image_folder}' does not exist.")

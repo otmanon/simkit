@@ -34,3 +34,7 @@ from. contact_springs_sphere_energy import contact_springs_sphere_energy
 from .contact_springs_sphere_gradient import contact_springs_sphere_gradient
 from .contact_springs_sphere_hessian import contact_springs_sphere_hessian
 
+
+from .quadratic_dynamic_friction_energy import quadratic_dynamic_friction_energy
+from .quadratic_dynamic_friction_gradient import quadratic_dynamic_friction_gradient
+from .quadratic_dynamic_friction_hessian import quadratic_dynamic_friction_hessian

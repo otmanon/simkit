@@ -1,9 +1,9 @@
 
 import numpy as np
 
-from simkit.linear_elasticity_gradient import linear_elasticity_gradient_dF
-from simkit.neo_hookean_gradient import neo_hookean_filtered_gradient_dF, neo_hookean_gradient_dF
-from simkit.fcr_gradient import fcr_gradient_dF
+from .linear_elasticity_gradient import linear_elasticity_gradient_dF
+from .neo_hookean_gradient import neo_hookean_filtered_gradient_dF, neo_hookean_gradient_dF
+from .fcr_gradient import fcr_gradient_dF
 from .arap_gradient import arap_gradient_dF, arap_gradient_dS
 
 def elastic_gradient_dF(F: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol, material):

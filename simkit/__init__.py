@@ -33,6 +33,7 @@ from .shape_outlines import *
 from .volume import volume
 from .closed_polyline import closed_polyline
 from .psd_project import psd_project
+from .vectorized_trace import vectorized_trace
 # submodules
 from . import sims
 from . import energies

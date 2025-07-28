@@ -57,7 +57,6 @@ def ellipse_outline(a=1, b=0.5, n=100):
     Returns n points regularly spaced around the perimeter of an ellipse with axes a and b.
     """
 
-
     # Arc length differential for ellipse
     def dS(theta):
         return np.sqrt((a * np.sin(theta)) ** 2 + (b * np.cos(theta)) ** 2)

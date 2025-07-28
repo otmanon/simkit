@@ -1,10 +1,10 @@
 import numpy as np
 
-from simkit.arap_energy import arap_energy_F
+from .arap_energy import arap_energy_F
 
-from .volume import volume
-from .deformation_jacobian import deformation_jacobian
-from .polar_svd import polar_svd
+from ..volume import volume
+from ..deformation_jacobian import deformation_jacobian
+from ..polar_svd import polar_svd
 
 # def arap_energy(X, T, U=None, mu=1, vol=None):
 #     if U is None:

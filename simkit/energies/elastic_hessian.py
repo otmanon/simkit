@@ -4,8 +4,9 @@ import scipy as sp
 from .fcr_hessian import fcr_hessian_d2F
 from .linear_elasticity_hessian import linear_elasticity_hessian_d2F
 from .neo_hookean_hessian import neo_hookean_hessian_d2F, neo_hookean_filtered_hessian_d2F
-from .psd_project import psd_project
 from .arap_hessian import arap_hessian_d2F, arap_hessian_d2S
+
+from ..psd_project import psd_project
 
 def elastic_hessian_d2F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol : np.ndarray, material, psd=True):
     

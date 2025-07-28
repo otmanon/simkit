@@ -1,12 +1,11 @@
 import numpy as np
 import scipy as sp
 
-from simkit.deformation_jacobian import deformation_jacobian
-from simkit.vectorized_trace import vectorized_trace
-from simkit.vectorized_transpose import vectorized_transpose
-from simkit.volume import volume
-
-from .polar_svd import polar_svd
+from ..deformation_jacobian import deformation_jacobian
+from ..vectorized_trace import vectorized_trace
+from ..vectorized_transpose import vectorized_transpose
+from ..volume import volume
+from ..polar_svd import polar_svd
 
 
 def linear_elasticity_hessian(**kwargs):

@@ -1,11 +1,8 @@
 import numpy as np
 
-from simkit.fcr_energy import fcr_energy_F
-from simkit.linear_elasticity_energy import linear_elasticity_energy_F
-
-
+from .fcr_energy import fcr_energy_F
+from .linear_elasticity_energy import linear_elasticity_energy_F
 from .arap_energy import arap_energy_F, arap_energy_S
-
 from .neo_hookean_energy import neo_hookean_energy_F, neo_hookean_filtered_energy_F
 
 

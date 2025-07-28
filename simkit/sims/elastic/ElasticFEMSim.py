@@ -152,7 +152,8 @@ class ElasticFEMSim():
         Computation done once every timestep and never again
         """
         self.y = z + self.params.h * z_dot
-
+        self.z_dot_curr = z_dot.copy()
+        self.z_curr = z.copy()
         # add to current Q_ext
         if BQB_ext is not None:
             self.Q = BQB_ext + self.BQ0B

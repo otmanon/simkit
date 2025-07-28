@@ -5,7 +5,7 @@ from ..pairwise_displacement import pairwise_displacement
 
 
 
-def contact_springs_plane_energy(X, k, p, n, M=None):
+def contact_springs_plane_energy(X, k, p, n, M=None, return_contact_inds=False):
     """ 
     Compute the Hessian of the contact springs with the ground plane.
     
@@ -23,7 +23,9 @@ def contact_springs_plane_energy(X, k, p, n, M=None):
     M : np.ndarray, optional
         The mass matrix of the contact points.
         Defaults to the identity matrix.
-        
+    return_contact_inds : bool, optional
+        Whether to return the indices of the contact points.
+        Defaults to False.
 
     """
 
@@ -40,6 +42,7 @@ def contact_springs_plane_energy(X, k, p, n, M=None):
     under_ground_plane = (offset < 0).flatten() 
     num_contacts = under_ground_plane.sum()
     dim = X.shape[1]
+    contacting_inds = None
     if num_contacts > 0:
         m = M.diagonal()
         m = m * under_ground_plane
@@ -58,4 +61,7 @@ def contact_springs_plane_energy(X, k, p, n, M=None):
 
 
     energy = energy_density.sum()
-    return energy
+    if return_contact_inds:
+        return energy, contacting_inds
+    else:
+        return energy

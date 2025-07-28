@@ -3,13 +3,13 @@ import igl
 import scipy as sp
 import numpy as np
 
-from .deformation_jacobian import deformation_jacobian
-from .rotation_gradient import rotation_gradient_F
-from .volume import volume
+from ..deformation_jacobian import deformation_jacobian
+from ..rotation_gradient import rotation_gradient_F
+from ..volume import volume
 
 
 from numpy import power as pow
-from .mat2py import _4x4matrix_2D_ordering_, _9x9matrix_3D_ordering_
+from ..mat2py import _4x4matrix_2D_ordering_, _9x9matrix_3D_ordering_
 
 def neo_hookean_hessian_d2F(F, mu=1, lam=1, vol=1):
 

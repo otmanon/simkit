@@ -2,12 +2,12 @@
 import scipy as sp
 import numpy as np
 
-from .volume import volume
-from .deformation_jacobian import deformation_jacobian
-from .polar_svd import polar_svd
+from ..volume import volume
+from ..deformation_jacobian import deformation_jacobian
+from ..polar_svd import polar_svd
 
 
-from .mat2py import _4vector_2D_ordering_, _9vector_3D_ordering_
+from ..mat2py import _4vector_2D_ordering_, _9vector_3D_ordering_
 
 def neo_hookean_gradient_dF(F, mu, lam, vol):
 

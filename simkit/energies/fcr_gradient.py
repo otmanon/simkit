@@ -2,11 +2,11 @@
 import scipy as sp
 import numpy as np
 
-from simkit.arap_gradient import arap_gradient_dF
+from .arap_gradient import arap_gradient_dF
 
-from .volume import volume
-from .deformation_jacobian import deformation_jacobian
-from .polar_svd import polar_svd
+from ..volume import volume
+from ..deformation_jacobian import deformation_jacobian
+from ..polar_svd import polar_svd
 
 
 

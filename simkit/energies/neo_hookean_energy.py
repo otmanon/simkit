@@ -1,8 +1,8 @@
 import numpy as np
 
-from .volume import volume
-from .deformation_jacobian import deformation_jacobian
-from .polar_svd import polar_svd
+from ..volume import volume
+from ..deformation_jacobian import deformation_jacobian
+from ..polar_svd import polar_svd
 
 # def arap_energy(X, T, U=None, mu=1, vol=None):
 #     if U is None:

@@ -2,10 +2,10 @@ import numpy as np
 import scipy as sp
 
 
-from simkit.vectorized_trace import vectorized_trace
-from simkit.vectorized_transpose import vectorized_transpose
+from ..vectorized_trace import vectorized_trace
+from ..vectorized_transpose import vectorized_transpose
 
-from .polar_svd import polar_svd
+from ..polar_svd import polar_svd
 
 
 def linear_elasticity_energy_F(F, mu, lam, vol):

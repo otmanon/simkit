@@ -49,7 +49,8 @@ class CMAESSolver():
                 
                 es.tell(X,objs)
                 es.disp()
-                running_history.append(es.result._asdict())
+                if return_history:
+                    running_history.append(es.result._asdict())
                 
         output = es.result.xbest
         if return_result:
