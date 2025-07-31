@@ -8,22 +8,45 @@ In particular, it is designed to be emphasize fast creative and experimental pro
 
 ## Installation
 
-We're working on a pip installation, but in the meantime, you can clone the repository and install the package locally.
-```
+Clone the repository:
+```bash
 git clone --recursive https://github.com/otmanon/simkit.git
 ```
 
 Installation is recommended on a fresh conda directory:
 
-```
-conda create -n simkit
+```bash
+cd simkit
+conda create -n simkit python=3.10
 conda activate simkit
+pip install -e .
 ```
 
-Finally, install the dependencies:
-```
-pip install -r requirements.txt
+## Optional Dependencies
+
+Some features require additional packages that are not installed by default. You can install these optional dependencies as needed:
+
+### CMAES Solver
+The `CMAESSolver` requires the `cma` package for CMA-ES optimization:
+
+```bash
+# Install with CMAES support
+pip install -e .[cmaes]
 ```
 
+### All Optional Dependencies
+To install all optional dependencies at once:
 
+```bash
+pip install -e .[all]
+```
+
+## Running Examples
+
+The repository includes several example scripts demonstrating different simulation capabilities. To run an example:
+
+```bash
+cd examples
+python run_elastics_reduced.py
+```
 
