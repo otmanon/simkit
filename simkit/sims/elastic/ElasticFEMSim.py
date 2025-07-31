@@ -2,14 +2,17 @@ import igl
 import numpy as np
 import scipy as sp
 
-from simkit.emu_energy import emu_energy_F
-from simkit.project_into_subspace import project_into_subspace
-
+from ...solvers import NewtonSolver, NewtonSolverParams
+from ...energies import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
+from ...energies import elastic_energy_z, elastic_gradient_dz, elastic_hessian_d2z, ElasticEnergyZPrecomp
+from ...energies import quadratic_energy, quadratic_gradient, quadratic_hessian
+from ...sims.Sim import *
 from ...solvers import NewtonSolver, NewtonSolverParams
 from ... import ympr_to_lame
-from ... import elastic_energy_z, elastic_gradient_dz, elastic_hessian_d2z, ElasticEnergyZPrecomp
-from ... import quadratic_energy, quadratic_gradient, quadratic_hessian
-from ... import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
+from ... import project_into_subspace
+# from ... import elastic_energy_z, elastic_gradient_dz, elastic_hessian_d2z, ElasticEnergyZPrecomp
+# from ... import quadratic_energy, quadratic_gradient, quadratic_hessian
+# from ... import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
 from ... import volume
 from ... import massmatrix
 from ... import deformation_jacobian, quadratic_hessian, selection_matrix
@@ -62,9 +65,9 @@ class ElasticFEMSim(Sim):
         
         dim = X.shape[1]
         self.dim = dim
-
         self.p = p
-        
+        self.mu, self.lam = simkit.ympr_to_lame(self.p.ym, self.p.pr)
+
         # preprocess some quantities
         self.X = X
         self.T = T
@@ -106,13 +109,7 @@ class ElasticFEMSim(Sim):
 
 
         # should also build the solver parameters
-        if isinstance(p.solver_p, NewtonSolverParams):
-            self.solver = NewtonSolver(self.energy, self.gradient, self.hessian, p.solver_p)
-        else:
-            # print error message and terminate programme
-            assert(False, "Error: solver_p of type " + str(type(p.solver_p)) +
-                          " is not a valid instance of NewtonSolverParams. Exiting.")
-        return
+        self.solver = NewtonSolver(self.energy, self.gradient, self.hessian, p.solver_p)
 
     def initial_precomp(self, X, T, B, x0, cI, cW, rho, ym, pr, dim):
         

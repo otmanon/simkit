@@ -1,3 +1,4 @@
+from .Solver import Solver, SolverParams
 
 from .NewtonSolver import NewtonSolver, NewtonSolverParams
 
