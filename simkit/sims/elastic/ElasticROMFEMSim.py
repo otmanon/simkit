@@ -2,11 +2,8 @@ import igl
 import numpy as np
 import scipy as sp
 
+import simkit
 from simkit.solvers import NewtonSolver, NewtonSolverParams
-from simkit import ympr_to_lame
-from simkit import volume
-from simkit import massmatrix
-from simkit import deformation_jacobian, selection_matrix
 from simkit.energies import elastic_energy_z, elastic_gradient_dz, elastic_hessian_d2z, ElasticEnergyZPrecomp
 from simkit.energies import quadratic_energy, quadratic_gradient, quadratic_hessian
 from simkit.energies import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
@@ -83,7 +80,6 @@ class ElasticROMFEMSim(Sim):
         [self.kin_pre, self.el_pre, self.mu, self.lam, self.vol] =  \
             self.initial_precomp(X, T, B, cI, cW, p.rho, p.ym, p.pr, dim)
 
-
         if p.Q0 is None:
             self.Q = None
         else:
@@ -94,32 +90,25 @@ class ElasticROMFEMSim(Sim):
             assert(p.b0.shape[0] == B.shape[-1])
             self.b = self.p.b0.reshape(-1, 1)
 
-
         # should also build the solver parameters
-        if isinstance(p.solver_p, NewtonSolverParams):
-            self.solver = NewtonSolver(self.energy, self.gradient, self.hessian, p.solver_p)
-        else:
-            # print error message and terminate programme
-            assert(False, "Error: solver_p of type " + str(type(p.solver_p)) +
-                          " is not a valid instance of NewtonSolverParams. Exiting.")
-        return
+        self.solver = NewtonSolver(self.energy, self.gradient, self.hessian, p.solver_p)
 
     def initial_precomp(self, X, T, B,  cI, cW, rho, ym, pr, dim):
         
         # kinetic energy precomp
-        M = massmatrix(self.X, self.T, rho=rho)
+        M = simkit.massmatrix(self.X, self.T, rho=rho)
         Mv = sp.sparse.kron( M, sp.sparse.identity(dim))# sp.sparse.block_diag([M for i in range(dim)])
         kin_z_precomp = KineticEnergyZPrecomp(B, Mv)
         
         
         # elastic energy precomp
         if cW is None:
-            vol = volume(X, T)
+            vol = simkit.volume(X, T)
         else:
             vol = cW.reshape(-1, 1)
             
         ## ym, pr to lame parameters
-        mu, lam = ympr_to_lame(ym, pr)
+        mu, lam = simkit.ympr_to_lame(ym, pr)
         if isinstance(mu, float):
             mu = np.ones((T.shape[0], 1)) * mu
         if isinstance(lam, float):
@@ -129,9 +118,9 @@ class ElasticROMFEMSim(Sim):
         lam = lam[cI]
 
         ## selection matrix from cubature precomp.
-        G = selection_matrix(cI, T.shape[0])
+        G = simkit.selection_matrix(cI, T.shape[0])
         Ge = sp.sparse.kron(G, sp.sparse.identity(dim*dim))
-        J = deformation_jacobian(self.X, self.T)
+        J = simkit.deformation_jacobian(self.X, self.T)
         elastic_z_precomp = ElasticEnergyZPrecomp(B, Ge, J, self.dim)
 
 
@@ -186,7 +175,6 @@ class ElasticROMFEMSim(Sim):
     
         # call this to set up inertia forces that change each timestep.
         self.dynamic_precomp(z, z_dot, Q_ext, b_ext)
-
 
         z0 = z.copy() # very important to copy this here so that x does not get over-written
         z_next = self.solver.solve(z0)

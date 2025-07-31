@@ -1,16 +1,6 @@
 import numpy as np
 
-from simkit import volume
-from simkit import deformation_jacobian
-from simkit import polar_svd
-
-# def arap_energy(X, T, U=None, mu=1, vol=None):
-#     if U is None:
-#         U = X.copy()
-#     x = U.reshape(-1, 1)
-#     e = arap_energy_x(x, X, T, mu=mu, vol=vol)
-#     return e
-
+import simkit
 
 def arap_energy_S(s, mu, vol):
     assert (s.ndim == 2 or s.ndim == 3)
@@ -37,7 +27,7 @@ def arap_energy_S(s, mu, vol):
     return E
 
 def arap_energy_F(F, mu, vol):
-    [R, S] = polar_svd(F)
+    [R, S] = simkit.polar_svd(F)
     E =  0.5*np.sum((mu * vol) * np.sum((F - R)**2, axis=(1, 2))[:, None])
     return E
 

@@ -111,14 +111,7 @@ class ElasticMFEMSim(Sim):
         print ('self Q shape', self.Q.shape, 'self b shape', self.b.shape)
 
         # should also build the solver parameters
-        if isinstance(p.solver_p, NewtonSolverParams):
-            self.solver = NewtonSolver(self.energy, self.gradient, self.hessian, p.solver_p)
-        else:
-            # print error message and terminate programme
-            assert(False, "Error: solver_p of type " + str(type(p.solver_p)) +
-                          " is not a valid instance of NewtonSolverParams. Exiting.")
-        return
-
+        self.solver = NewtonSolver(self.energy, self.gradient, self.hessian, p.solver_p)
 
     def energy(self, p : np.ndarray):
         """

@@ -2,10 +2,7 @@ import igl
 import numpy as np
 import scipy as sp
 
-from simkit import volume
-from simkit import massmatrix
-from simkit import ympr_to_lame
-from simkit import deformation_jacobian
+import simkit
 from simkit.solvers import NewtonSolver, NewtonSolverParams
 from simkit.energies import kinetic_energy, kinetic_gradient, kinetic_hessian
 from simkit.energies import elastic_energy_x, elastic_gradient_dx, elastic_hessian_d2x
@@ -69,7 +66,7 @@ class ElasticFEMSim(Sim):
         dim = X.shape[1]
         self.dim = dim
         self.p = p
-        self.mu, self.lam = ympr_to_lame(self.p.ym, self.p.pr)
+        self.mu, self.lam = simkit.ympr_to_lame(self.p.ym, self.p.pr)
 
         # preprocess some quantities
         self.X = X
@@ -79,14 +76,14 @@ class ElasticFEMSim(Sim):
         self.x_dot = None
         self.x0 = None
 
-        M = massmatrix(self.X, self.T, rho=self.p.rho)
+        M = simkit.massmatrix(self.X, self.T, rho=self.p.rho)
         self.M = M
         Mv = sp.sparse.kron( M, sp.sparse.identity(dim))# sp.sparse.block_diag([M for i in range(dim)])
         self.Mv = Mv
 
         # elastic energy, gradient and hessian
-        self.J = deformation_jacobian(self.X, self.T)
-        self.vol = volume(self.X, self.T)
+        self.J = simkit.deformation_jacobian(self.X, self.T)
+        self.vol = simkit.volume(self.X, self.T)
         
    
 
@@ -109,13 +106,7 @@ class ElasticFEMSim(Sim):
 
 
         # should also build the solver parameters
-        if isinstance(p.solver_p, NewtonSolverParams):
-            self.solver = NewtonSolver(self.energy, self.gradient, self.hessian, p.solver_p)
-        else:
-            # print error message and terminate programme
-            assert(False, "Error: solver_p of type " + str(type(p.solver_p)) +
-                          " is not a valid instance of NewtonSolverParams. Exiting.")
-        return
+        self.solver = NewtonSolver(self.energy, self.gradient, self.hessian, p.solver_p)
 
 
     def energy(self, x : np.ndarray):
