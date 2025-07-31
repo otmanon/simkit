@@ -10,9 +10,6 @@ from ...sims.Sim import *
 from ...solvers import NewtonSolver, NewtonSolverParams
 from ... import ympr_to_lame
 from ... import project_into_subspace
-# from ... import elastic_energy_z, elastic_gradient_dz, elastic_hessian_d2z, ElasticEnergyZPrecomp
-# from ... import quadratic_energy, quadratic_gradient, quadratic_hessian
-# from ... import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
 from ... import volume
 from ... import massmatrix
 from ... import deformation_jacobian, quadratic_hessian, selection_matrix
