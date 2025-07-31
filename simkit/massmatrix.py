@@ -4,6 +4,7 @@ import scipy as sp
 
 from .volume import volume
 from .vertex_to_simplex_adjacency import vertex_to_simplex_adjacency
+
 def massmatrix(X, T, rho : None | float | np.ndarray = 1):
     """
     Lumped diagonal mass matrix for a mesh

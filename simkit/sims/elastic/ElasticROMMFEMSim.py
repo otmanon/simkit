@@ -1,25 +1,15 @@
-from telnetlib import BM
 import warnings
 import igl
 import numpy as np
 import scipy as sp
 import os
 
-from simkit.solvers import NewtonSolver, NewtonSolverParams
-from ... import ympr_to_lame
-from ... import stretch
-from ...stretch_gradient import stretch_gradient_dz
-from ... import volume
-from ... import massmatrix
-from ... import backtracking_line_search
-from ... import deformation_jacobian, project_into_subspace, selection_matrix
-from ... import project_into_subspace
-from ... import symmetric_stretch_map
-from ...energies import elastic_energy_S, elastic_gradient_dS, elastic_hessian_d2S
-from ...energies import quadratic_energy, quadratic_gradient, quadratic_hessian
-from ...energies import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
-from ...sims.Sim import *
-from ...solvers.Solver import Solver, SolverParams
+import simkit
+from simkit.solvers import Solver, SolverParams, NewtonSolver
+from simkit.energies import elastic_energy_S, elastic_gradient_dS, elastic_hessian_d2S
+from simkit.energies import quadratic_energy, quadratic_gradient, quadratic_hessian
+from simkit.energies import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
+from simkit.sims.Sim import *
 
 class SQPMFEMSolverParams(SolverParams):
 
@@ -32,7 +22,7 @@ class SQPMFEMSolverParams(SolverParams):
     
 class SQPMFEMSolver(Solver):
 
-    def __init__(self, energy_func, hess_blocks_func, grad_blocks_func, params : SQPMFEMSolverParams = None):
+    def __init__(self, energy_func, grad_blocks_func, hess_blocks_func, params : SQPMFEMSolverParams = None):
         """
          SQP Solver for the MFEM System from https://www.dgp.toronto.edu/projects/subspace-mfem/ ,  Section 4.
 
@@ -50,10 +40,10 @@ class SQPMFEMSolver(Solver):
         ----------
         energy_func : function
             Energy function to minimize
-        hess_blocks_func : function
-            Function that returns the important blocks of the hessian: Hu, Hz, Gu, Gzi
         grad_blocks_func : function
             Function that returns the blocks of the gradient: fu, fz, fmu
+        hess_blocks_func : function
+            Function that returns the important blocks of the hessian: Hu, Hz, Gu, Gzi
         params : SQPMFEMSolverParams
             Parameters for the solver
 
@@ -101,7 +91,7 @@ class SQPMFEMSolver(Solver):
             dp = np.vstack([du, dz])
             if self.params.do_line_search:
                 energy_func = lambda z: self.energy_func(z)
-                alpha, lx, ex = backtracking_line_search(energy_func, p, g, dp)
+                alpha, lx, ex = simkit.backtracking_line_search(energy_func, p, g, dp)
             else:
                 alpha = 1.0
 
@@ -203,15 +193,8 @@ class ElasticROMMFEMSim(Sim):
         self.na = self.Ci.shape[0]
     
         # should also build the solver parameters
-        if isinstance(p.solver_p, NewtonSolverParams):
-            self.solver = NewtonSolver(self.energy, self.gradient, self.hessian, p.solver_p)
-        elif isinstance(p.solver_p, SQPMFEMSolverParams):
-            self.solver = SQPMFEMSolver(self.energy, self.hessian_blocks, self.gradient_blocks, p.solver_p)
-        else:
-            # print error message and terminate programme
-            assert(False, "Error: solver_p of type " + str(type(p.solver_p)) +
-                          " is not a valid instance of NewtonSolverParams. Exiting.")
-        return
+        # TODO: do we want to support NewtonSolverParams as well?
+        self.solver = SQPMFEMSolver(self.energy, self.gradient_blocks, self.hessian_blocks, p.solver_p)
     
     def read_cache(self, cache_dir):
         kin_pre = np.load(cache_dir + "kin_pre.npy", allow_pickle=True).item()
@@ -241,19 +224,19 @@ class ElasticROMMFEMSim(Sim):
     def initial_precomp(self, X, T, B,  cI, cW, rho, ym, pr, dim):
         
         # kinetic energy precomp
-        M = massmatrix(self.X, self.T, rho=rho)
+        M = simkit.massmatrix(self.X, self.T, rho=rho)
         Mv = sp.sparse.kron( M, sp.sparse.identity(dim))# sp.sparse.block_diag([M for i in range(dim)])
         kin_z_precomp = KineticEnergyZPrecomp(B, Mv)
         
         
         # elastic energy precomp
         if cW is None:
-            vol = volume(X, T)
+            vol = simkit.volume(X, T)
         else:
             vol = cW.reshape(-1, 1)
             
         ## ym, pr to lame parameters
-        mu, lam = ympr_to_lame(ym, pr)
+        mu, lam = simkit.ympr_to_lame(ym, pr)
         if isinstance(mu, float):
             mu = np.ones((T.shape[0], 1)) * mu
         if isinstance(lam, float):
@@ -263,13 +246,13 @@ class ElasticROMMFEMSim(Sim):
         lam = lam[cI]
 
         ## selection matrix from cubature precomp.
-        G = selection_matrix(cI, T.shape[0])
+        G = simkit.selection_matrix(cI, T.shape[0])
         Ge = sp.sparse.kron(G, sp.sparse.identity(dim*dim))
-        J = deformation_jacobian(self.X, self.T)
+        J = simkit.deformation_jacobian(self.X, self.T)
         GJB = Ge @ J @ B
         # elastic_z_precomp = ElasticEnergyZPrecomp(B, Ge, J, self.dim)
         
-        C, Ci = symmetric_stretch_map(cI.shape[0], dim)
+        C, Ci = simkit.symmetric_stretch_map(cI.shape[0], dim)
 
         MB = Mv @ B
         BMB = B.T @ MB
@@ -321,7 +304,7 @@ class ElasticROMMFEMSim(Sim):
 
         kinetic = kinetic_energy_z(z, self.y, self.params.h, self.kin_pre)
 
-        constraint = (np.linalg.norm(stretch(F) - self.C @ a)) * self.params.gamma # merit function
+        constraint = (np.linalg.norm(simkit.stretch(F) - self.C @ a)) * self.params.gamma # merit function
 
         external = 0
         if self.ext_energy_func is not None:
@@ -343,7 +326,7 @@ class ElasticROMMFEMSim(Sim):
         
         g_s = elastic_gradient_dS(A,  self.mu, self.lam, self.vol, self.params.material)
     
-        g_l = (self.Ci @ stretch(F) - a)
+        g_l = (self.Ci @ simkit.stretch(F) - a)
 
         if self.ext_gradient_func is not None:
             g_x += self.ext_gradient_func(z)
@@ -366,7 +349,7 @@ class ElasticROMMFEMSim(Sim):
 
         H_xs = sp.sparse.csc_matrix((z.shape[0], a.shape[0])) 
 
-        H_xl = stretch_gradient_dz(z, self.GJB, Ci=self.Ci, dim=dim) 
+        H_xl = simkit.stretch_gradient_dz(z, self.GJB, Ci=self.Ci, dim=dim) 
 
         H_ss =  elastic_hessian_d2S(A, self.mu, self.lam, self.vol, self.params.material) 
     
@@ -394,7 +377,7 @@ class ElasticROMMFEMSim(Sim):
         if self.ext_hessian_func is not None:
             H_x += self.ext_hessian_func(z)
 
-        G_x = stretch_gradient_dz(z, self.GJB, Ci=self.Ci, dim=dim) 
+        G_x = simkit.stretch_gradient_dz(z, self.GJB, Ci=self.Ci, dim=dim) 
 
         H_s =  elastic_hessian_d2S(A, self.mu, self.lam, self.vol, self.params.material) 
     
@@ -415,7 +398,7 @@ class ElasticROMMFEMSim(Sim):
             g_x += self.ext_gradient_func(z)
 
         g_s =  elastic_gradient_dS(A,  self.mu, self.lam, self.vol, self.params.material)
-        g_mu = (self.Ci @ stretch(F) - a)
+        g_mu = (self.Ci @ simkit.stretch(F) - a)
         return g_x, g_s, g_mu
     
     def step(self, z : np.ndarray, a : np.ndarray,  z_dot : np.ndarray, Q_ext=None, b_ext=None, 
@@ -453,8 +436,8 @@ class ElasticROMMFEMSim(Sim):
     def rest_state(self):
         dim = self.X.shape[1]
         # position dofs init to rest position
-        z = project_into_subspace( self.X.reshape(-1, 1), self.B,
-                                M=sp.sparse.kron(massmatrix(self.X, self.T), sp.sparse.identity(dim)), BMB=self.BMB, BMy=self.BMy)# 
+        z = simkit.project_into_subspace( self.X.reshape(-1, 1), self.B,
+                                M=sp.sparse.kron(simkit.massmatrix(self.X, self.T), sp.sparse.identity(dim)), BMB=self.BMB, BMy=self.BMy)# 
 
         # velocity dofs init to zero 
         z_dot = np.zeros(z.shape)

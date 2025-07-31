@@ -18,6 +18,6 @@ from .contact_springs_plane_energy import contact_springs_plane_energy
 from .contact_springs_plane_gradient import contact_springs_plane_gradient 
 from .contact_springs_plane_hessian import contact_springs_plane_hessian
 
-from. contact_springs_sphere_energy import contact_springs_sphere_energy
+from .contact_springs_sphere_energy import contact_springs_sphere_energy
 from .contact_springs_sphere_gradient import contact_springs_sphere_gradient
 from .contact_springs_sphere_hessian import contact_springs_sphere_hessian
