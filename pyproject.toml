@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simkit"
+version = "0.0.0"
+description = "SimKit: A Simulation Toolkit For Computer Animation"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Otman Benchekroun", email = "otman.benchekroun@mail.utoronto.ca"}
+]
+maintainers = [
+    {name = "Otman Benchekroun", email = "otman.benchekroun@mail.utoronto.ca"}
+]
+keywords = ["simulation", "animation", "physics", "computer-graphics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "scipy",
+    "numpy",
+    "polyscope",
+    "libigl",
+    "matplotlib",
+    "scikit-learn",
+    "opencv-python",
+    "cvxopt",
+]
+
+[project.optional-dependencies]
+cmaes = ["cma"]
+all = ["cma"]
+
+[project.urls]
+Homepage = "https://github.com/otmanon/simkit"
+Repository = "https://github.com/otmanon/simkit"
+Documentation = "https://github.com/otmanon/simkit"
+Issues = "https://github.com/otmanon/simkit/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["simkit*"]
+
+[tool.setuptools.package-data]
+simkit = ["*.py", "**/*.py"] 

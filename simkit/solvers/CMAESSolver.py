@@ -1,4 +1,8 @@
-import cma
+try:
+    import cma
+    CMA_AVAILABLE = True
+except ImportError:
+    CMA_AVAILABLE = False
 
 class CMAESSolverParams():
     def __init__(self, maxiter=10, sigma=1.0, popsize=10, seed=0, num_processes=1):
@@ -7,9 +11,15 @@ class CMAESSolverParams():
         self.seed = seed
         self.sigma = sigma
         self.num_processes = num_processes
+
 class CMAESSolver():
     
     def __init__(self, objective_func,  cmaes_params):
+        if not CMA_AVAILABLE:
+            raise ImportError(
+                "CMAESSolver requires the 'cma' package. "
+                "Install it with: pip install -e .[cmaes] or pip install cma"
+            )
         self.cmaes_params = cmaes_params
         self.objective_func = objective_func
         
