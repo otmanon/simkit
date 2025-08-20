@@ -1,9 +1,4 @@
-# submodules
-from . import sims
-from . import energies
-from . import matplotlib
-from . import polyscope
-from . import filesystem
+
 
 from .backtracking_line_search import backtracking_line_search
 from .ympr_to_lame import ympr_to_lame
@@ -33,3 +28,13 @@ from .stretch_gradient import *
 from .stretch import stretch
 from .subspace_rotation import subspace_rotation
 from .limit_actuation_dirichlet_energy import limit_actuation_dirichlet_energy
+from .psd_project import psd_project
+
+
+# submodules
+from . import sims
+from . import energies
+from . import matplotlib
+from . import polyscope
+from . import filesystem
+from . import solvers

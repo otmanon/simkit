@@ -1,5 +1,7 @@
 import numpy as np
 
+from .arap_energy import arap_energy_F
+
 from ..volume import volume
 from ..deformation_jacobian import deformation_jacobian
 from ..polar_svd import polar_svd
@@ -12,35 +14,47 @@ from ..polar_svd import polar_svd
 #     return e
 
 
-def arap_energy_S(s, mu, vol):
-    assert (s.ndim == 2 or s.ndim == 3)
-    if s.ndim == 3:
-        dim = s.shape[-1]
-        psi = s - np.eye(dim)[None, :, :]
-        E = 0.5 * np.sum((mu * vol) * np.sum(psi**2, axis=(1, 2))[:, None])
-    if s.ndim == 2:
-        k = s.shape[-1]
-        # relationship between k =  dim * (dim + 1)/2
-        if k == 3:
-            dim = 2
-            w = np.array([ 1, 1, 2])[None, :]
-            i = np.array([1, 1, 0])[None, :]
-        elif k == 6:
-            dim = 3
-            w = np.array([ 1, 1, 1, 2, 2, 2])[None, :]
-            i = np.array([1, 1, 1, 0, 0, 0])[None, :]
-        else:
-            raise ValueError("Unknown dimension, k must be 3 (for 2D) or 6 (for 3D)")
+# def arap_energy_S(s, mu, vol):
+#     assert (s.ndim == 2 or s.ndim == 3)
+#     if s.ndim == 3:
+#         dim = s.shape[-1]
+#         psi = s - np.eye(dim)[None, :, :]
+#         E = 0.5 * np.sum((mu * vol) * np.sum(psi**2, axis=(1, 2))[:, None])
+#     if s.ndim == 2:
+#         k = s.shape[-1]
+#         # relationship between k =  dim * (dim + 1)/2
+#         if k == 3:
+#             dim = 2
+#             w = np.array([ 1, 1, 2])[None, :]
+#             i = np.array([1, 1, 0])[None, :]
+#         elif k == 6:
+#             dim = 3
+#             w = np.array([ 1, 1, 1, 2, 2, 2])[None, :]
+#             i = np.array([1, 1, 1, 0, 0, 0])[None, :]
+#         else:
+#             raise ValueError("Unknown dimension, k must be 3 (for 2D) or 6 (for 3D)")
         
-        psi = (s - i)
-        E = 0.5 * np.sum((mu * vol) * np.sum(psi**2 * w, axis=1)[:, None])
-    return E
+#         psi = (s - i)
+#         E = 0.5 * np.sum((mu * vol) * np.sum(psi**2 * w, axis=1)[:, None])
+#     return E
 
-def arap_energy_F(F, mu, vol):
-    [R, S] = polar_svd(F)
-    E =  0.5*np.sum((mu * vol) * np.sum((F - R)**2, axis=(1, 2))[:, None])
-    return E
+def fcr_energy_F(F, mu, lam, vol):
 
+    mu = mu.reshape(-1, 1)
+    vol = vol.reshape(-1, 1)
+    lam = lam.reshape(-1, 1)
+    arap_e = 2 * arap_energy_F(F, mu,  vol);
+
+    dim = F.shape[1]
+    if dim == 2:
+        I3 = np.linalg.det(F).reshape(-1, 1)
+        E_vol = 0.5 * lam * vol * ((I3 - 1.0 )**2);
+    elif dim == 3:
+        I3 = np.linalg.det(F).reshape(-1, 1)
+        E_vol = 0.5 * lam * vol * ((I3  - 1.0 )**2);
+    
+    E = np.sum(E_vol)[None] + arap_e
+    return E
 
 # def arap_energy(V, F, mu=None, U=None):
 #     """

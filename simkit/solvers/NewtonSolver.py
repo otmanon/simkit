@@ -23,11 +23,13 @@ class NewtonSolver(Solver):
         pass
 
 
-    def solve(self, x0):
+    def solve(self, x0, return_info=False):
         
         x = x0.copy()
+        if return_info:
+            info = {'g' : [], 'dx' : [], 'alphas' : [], 'iters' : -1}
+        
         for i in range(self.p.max_iter):
-
             g = self.gradient_func(x)
             H = self.hessian_func(x)
 
@@ -44,9 +46,18 @@ class NewtonSolver(Solver):
                 alpha = 1.0
 
             x += alpha * dx
+
+            if return_info:
+                info['g'].append(g)
+                info['dx'].append(dx)
+                info['alphas'].append(alpha)
+                info['iters'] = i
+
             if np.linalg.norm(g) < 1e-4:
                 break
-
-        return x
+        if return_info:
+            return x, info
+        else:   
+            return x
     
 

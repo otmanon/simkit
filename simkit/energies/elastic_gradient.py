@@ -1,11 +1,23 @@
 
 import numpy as np
+
+from .linear_elasticity_gradient import linear_elasticity_gradient_dF
+from .neo_hookean_gradient import neo_hookean_filtered_gradient_dF, neo_hookean_gradient_dF
+from .fcr_gradient import fcr_gradient_dF
 from .arap_gradient import arap_gradient_dF, arap_gradient_dS
 
 def elastic_gradient_dF(F: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol, material):
-
-    if material == 'arap':
+    
+    if material == 'linear-elasticity':
+        return linear_elasticity_gradient_dF(F, mu, lam, vol) 
+    elif material == 'arap':
         return arap_gradient_dF(F, mu, vol)
+    elif material == 'fcr':
+        return fcr_gradient_dF(F, mu, lam, vol)
+    elif material == 'neo-hookean':
+        return neo_hookean_gradient_dF(F, mu, lam, vol)
+    elif material == 'neo-hookean-filtered':
+        return neo_hookean_filtered_gradient_dF(F, mu, lam, vol)
     else:
         raise ValueError("Unknown material type: "  + material)
     return
@@ -28,10 +40,24 @@ from .elastic_energy import ElasticEnergyZPrecomp
 def elastic_gradient_dz(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol, material, precomp : ElasticEnergyZPrecomp, F=None):
     if F is None:
         dim = precomp.dim
-        F = (precomp.JB @ z).reshape(-1, dim, dim)
+        F = (precomp.JB @ z + precomp.Jx0).reshape(-1, dim, dim)
+        
     g = elastic_gradient_dF(F, mu, lam, vol, material)
 
-    g = precomp.JB.transpose() @ g.reshape(-1, 1)
+    g = precomp.JB.transpose() @ g.reshape(-1, 1) 
+    return g
+
+from .elastic_energy import ElasticEnergyZFilteredPrecomp
+
+def elastic_gradient_filtered_dz(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol, material, precomp : ElasticEnergyZFilteredPrecomp, F=None):
+    if F is None:
+        dim = precomp.dim
+        F = (precomp.JB @ z + precomp.Jx0).reshape(-1, dim, dim)
+        
+    g = elastic_gradient_dF(F, mu, lam, vol, material)
+
+    precomp_g = precomp.BJAMuJx0 + precomp.BJAMuJB @ z
+    g = precomp.JB.transpose() @ g.reshape(-1, 1) + precomp_g
     return g
 
 def elastic_gradient_dS(S : np.ndarray, mu: np.ndarray, lam : np.ndarray, vol, material):

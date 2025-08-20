@@ -52,8 +52,6 @@ def symmetric_stretch_map(t, dim):
     # else:
     #     raise ValueError("dim must be 2 or 3")
     
-
-
     SI = np.arange(dim*dim, dtype=int).reshape(dim, dim)
     SJ = -np.ones((dim, dim), dtype=int)
     SV = np.zeros((dim, dim), dtype=float)
