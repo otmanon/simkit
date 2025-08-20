@@ -10,6 +10,18 @@ from .arap_energy import arap_energy_F, arap_energy_S
 from .arap_gradient import arap_gradient_dF, arap_gradient_dS
 from .arap_hessian import arap_hessian_d2F, arap_hessian_d2S,arap_hessian_d2x, arap_hessian
 
+from .fcr_energy import fcr_energy_F
+from .fcr_gradient import fcr_gradient_dF
+from .fcr_hessian import fcr_hessian_d2F
+
+from .linear_elasticity_energy import linear_elasticity_energy_F
+from .linear_elasticity_gradient import linear_elasticity_gradient_dF
+from .linear_elasticity_hessian import linear_elasticity_hessian_d2F, linear_elasticity_hessian
+
+from .neo_hookean_energy import neo_hookean_energy_F
+from .neo_hookean_gradient import neo_hookean_gradient_dF
+from .neo_hookean_hessian import neo_hookean_hessian_d2F
+
 from .kinetic_energy import kinetic_energy, kinetic_energy_z, KineticEnergyZPrecomp
 from .kinetic_gradient import kinetic_gradient, kinetic_gradient_z
 from .kinetic_hessian import kinetic_hessian, kinetic_hessian_z
@@ -18,6 +30,11 @@ from .contact_springs_plane_energy import contact_springs_plane_energy
 from .contact_springs_plane_gradient import contact_springs_plane_gradient 
 from .contact_springs_plane_hessian import contact_springs_plane_hessian
 
-from .contact_springs_sphere_energy import contact_springs_sphere_energy
+from. contact_springs_sphere_energy import contact_springs_sphere_energy
 from .contact_springs_sphere_gradient import contact_springs_sphere_gradient
 from .contact_springs_sphere_hessian import contact_springs_sphere_hessian
+
+
+from .quadratic_dynamic_friction_energy import quadratic_dynamic_friction_energy
+from .quadratic_dynamic_friction_gradient import quadratic_dynamic_friction_gradient
+from .quadratic_dynamic_friction_hessian import quadratic_dynamic_friction_hessian

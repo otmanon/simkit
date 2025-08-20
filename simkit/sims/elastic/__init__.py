@@ -1,9 +1,9 @@
 
-from .ElasticFEMSim import ElasticFEMSim, ElasticFEMSimParams, ElasticFEMState
+from .ElasticFEMSim import ElasticFEMSim, ElasticFEMSimParams
 
-from .ElasticMFEMSim import ElasticMFEMSim, ElasticMFEMSimParams, ElasticMFEMState
-
-from .ElasticROMFEMSim import ElasticROMFEMSim, ElasticROMFEMSimParams, ElasticROMFEMState
+# from .ElasticMFEMSim import ElasticMFEMSim, ElasticMFEMSimParams
+from .ElasticMFEMSim import *
+from .ElasticROMFEMSim import ElasticROMFEMSim, ElasticROMFEMSimParams
 
 from .ElasticROMMFEMSim import ElasticROMMFEMSim, ElasticROMMFEMSimParams, ElasticROMMFEMState, SQPMFEMSolverParams
 

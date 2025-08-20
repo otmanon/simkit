@@ -1,23 +1,32 @@
 import scipy as sp
 import numpy as np
 
-from simkit import pairwise_displacement
+from ..pairwise_displacement import pairwise_displacement
 
-def contact_springs_plane_energy(X, k, p, n, M=None):
-    """
-    Compute the energy of the contact springs with the ground plane.
+
+
+def contact_springs_plane_energy(X, k, p, n, M=None, return_contact_inds=False):
+    """ 
+    Compute the Hessian of the contact springs with the ground plane.
     
     Parameters
     ----------
-    x : np.ndarray
+    X : np.ndarray
         The positions of the contact points.
-    height : float
-        The height of the ground plane.
     
-    Returns
-    -------
-    float
-        The energy of the contact springs.
+    k : float
+        The stiffness of the contact springs.
+    p : np.ndarray
+        The position of a point on the ground plane.
+    n : np.ndarray
+        The normal vector of the ground plane.
+    M : np.ndarray, optional
+        The mass matrix of the contact points.
+        Defaults to the identity matrix.
+    return_contact_inds : bool, optional
+        Whether to return the indices of the contact points.
+        Defaults to False.
+
     """
 
     if M is None:
@@ -33,6 +42,7 @@ def contact_springs_plane_energy(X, k, p, n, M=None):
     under_ground_plane = (offset < 0).flatten() 
     num_contacts = under_ground_plane.sum()
     dim = X.shape[1]
+    contacting_inds = None
     if num_contacts > 0:
         m = M.diagonal()
         m = m * under_ground_plane
@@ -51,4 +61,7 @@ def contact_springs_plane_energy(X, k, p, n, M=None):
 
 
     energy = energy_density.sum()
-    return energy
+    if return_contact_inds:
+        return energy, contacting_inds
+    else:
+        return energy

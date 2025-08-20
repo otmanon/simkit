@@ -1,9 +1,11 @@
 import scipy as sp
 import numpy as np
 
-from simkit import pairwise_displacement
+from ..pairwise_displacement import pairwise_displacement
 
-def contact_springs_plane_gradient(X, k, p, n, M=None):
+
+
+def contact_springs_plane_gradient(X, k, p, n, M=None, return_contact_inds=False):
     """
     Compute the energy of the contact springs with the ground plane.
     
@@ -34,10 +36,11 @@ def contact_springs_plane_gradient(X, k, p, n, M=None):
 
     # if the contact point is above the ground plane, the energy is 0
     under_ground_plane = (offset < 0).flatten() 
-    
+    contacting_inds = None
     under_ground_plane = (offset < 0).flatten() 
     num_contacts = under_ground_plane.sum()
     dim = X.shape[1]
+    
     if np.sum(under_ground_plane) > 0:
             
         m = M.diagonal()
@@ -62,5 +65,7 @@ def contact_springs_plane_gradient(X, k, p, n, M=None):
         gradient = k* (NMN @ x - NM @ ((V[:, None, :] @ p.T[None, :, :])[:, 0]))
 
     gradient = gradient.reshape(-1, 1)
-
-    return gradient
+    if return_contact_inds:
+        return gradient, contacting_inds
+    else:
+        return gradient

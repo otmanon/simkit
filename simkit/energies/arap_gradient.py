@@ -2,12 +2,16 @@
 import scipy as sp
 import numpy as np
 
-import simkit
+from ..volume import volume
+from ..deformation_jacobian import deformation_jacobian
+from ..polar_svd import polar_svd
+
+
 
 def arap_gradient_dF(F, mu, vol):
     dim = F.shape[-1]
     F = F.reshape(-1, dim, dim)
-    [R, S] = simkit.polar_svd(F)
+    [R, S] = polar_svd(F)
     PK1 = F - R
     d = mu * vol
     PK1 *= d.reshape(-1, 1, 1)

@@ -23,11 +23,16 @@ def stretch_gradient_dF(F):
     return dSdF
 
 
-def stretch_gradient_dx(X, J, Ci=None, dim=None):
+def stretch_gradient_dx(X, J, Ci=None, dim=None, Jq=None):
     if dim is None:
         dim = X.shape[1]
     x = X.reshape(-1, 1)
-    F = (J @ x).reshape(-1, dim, dim)
+    
+    if Jq is None:
+        F = (J @ x).reshape(-1, dim, dim)
+    else:
+        F = (J @ x + Jq).reshape(-1, dim, dim)
+        
     dSdF = stretch_gradient(F).reshape(-1, dim * dim, dim * dim)
     dSdFb = sp.sparse.block_diag(dSdF)
     dsdx = J.T @ dSdFb
@@ -36,8 +41,8 @@ def stretch_gradient_dx(X, J, Ci=None, dim=None):
         dsdx = dsdx @ Ci.T
     return dsdx
 
-def stretch_gradient_dz(z, GJB, dim, Ci=None):
+def stretch_gradient_dz(z, GJB, dim, Ci=None, GJq=None):
     
-    dsdx = stretch_gradient_dx(z, GJB, Ci, dim)
+    dsdx = stretch_gradient_dx(z, GJB, Ci, dim, Jq=GJq)
 
     return dsdx
