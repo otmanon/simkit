@@ -108,7 +108,7 @@ class SQPMFEMSolver(Solver):
                     info['alphas'].append(alpha)
 
             p += alpha * dp
-            if np.linalg.norm(g) < 1e-4:
+            if np.linalg.norm(alpha * dp) < 1e-6:
                 break
 
         if return_info:

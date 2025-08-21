@@ -13,55 +13,60 @@ from config import *
 
 dirname =  os.path.dirname(__file__)
 
-c = crabConfig()
 
-# Load mesh
-[X, T] = load_mesh(c.geometry_path)
-dim = X.shape[1]
-X = normalize_mesh(X)
-
-
-W, E, B, cI, cW, labels = compute_subspace(X, T, c.m, c.k, mu=c.ym)
-
+configs = [crabConfig(), cthuluConfig()]
 num_timesteps = 400
+for c in configs:
+    print(c.name)
 
-mfem_sim = create_mfem_sim(X, T, c.ym, c.rho, 
-                           c.h, c.max_iter, 
-                           c.do_line_search,
-                           B=B, cI=cI, cW=cW)
+    [X, T] = load_mesh(c.geometry_path)
+    dim = X.shape[1]
+    X = normalize_mesh(X)
 
-[Zs, As, info_history] = simulate_drop_mfem(mfem_sim, c.bI,
-                              num_timesteps, return_info=True)
+    
+    W, E, B, cI, cW, labels = compute_subspace(X, T, c.m, c.k, mu=c.ym)
 
-
-
-
-view_animation(X, T, (mfem_sim.B @ Zs), path=dirname + "/results/drop/" + c.name + "_mfem.mp4")
-
-
-
-fem_sim = create_fem_sim(X, T, c.ym, 
-                         c.rho, c.h, 
-                         c.max_iter,
-                         c.do_line_search,
-                         B=B, cI=cI, cW=cW)
-Zs = simulate_drop_fem(fem_sim, c.bI, num_timesteps)
-view_animation(X, T, (fem_sim.B @ Zs), path=dirname + "/results/drop/" + c.name + "_fem.mp4")
-
+    video_path_mfem = dirname + "/results/drop/" + c.name + "_mfem.mp4"
+    mfem_sim = create_mfem_sim(X, T, c.ym, c.rho, 
+                            c.h, c.max_iter, 
+                            c.do_line_search,
+                            B=B, cI=cI, cW=cW)
+    
+    [Zs, As] = simulate_drop_mfem(mfem_sim, c.bI,
+                                num_timesteps, 
+                                return_info=False)
+    view_animation(X, T, (mfem_sim.B @ Zs), 
+                path=video_path_mfem, eye_pos=c.eye_pos,
+                look_at=c.look_at)
 
 
+    video_path_fem = dirname + "/results/drop/" + c.name + "_fem.mp4"
+    fem_sim = create_fem_sim(X, T, c.ym, 
+                            c.rho, c.h, 
+                            c.max_iter,
+                            c.do_line_search,
+                            B=B, cI=cI, cW=cW)
+    
+    Zs = simulate_drop_fem(fem_sim, c.bI, num_timesteps,
+                        return_info=False)
+    view_animation(X, T, (fem_sim.B @ Zs),
+                path=video_path_fem, eye_pos=c.eye_pos,
+                look_at=c.look_at)
 
 
-# # dp_hist = np.array(info_history[0]['dx'])[:, : , 0]
-# # search_directions = np.array(dp_hist)
-# # step_sizes = np.array(info_history[0]['alphas'])
-# # du = np.cumsum(search_directions * step_sizes[:, None], axis=0)
-# view_animation(X, T, (fem_sim.B @ Zs))
 
-# mfem_sim = create_mfem_sim(X, T, ym, rho, h, max_iter, do_line_search)
-# [Zs, As,  info_history] = simulate_mfem(mfem_sim, num_timesteps, return_info=True)
-# step_sizes = np.array(info_history[0]['alphas'])
-# dp_hist = np.array(info_history[0]['dp'])[:, :, 0]
+
+
+    # # dp_hist = np.array(info_history[0]['dx'])[:, : , 0]
+    # # search_directions = np.array(dp_hist)
+    # # step_sizes = np.array(info_history[0]['alphas'])
+    # # du = np.cumsum(search_directions * step_sizes[:, None], axis=0)
+    # view_animation(X, T, (fem_sim.B @ Zs))
+
+    # mfem_sim = create_mfem_sim(X, T, ym, rho, h, max_iter, do_line_search)
+    # [Zs, As,  info_history] = simulate_mfem(mfem_sim, num_timesteps, return_info=True)
+    # step_sizes = np.array(info_history[0]['alphas'])
+    # dp_hist = np.array(info_history[0]['dp'])[:, :, 0]
 # alphas = np.array([info['alphas'] for info in info_history])
 # search_directions = np.array([mfem_sim.z_a_from_p(dp)[0] for dp in dp_hist])
 # du = np.cumsum(search_directions * step_sizes[:, None], axis=0)

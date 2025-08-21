@@ -25,7 +25,7 @@ def normalize_mesh(X):
     X = X / max(X.max(axis=0) - X.min(axis=0))
     return X
 
-def compute_subspace(X, T, m, k, mu=None):
+def compute_subspace(X, T, m, k, mu=None, bI=None):
     # Compute skinning modes and cubature points
     
     if mu is not None:
@@ -40,10 +40,22 @@ def compute_subspace(X, T, m, k, mu=None):
     assert(mu.shape[1] == 1)
     assert(mu.shape[0] == T.shape[0])
     
+    if isinstance(bI, str):
+        bI = np.load(bI).astype(int)
+        
+    if m is None:    
+        W = None
+        E = None
+        B = None
+    else:
+        [W, E,  B] = sk.skinning_eigenmodes(X, T, m, mu=mu, bI=bI)
     
-            
-    [W, E,  B] = sk.skinning_eigenmodes(X, T, m, mu=mu)
-    [cI, cW, labels] = sk.spectral_cubature(X, T, W, k, return_labels=True)
+    if k is None:
+        cI = None
+        cW = None
+        labels = None
+    else:
+        [cI, cW, labels] = sk.spectral_cubature(X, T, W, k, return_labels=True)
     return W, E, B, cI, cW, labels
 
 def create_mfem_sim(X, T, ym, rho, h,
@@ -107,7 +119,6 @@ def simulate_drop_mfem(sim : sk.sims.elastic.ElasticMFEMSim, bI,
     assert(isinstance(bI, np.ndarray))
     assert(bI.dtype == int)
     
-    
     dim = sim.X.shape[1]
     bg =  -sk.gravity_force(sim.X, sim.T, a=ag, rho=1e3).reshape(-1, 1)
 
@@ -142,6 +153,87 @@ def simulate_drop_mfem(sim : sk.sims.elastic.ElasticMFEMSim, bI,
         return Zs, As, info_history
     else:
         return Zs, As
+
+
+def simulate_slingshot_mfem(
+    sim : sk.sims.elastic.ElasticMFEMSim, 
+    bI, pullI, 
+    pull_disp, 
+    pull_timesteps, free_timesteps, 
+    return_info=False, return_history=False):
+    
+    if isinstance(bI, str):
+        bI = np.load(bI).astype(int)
+    if isinstance(pullI, str):
+        pullI = np.load(pullI).astype(int)
+    
+    dim = sim.X.shape[1]
+    assert(isinstance(bI, np.ndarray))
+    assert(isinstance(pullI, np.ndarray))
+    assert(pullI.dtype == int)
+    assert(pull_disp.shape[0] == 1)
+    assert(pull_disp.shape[1] == dim)
+    
+    bg =  -sk.gravity_force(sim.X, sim.T, a=ag, rho=1e3).reshape(-1, 1)
+
+    pull_disp = pull_disp / np.linalg.norm(pull_disp)
+    pull_bc0 = (sim.X - sim.q.reshape(-1, dim))[pullI, :]
+    bc0 = (sim.X - sim.q.reshape(-1, dim))[bI, :]
+
+
+    Q_ext_pin, b_ext_pin = sk.dirichlet_penalty(bI, bc0, sim.X.shape[0],  k_pin)
+    BQB_ext_pin = sim.B.T @ Q_ext_pin @ sim.B
+    Bb_ext_pin = sim.B.T @ b_ext_pin
+    
+    [Q_ext_pull, b_ext_pull, SGamma] = sk.dirichlet_penalty(pullI, pull_bc0, sim.X.shape[0],  k_pin,
+                                                    return_SGamma=True)
+    BSGamma = sim.B.T @ SGamma
+    BQB_ext_pull = sim.B.T @ Q_ext_pull @ sim.B
+    Bb_ext_pull = sim.B.T @ b_ext_pull
+    
+    Bb_gravity = sim.B.T @ bg
+
+    z, s, z_dot = sim.rest_state()
+    Zs = np.zeros((z.shape[0], pull_timesteps + free_timesteps + 1))
+    As = np.zeros((s.shape[0], pull_timesteps + free_timesteps + 1))
+
+        
+    num_timesteps = pull_timesteps + free_timesteps
+    if return_info:
+        info_history = np.empty(num_timesteps, dtype=object)
+    BQB_ext = BQB_ext_pull + BQB_ext_pin 
+    for i in range(num_timesteps):
+        
+        if i < pull_timesteps:
+            pull_bc = (pull_bc0.reshape(-1, dim) + (i / pull_timesteps) * pull_disp).reshape(-1, 1)
+            Bb_ext_pull = BSGamma @pull_bc 
+            Bb_ext = Bb_ext_pull + Bb_ext_pin + Bb_gravity
+        else:
+            pull_bc0 = pull_bc0
+            BQB_ext = BQB_ext_pin
+            Bb_ext = Bb_ext_pin + Bb_gravity
+            
+        if return_info:
+            z_next, s_next, info = sim.step(z, s, z_dot, Q_ext=BQB_ext,
+                                            b_ext=Bb_ext, return_info=return_info)
+            info_history[i] = info
+
+        else:
+            z_next, s_next = sim.step(z, s, z_dot, Q_ext=BQB_ext,
+                                        b_ext=Bb_ext)
+        z_dot = (z_next - z) / sim.sim_params.h
+        z = z_next.copy()
+        s = s_next.copy()
+
+        Zs[:, i+1] = z.flatten()
+        As[:, i+1] = s.flatten()
+
+    if return_info:
+        return Zs, As, info_history
+    else:
+        return Zs, As
+          
+
 
 def simulate_drop_fem(sim : sk.sims.elastic.ElasticFEMSim, bI,
                       num_timesteps, return_info=False):
@@ -185,12 +277,97 @@ def simulate_drop_fem(sim : sk.sims.elastic.ElasticFEMSim, bI,
         return Zs
 
 
+def simulate_slingshot_fem(sim : sk.sims.elastic.ElasticFEMSim, 
+                           bI, pullI, 
+                           pull_disp, pull_timesteps, 
+                           free_timesteps, 
+                           return_info=False):
+        
+    if isinstance(bI, str):
+        bI = np.load(bI).astype(int)
+    if isinstance(pullI, str):
+        pullI = np.load(pullI).astype(int)
+    
+    assert(isinstance(bI, np.ndarray))
+    assert(bI.dtype == int)
 
-def view_animation(X, T, U, path=None, fps=60):
+    dim = sim.X.shape[1]
+    bg = -sk.gravity_force(sim.X, sim.T, a=ag, rho=1e3).reshape(-1, 1)
+
+    Bb_gravity = sim.B.T @ bg
+    
+    pull_disp = pull_disp / np.linalg.norm(pull_disp)
+    pull_bc0 = (sim.X - sim.q.reshape(-1, dim))[pullI, :]
+    
+    # pull_disp_bc0 = pull_bc0.reshape(-1, dim)
+    [Q_pull, b_pull, SGamma] = sk.dirichlet_penalty(pullI, 
+                                                    pull_bc0, sim.X.shape[0], 
+                                                    k_pin, 
+                                                    return_SGamma=True)
+    BSGamma = sim.B.T @ SGamma
+    BQB_pull = sim.B.T @ Q_pull @ sim.B
+    
+    # Pin boundary vertices in place
+    bc0 = (sim.X - sim.q.reshape(-1, dim))[bI, :]
+    [Q_pin, b_pin] = sk.dirichlet_penalty(bI, bc0, sim.X.shape[0], k_pin)
+    BQB_pin = sim.B.T @ Q_pin @ sim.B
+    Bb_pin = sim.B.T @ (b_pin + bg)
+
+    # Initialize simulation state
+    z, z_dot = sim.rest_state()
+    total_timesteps = pull_timesteps + free_timesteps
+    Zs = np.zeros((z.shape[0], total_timesteps + 1))
+    Zs[:, 0] = z.flatten()
+
+    BQB_ext = BQB_pull + BQB_pin 
+    
+    num_timesteps = pull_timesteps + free_timesteps
+    
+    if return_info:
+        info_history = np.empty(num_timesteps, dtype=object)
+    # Pull phase - gradually displace pullI vertices
+    for i in range(num_timesteps):
+        # Linearly interpolate displacement
+        if i < pull_timesteps:
+            pull_bc = (pull_bc0.reshape(-1, dim) + (i / pull_timesteps) * pull_disp).reshape(-1, 1)            
+            Bb_ext_pull = BSGamma @ pull_bc 
+            Bb_ext = Bb_ext_pull + Bb_pin + Bb_gravity
+        else:
+            pull_bc = pull_bc0
+            BQB_ext = BQB_pin
+            Bb_ext = Bb_pin + Bb_gravity
+    
+
+        if return_info:
+            z_next, info = sim.step(z, z_dot, Q_ext=BQB_ext,
+                                    b_ext=Bb_ext, return_info=True)
+            info_history[i] = info
+            
+        else:
+            z_next = sim.step(z, z_dot, Q_ext=BQB_ext, b_ext=Bb_ext)
+            
+            
+        z_dot = (z_next - z) / sim.sim_params.h
+        z = z_next.copy()
+        Zs[:, i+1] = z.flatten()
+
+    if return_info:
+        return Zs, info_history
+    else:
+        return Zs
+
+
+    
+    
+
+def view_animation(X, T, U, path=None, fps=60, eye_pos=None, look_at=None):
     import polyscope as ps
     ps.init()
     ps.set_ground_plane_mode("none")
-    ps.look_at(np.array([0, 0, 3]), np.array([0, 0, 0]))
+    if eye_pos is not None and look_at is not None:
+        ps.look_at(eye_pos, look_at)
+    else:
+        ps.look_at(np.array([0, 0, 3]), np.array([0, 0, 0]))
     dim = X.shape[1]
     
     if path is not None:
