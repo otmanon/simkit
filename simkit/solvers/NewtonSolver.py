@@ -53,7 +53,7 @@ class NewtonSolver(Solver):
                 info['alphas'].append(alpha)
                 info['iters'] = i
 
-            if np.linalg.norm(g) < 1e-4:
+            if np.linalg.norm(alpha * dx) < 1e-6:
                 break
         if return_info:
             return x, info
