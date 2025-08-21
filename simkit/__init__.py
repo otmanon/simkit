@@ -29,7 +29,7 @@ from .stretch import stretch
 from .subspace_rotation import subspace_rotation
 from .limit_actuation_dirichlet_energy import limit_actuation_dirichlet_energy
 from .psd_project import psd_project
-
+from .average_onto_simplex import average_onto_simplex
 
 # submodules
 from . import sims

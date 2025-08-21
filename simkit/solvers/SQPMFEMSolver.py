@@ -70,7 +70,12 @@ class SQPMFEMSolver(Solver):
 
             # form g_u
             g_u = -f_u + G_u @ G_zi @ (f_z - H_z @ G_zi @ f_mu)
-            du = sp.sparse.linalg.spsolve(Q, g_u)
+            
+            if sp.sparse.issparse(Q):
+                du = sp.sparse.linalg.spsolve(Q, g_u)
+            else:
+                du = sp.linalg.solve(Q, g_u)
+                
             if du.ndim == 1:
                 du = du.reshape(-1, 1)
             
