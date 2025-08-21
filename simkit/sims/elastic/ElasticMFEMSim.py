@@ -74,7 +74,7 @@ class SQPMFEMSolver(Solver):
             Q = H_u + K
 
             # form g_u
-            g_u = -f_u + G_u @ G_zi @ (f_z - H_z @ G_zi @ f_mu)
+            g_u =  G_u @ G_zi @ (f_z - H_z @ G_zi @ f_mu) - f_u 
 
             if isinstance(Q, sp.sparse.spmatrix):
                 du =  sp.sparse.linalg.spsolve(Q, g_u).reshape(-1, 1)
@@ -88,8 +88,10 @@ class SQPMFEMSolver(Solver):
             g_z = - (f_mu + G_u.T @ du)
             dz = G_zi @ g_z
 
-            g = np.vstack([f_u, f_z])
-            dp = np.vstack([du, dz])
+            dmu = - G_zi @ (f_z + H_z @ dz)
+
+            g = np.vstack([f_u, f_z, f_mu])
+            dp = np.vstack([du, dz, dmu])
             
             if return_info:
                 info['g'].append(g)
@@ -118,8 +120,10 @@ class SQPMFEMSolver(Solver):
 
 
 class ElasticMFEMSimParams():
-    def __init__(self, rho=1, h=1e-2, ym=1, pr=0,  material='arap', gamma=None,
-                 solver_params : SQPMFEMSolverParams  = None, Q0=None, b0=None, read_cache=False, cache_dir=None):
+    def __init__(self, rho=1, h=1e-2, ym=1, pr=0,  material='arap', 
+                 solver_params : SQPMFEMSolverParams  = None,
+                 Q0=None, b0=None,
+                 read_cache=False, cache_dir=None):
         """
         Parameters of the pinned pendulum simulation
 
@@ -138,11 +142,7 @@ class ElasticMFEMSimParams():
         self.solver_p = solver_params
         self.Q0 = Q0
         self.b0 = b0
-        
-        if gamma is None:
-            gamma = ym
-            
-        self.gamma = gamma
+    
         
         self.read_cache = read_cache
         self.cache_dir = cache_dir
@@ -313,7 +313,7 @@ class ElasticMFEMSim(Sim):
         dim = self.dim
 
         z, a = self.z_a_from_p(p)
-
+        l = p[self.nz + self.na:]
         A = a.reshape(-1, dim * (dim + 1) // 2)
         F = (self.GJB @ z + self.GJq).reshape(-1, dim, dim) # deformation gradient at cubature tets
         
@@ -323,8 +323,16 @@ class ElasticMFEMSim(Sim):
 
         kinetic = kinetic_energy_z(z, self.y, self.sim_params.h, self.kin_pre)
 
-        c = simkit.stretch(F) - self.C @ a
-        constraint = (c.T @ c) * self.sim_params.gamma # merit function
+        # c = simkit.stretch(F) - self.C @ a
+        if self.dim == 2:
+            w = np.kron(self.vol, np.array([[1, 1, 2]]).T)
+        elif self.dim == 3:
+            w = np.kron(self.vol, np.array([[1, 1, 1, 2, 2, 2]]).T)
+ 
+        c = w * (self.Ci @ simkit.stretch(F) - a)
+        constraint = l.T @ c
+        # constraint = w.T @ c
+        # constraint = (c.T @ c) * self.sim_params.gamma # merit function
 
         total = elastic + quad + kinetic + constraint 
         return total
@@ -357,7 +365,6 @@ class ElasticMFEMSim(Sim):
 
         H_xx = kinetic_hessian_z(self.sim_params.h, self.kin_pre)+ \
             quadratic_hessian(self.Q)
-
 
         H_xs = sp.sparse.csc_matrix((z.shape[0], a.shape[0])) 
 
@@ -402,7 +409,7 @@ class ElasticMFEMSim(Sim):
         g_x = kinetic_gradient_z(z, self.y, self.sim_params.h, self.kin_pre) \
                 + quadratic_gradient(z, self.Q, self.b) 
         
-  
+
         g_s =  elastic_gradient_dS(A,  self.mu, self.lam, self.vol, self.sim_params.material)
         g_mu = (self.Ci @ simkit.stretch(F) - a)
         return g_x, g_s, g_mu
@@ -410,8 +417,8 @@ class ElasticMFEMSim(Sim):
     def step(self, z : np.ndarray, a : np.ndarray,  z_dot : np.ndarray, Q_ext=None, b_ext=None,  return_info=False):
     
         self.dynamic_precomp(z, z_dot, Q_ext, b_ext)
-        # l = np.zeros((a.shape[0], 1))
-        p = np.vstack([z, a])#, l])
+        l = np.zeros((a.shape[0], 1))
+        p = np.vstack([z, a, l])
 
         if return_info:
             p, info = self.solver.solve(p, return_info=return_info)

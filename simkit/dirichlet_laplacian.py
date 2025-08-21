@@ -5,6 +5,15 @@ from .deformation_jacobian import deformation_jacobian
 from .volume import volume
 
 def dirichlet_laplacian(X, T, mu=1, vector=False):
+    
+    if mu is not None:
+        if isinstance(mu, int) or isinstance(mu, float):
+            mu = np.ones((T.shape[0], 1)) * mu
+        else:
+            mu = mu.reshape(-1, 1)
+            
+        assert(mu.shape[0] == T.shape[0])
+        
     vol = volume(X, T)
 
     a = vol * mu
