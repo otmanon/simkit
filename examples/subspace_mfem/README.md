@@ -103,5 +103,5 @@ To drag the last added control handle, **hold the space bar** while hovering you
 Right-clicking on another part of the mesh replaces the previous handle with the new one!
 
 <div align="center">
-<img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/interactive/interactive_crab.gif" width="300">
+<img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/interactive/interactive_crab.gif" width="600">
 </div>
