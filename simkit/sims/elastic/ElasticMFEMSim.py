@@ -70,11 +70,11 @@ class SQPMFEMSolver(Solver):
             [f_u, f_z, f_mu] = self.grad_blocks_func(p)
 
             #form K
-            K = G_u @ G_zi @ H_z @ G_zi @ G_u.T 
+            K = G_u @ (G_zi @ (H_z @ (G_zi @ G_u.T))) 
             Q = H_u + K
 
             # form g_u
-            g_u =  G_u @ G_zi @ (f_z - H_z @ G_zi @ f_mu) - f_u 
+            g_u =  G_u @ (G_zi @ (f_z - H_z @ (G_zi @ f_mu))) - f_u 
 
             if isinstance(Q, sp.sparse.spmatrix):
                 du =  sp.sparse.linalg.spsolve(Q, g_u).reshape(-1, 1)
@@ -88,10 +88,10 @@ class SQPMFEMSolver(Solver):
             g_z = - (f_mu + G_u.T @ du)
             dz = G_zi @ g_z
 
-            dmu = - G_zi @ (f_z + H_z @ dz)
+            dmu = - G_zi @ (f_z + (H_z @ dz)) - p[-dz.shape[0]:]
 
             g = np.vstack([f_u, f_z, f_mu])
-            dp = np.vstack([du, dz, dmu])
+            dp = np.vstack([du, dz, dmu ])
             
             if return_info:
                 info['g'].append(g)
@@ -108,6 +108,7 @@ class SQPMFEMSolver(Solver):
                     info['alphas'].append(alpha)
 
             p += alpha * dp
+            
             if np.linalg.norm(alpha * dp) < 1e-6:
                 break
 
@@ -246,7 +247,6 @@ class ElasticMFEMSim(Sim):
         Mv = sp.sparse.kron( M, sp.sparse.identity(dim))# sp.sparse.block_diag([M for i in range(dim)])
         kin_z_precomp = KineticEnergyZPrecomp(B, Mv)
         
-        
         # elastic energy precomp
         if cW is None:
             vol = simkit.volume(X, T)
@@ -312,8 +312,7 @@ class ElasticMFEMSim(Sim):
     def energy(self, p : np.ndarray):
         dim = self.dim
 
-        z, a = self.z_a_from_p(p)
-        l = p[self.nz + self.na:]
+        z, a, l = self.z_a_l_from_p(p)
         A = a.reshape(-1, dim * (dim + 1) // 2)
         F = (self.GJB @ z + self.GJq).reshape(-1, dim, dim) # deformation gradient at cubature tets
         
@@ -323,56 +322,83 @@ class ElasticMFEMSim(Sim):
 
         kinetic = kinetic_energy_z(z, self.y, self.sim_params.h, self.kin_pre)
 
-        # c = simkit.stretch(F) - self.C @ a
+        # # c = simkit.stretch(F) - self.C @ a
         if self.dim == 2:
             w = np.kron(self.vol, np.array([[1, 1, 2]]).T)
         elif self.dim == 3:
             w = np.kron(self.vol, np.array([[1, 1, 1, 2, 2, 2]]).T)
  
-        c = w * (self.Ci @ simkit.stretch(F) - a)
-        constraint = l.T @ c
+        c = (self.Ci @ simkit.stretch(F) - a) #* (self.Ci @ simkit.stretch(F) - a)
+        # constraint = l.T @ c
+        constraint = (c.T @ (w * c)) 
         # constraint = w.T @ c
         # constraint = (c.T @ c) * self.sim_params.gamma # merit function
-
+        # print("constraint ", constraint)
+        # print("elastic ", elastic)
+        # print("quad ", quad)
+        # print("kinetic ", kinetic)
         total = elastic + quad + kinetic + constraint 
+        # print("total ", total)
         return total
 
     def gradient(self, p : np.ndarray):
         dim = self.dim
 
-        z, a = self.z_a_from_p(p)
+        z, a, l = self.z_a_l_from_p(p)
 
         F = (self.GJB @ z + self.GJq).reshape(-1, dim, dim)
         A = a.reshape(-1, dim * (dim + 1) // 2)
        
-        g_x = kinetic_gradient_z(z, self.y, self.sim_params.h, self.kin_pre) \
-                + quadratic_gradient(z, self.Q, self.b) 
-        
-        g_s = elastic_gradient_dS(A,  self.mu, self.lam, self.vol, self.sim_params.material)
-    
-        g_l = (self.Ci @ simkit.stretch(F) - a)
+       
+        dsdz = simkit.stretch_gradient_dz(z, self.GJB, Ci=self.Ci, dim=dim, GJq=self.GJq) 
 
-    
+
+        if self.dim == 2:
+            w = np.kron(self.vol, np.array([[1, 1, 2]]).T)
+        elif self.dim == 3:
+            w = np.kron(self.vol, np.array([[1, 1, 1, 2, 2, 2]]).T)
+ 
+ 
+        g_x = kinetic_gradient_z(z, self.y, self.sim_params.h, self.kin_pre) \
+                + quadratic_gradient(z, self.Q, self.b) \
+                + dsdz @ (w * l)
+        
+        g_s = elastic_gradient_dS(A,  self.mu, self.lam, self.vol, self.sim_params.material) \
+                - (w * l) 
+                
+        g_l = (w * (self.Ci @ simkit.stretch(F) - a))
+
         g = np.vstack([g_x, g_s, g_l])
         return g
 
     def hessian(self, p : np.ndarray):
         dim = self.dim
-        z, a = self.z_a_from_p(p)
+        z, a, l = self.z_a_l_from_p(p)
 
         # F = (self.GJ @ z).reshape(-1, dim, dim)
         A = a.reshape(-1, dim * (dim + 1) // 2)
 
+        if self.dim == 2:
+            w = np.kron(self.vol, np.array([[1, 1, 2]]).T)
+        elif self.dim == 3:
+            w = np.kron(self.vol, np.array([[1, 1, 1, 2, 2, 2]]).T)
+
+        W = sp.sparse.diags(w.flatten())
+ 
         H_xx = kinetic_hessian_z(self.sim_params.h, self.kin_pre)+ \
             quadratic_hessian(self.Q)
 
         H_xs = sp.sparse.csc_matrix((z.shape[0], a.shape[0])) 
 
-        H_xl = simkit.stretch_gradient_dz(z, self.GJB, Ci=self.Ci, dim=dim, GJq=self.GJq) 
-
+        dsdz = simkit.stretch_gradient_dz(z, self.GJB, 
+                                          Ci=self.Ci, dim=dim, 
+                                          GJq=self.GJq) 
+        H_xl = dsdz @ W
+       
         H_ss =  elastic_hessian_d2S(A, self.mu, self.lam, self.vol, self.sim_params.material) 
     
-        H_sl = -sp.sparse.identity(a.shape[0])
+        
+        H_sl = - W #sp.sparse.identity(a.shape[0])
 
         H_ll =  sp.sparse.csc_matrix((a.shape[0], a.shape[0])) 
 
@@ -385,39 +411,66 @@ class ElasticMFEMSim(Sim):
 
     def hessian_blocks(self, p : np.ndarray):
         dim = self.dim
-        z, a = self.z_a_from_p(p)
+        z, a, l = self.z_a_l_from_p(p)
         
+        
+        if self.dim == 2:
+            w = np.kron(self.vol, np.array([[1, 1, 2]]).T)
+        elif self.dim == 3:
+            w = np.kron(self.vol, np.array([[1, 1, 1, 2, 2, 2]]).T)
+ 
+        W = sp.sparse.diags(w.flatten())
+ 
         A = a.reshape(-1, dim * (dim + 1) // 2)
 
         H_x = kinetic_hessian_z(self.sim_params.h, self.kin_pre)+ \
             quadratic_hessian(self.Q)
         
-        G_x = simkit.stretch_gradient_dz(z, self.GJB, Ci=self.Ci, dim=dim, GJq=self.GJq) 
+        
+        dsdz = simkit.stretch_gradient_dz(z, self.GJB, 
+                                          Ci=self.Ci, dim=dim, 
+                                          GJq=self.GJq) 
+        G_x = dsdz @ W
+        # G_x = simkit.stretch_gradient_dz(z, self.GJB, Ci=self.Ci, dim=dim, GJq=self.GJq) 
 
         H_s =  elastic_hessian_d2S(A, self.mu, self.lam, self.vol, self.sim_params.material) 
     
-        G_s = -sp.sparse.identity(a.shape[0])
-        G_si = G_s 
+        G_s = -W#sp.sparse.identity(a.shape[0])
+        G_si = sp.sparse.diags(1.0/G_s.diagonal())
 
         return H_x, H_s, G_x, G_si
     
     def gradient_blocks(self, p : np.ndarray):
         dim = self.dim
-        z, a = self.z_a_from_p(p)
+        z, a, l = self.z_a_l_from_p(p)
         F = (self.GJB @ z + self.GJq).reshape(-1, dim, dim)
         A = a.reshape(-1, dim * (dim + 1) // 2)
+        
+        
+        dsdz = simkit.stretch_gradient_dz(z, self.GJB, Ci=self.Ci, dim=dim, GJq=self.GJq) 
+
+
+        if self.dim == 2:
+            w = np.kron(self.vol, np.array([[1, 1, 2]]).T)
+        elif self.dim == 3:
+            w = np.kron(self.vol, np.array([[1, 1, 1, 2, 2, 2]]).T)
+ 
+ 
+ 
         g_x = kinetic_gradient_z(z, self.y, self.sim_params.h, self.kin_pre) \
-                + quadratic_gradient(z, self.Q, self.b) 
+                + quadratic_gradient(z, self.Q, self.b) \
+                + dsdz @ (w * l)
         
 
-        g_s =  elastic_gradient_dS(A,  self.mu, self.lam, self.vol, self.sim_params.material)
-        g_mu = (self.Ci @ simkit.stretch(F) - a)
+        g_s =  elastic_gradient_dS(A,  self.mu, self.lam, self.vol, self.sim_params.material)\
+                - (w * l)
+        
+        g_mu = (w * (self.Ci @ simkit.stretch(F) - a))
         return g_x, g_s, g_mu
     
-    def step(self, z : np.ndarray, a : np.ndarray,  z_dot : np.ndarray, Q_ext=None, b_ext=None,  return_info=False):
+    def step(self, z : np.ndarray, a : np.ndarray, l : np.ndarray, z_dot : np.ndarray, Q_ext=None, b_ext=None,  return_info=False):
     
         self.dynamic_precomp(z, z_dot, Q_ext, b_ext)
-        l = np.zeros((a.shape[0], 1))
         p = np.vstack([z, a, l])
 
         if return_info:
@@ -425,24 +478,25 @@ class ElasticMFEMSim(Sim):
         else:
             p = self.solver.solve(p)
         
-        z, a = self.z_a_from_p(p)
+        z, a, l = self.z_a_l_from_p(p)
 
 
         if return_info:
-            return z, a, info
+            return z, a, l, info
         else:
-            return z, a
+            return z, a, l
         
         return z, a, info
 
 
-    def z_a_from_p( self, p):
+    def z_a_l_from_p( self, p):
         z = p[:self.nz]
         a = p[self.nz:self.nz + self.na]
-        return z, a
+        l = p[self.nz + self.na:]
+        return z, a, l
     
-    def p_from_z_c(self, z, a):
-        return np.concatenate([z, a])
+    # def p_from_z_c(self, z, a):
+    #     return np.concatenate([z, a])
     
 
     def rest_state(self):
@@ -460,5 +514,6 @@ class ElasticMFEMSim(Sim):
         s[:, dim:] = 0
         s = s.reshape(-1, 1)
 
-        return z, s, z_dot
+        la = np.zeros(s.shape)
+        return z, s, la, z_dot
 

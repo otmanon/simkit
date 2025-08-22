@@ -19,7 +19,9 @@ def skinning_eigenmodes(X, T, k, mu=1, bI=None, Aeq=None):
         L = L[Ii, :][:, Ii]
         M = sp.sparse.diags(M.diagonal()[Ii,], 0)
         
-        [E, Wi] = sp.sparse.linalg.eigs(L, k=k, M=M, which='LM', sigma=0)
+        [E, Wi] = eigs(L, k, M=M)
+        
+        # [E, Wi] = sp.sparse.linalg.eigs(L, k=k, M=M, which='LM', sigma=0)
         Wi = Wi.real
         E = E.real
         W = np.zeros((X.shape[0], k))
@@ -36,8 +38,9 @@ def skinning_eigenmodes(X, T, k, mu=1, bI=None, Aeq=None):
         W = W.real
         W = W[:X.shape[0], :]
     else:
-        [E, W] = sp.sparse.linalg.eigs(L, k=k, M=M, which='LM', sigma=0)
+        # [E, W] = sp.sparse.linalg.eigs(L, k=k, M=M, which='LM', sigma=0)
         
+        [E, W] = eigs(L, k, M=M)
 
         E = E.real
         W = W.real
