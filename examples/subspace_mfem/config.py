@@ -61,9 +61,9 @@ class crabConfig():
         self.ym = sk.filesystem.get_data_directory() + "/3d/crab/mu.npy"
         self.h = 1e-2
         self.rho = 1e3
-        self.m = 16
-        self.k = 400
-        self.max_iter = 3
+        self.m = 12
+        self.k = 300
+        self.max_iter = 2
         self.do_line_search = True
         self.name = "crab"
         self.geometry_path = sk.filesystem.get_data_directory() + "/3d/crab/crab.mesh"
