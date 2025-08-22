@@ -39,12 +39,35 @@ A simulation of a heterogeneous material elastodynamic simulation will then be r
 It will output two videos in `\results\drop\` :
 
 #### FEM
-<img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_fem.gif" width="300">
+
+<div align="center">
+  <img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_fem.gif" width="300">
+</div>
 
 Notice how the crab loses a lot of kinetic energy as it falls? This is because the standard Newton solver used to solve the elastodynamic optimization takes forever to converge, so we have to cut it short! It's the cutting it short that induces this loss of angular momentum.
 
 #### MFEM
+<div align="center">
+  <img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_mfem.gif" width="300">
+</div>
+
+In contrast, our Mixed discretization allows the Newton solver to be truncates to few iterations, while much better preserving the angular momentum!
+
+
+### Slingshot Test
+
+Run 
+
+<div align="center">
+<img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_fem.gif" width="300">
+</div>
+
+Notice how the crab loses a lot of kinetic energy as it falls? This is because the standard Newton solver used to solve the elastodynamic optimization takes forever to converge, so we have to cut it short! It's the cutting it short that induces this loss of angular momentum.
+
+#### MFEM
+<div align="center">
 <img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_mfem.gif" width="300">
+</div>
 
 In contrast, our Mixed discretization allows the Newton solver to be truncates to few iterations, while much better preserving the angular momentum!
 
@@ -61,12 +84,16 @@ These simulations pin a few parts of the mesh, and pull on another part of the m
 
 
 #### FEM
+<div align="center">
 <img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/slingshot/gatorman_fem.gif" width="300">
+</div>
 
 Notice the stiff sword resists rotating.
 
 #### MFEM
+<div align="center">
 <img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/slingshot/gatorman_mfem.gif" width="300">
+</div>
 
 With our mixed formulation, the sword rotates more freely and dynamically!
 
@@ -83,4 +110,6 @@ To add a control handle, **right-click** click anywhere on the mesh.
 
 To drag the last added control handle, **hold the space bar** while hovering your mouse where you want the control handle to move.
 
+<div align="center">
 <img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/interactive/interactive_crab.gif" width="300">
+</div>
