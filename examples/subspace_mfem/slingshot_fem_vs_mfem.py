@@ -195,7 +195,7 @@ for c in configs:
                             c.do_line_search,
                             B=B, cI=cI, cW=cW)
     
-    [Zs, As] = simulate_slingshot_mfem(mfem_sim, c.bI, 
+    [Zs, As, Las] = simulate_slingshot_mfem(mfem_sim, c.bI, 
                                        c.pullI,
                                        c.pull_disp,
                                        pull_timesteps,
