@@ -9,9 +9,8 @@ First install [simkit](https://github.com/otmanon/simkit.git) a python library c
 ```
 git clone --recursive https://github.com/otmanon/simkit.git
 
-cd simkit/examples/subspace_mfem/
+cd simkit/
 ```
-
 
 It's recommended to use a python environment manager like conda! The code is tested in python 3.10
 
@@ -20,10 +19,16 @@ conda create -n subspace_mfem python=3.10
 conda activate subspace_mfem
 ```
 
-Be sure to install all the dependencies for simkit!
+Finally install simkit:
 
 ```
-pip install numpy scipy libigl polyscope scikit-learn matplotlib cvxopt opencv-python
+pip install . 
+```
+
+Navigate to the  `\examples\subspace_mfem\` directory.
+
+```
+cd \examples\subspace_mfem\
 ```
 
 # Demos
