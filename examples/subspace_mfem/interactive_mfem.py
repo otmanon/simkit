@@ -62,18 +62,19 @@ def interactive_click_demo(sim, bI):
         # if right mouse button is clicked, place a point on the mesh.
         if psim.IsMouseClicked(1):     
             pos = ps.screen_coords_to_world_position(win_pos).reshape(-1, 3)    # use polyscope to find intersection into scene
-            d = np.linalg.norm(pos - camera_pos)    # remember depth for future dragging
-            pc = ps.register_point_cloud("clicked", pos, radius=0.01)   #vis
-            clickedInd = np.array([np.argmin(sk.pairwise_distance(Y, pos[:, :dim]))])
-            
-            # update Bb_ext
-            P0 = pos[:, :dim].copy()
-            y = P0 - (sim.X)[clickedInd, :] 
-            [Q_handle, b_handle, SGamma] = sk.dirichlet_penalty(clickedInd, y, sim.X.shape[0], 
-                                                                k_pin, return_SGamma=True)
-            BQB_ext = sim.B.T @ Q_handle @ sim.B + BQB_pin 
-            BSGamma = -sim.B.T @ SGamma 
-            Bb_ext = BSGamma @ y.reshape(-1, 1) + Bb_pin + Bb_gravity
+            if not np.isinf(pos).any():
+                d = np.linalg.norm(pos - camera_pos)    # remember depth for future dragging
+                pc = ps.register_point_cloud("clicked", pos, radius=0.01)   #vis
+                clickedInd = np.array([np.argmin(sk.pairwise_distance(Y, pos[:, :dim]))])
+                
+                # update Bb_ext
+                P0 = pos[:, :dim].copy()
+                y = P0 - (sim.X)[clickedInd, :] 
+                [Q_handle, b_handle, SGamma] = sk.dirichlet_penalty(clickedInd, y, sim.X.shape[0], 
+                                                                    k_pin, return_SGamma=True)
+                BQB_ext = sim.B.T @ Q_handle @ sim.B + BQB_pin 
+                BSGamma = -sim.B.T @ SGamma 
+                Bb_ext = BSGamma @ y.reshape(-1, 1) + Bb_pin + Bb_gravity
             
 
         # if point being moved exists, and space is being held down, move the point by dragging mouse around
@@ -110,7 +111,7 @@ if __name__ == "__main__":
     dirname =  os.path.dirname(__file__)
 
 
-    configs = [cthuluConfig()]
+    configs = [crabConfig()]
     for c in configs:
         print(c.name)
         [X, T] = load_mesh(c.geometry_path)
