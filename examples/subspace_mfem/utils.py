@@ -42,27 +42,33 @@ def compute_subspace(X, T, m, k, mu=None, bI=None):
     
     if isinstance(bI, str):
         bI = np.load(bI).astype(int)
-        
+    
+    print("Copmuting skinning eigenmodes subspace ....")
     if m is None:    
         W = None
         E = None
         B = None
     else:
         [W, E,  B] = sk.skinning_eigenmodes(X, T, m, mu=mu, bI=bI)
+    print("Done!")
     
+    print("Computing spectral cubature points ....")
     if k is None:
         cI = None
         cW = None
         labels = None
     else:
         [cI, cW, labels] = sk.spectral_cubature(X, T, W, k, return_labels=True)
+    print("Done!")
+    
     return W, E, B, cI, cW, labels
 
 def create_mfem_sim(X, T, ym, rho, h,
                     max_iter, do_line_search,
                     B=None, cI=None, cW=None):
     
-        
+    
+    print("Initializing MFEM simulation ....")
     if ym is not None:
         if isinstance(ym, str):
             ym = np.load(ym).reshape(-1, 1)
@@ -80,11 +86,14 @@ def create_mfem_sim(X, T, ym, rho, h,
     sim_params.solver_p.do_line_search = do_line_search
     q = X.reshape(-1, 1) # rest geometry.
     sim = sk.sims.elastic.ElasticMFEMSim(X, T, sim_params=sim_params, q=q, B=B, cI=cI, cW=cW)
+    print("Done!")
+    
     return sim
 
 
 def create_fem_sim(X, T, ym, rho, h,  max_iter, do_line_search, B=None, cI=None, cW=None):
     
+    print("Initializing FEM simulation ....")
     if ym is not None:
         if isinstance(ym, str):
             ym = np.load(ym).reshape(-1, 1)
@@ -106,6 +115,7 @@ def create_fem_sim(X, T, ym, rho, h,  max_iter, do_line_search, B=None, cI=None,
     sim_params.solver_p.do_line_search = do_line_search
     q = X.reshape(-1, 1) # rest geometry.
     sim = sk.sims.elastic.ElasticFEMSim(X, T, sim_params=sim_params, q=q, B=B, cI=cI, cW=cW)
+    print("Done!")
     return sim
 
 
@@ -141,6 +151,7 @@ def view_animation(X, T, U, path=None, fps=60, eye_pos=None, look_at=None):
         if path is not None:
             ps.screenshot(dirstem + "/" + str(i + 1).zfill(4) + ".png", transparent_bg=True)
 
+    
     if path is not None:
         sk.filesystem.video_from_image_dir(dirstem, path, fps=fps)
         sk.filesystem.mp4_to_gif(path, path.replace(".mp4", ".gif"))

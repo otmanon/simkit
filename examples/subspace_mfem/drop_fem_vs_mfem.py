@@ -105,7 +105,7 @@ if __name__ == "__main__":
     dirname =  os.path.dirname(__file__)
 
 
-    configs = [crabConfig(), cthuluConfig()]
+    configs = [crabConfig()]
     num_timesteps = 400
     for c in configs:
         print(c.name)
