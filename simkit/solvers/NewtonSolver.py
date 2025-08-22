@@ -45,6 +45,7 @@ class NewtonSolver(Solver):
             else:
                 alpha = 1.0
 
+
             x += alpha * dx
 
             if return_info:
@@ -55,6 +56,7 @@ class NewtonSolver(Solver):
 
             if np.linalg.norm(alpha * dx) < 1e-6:
                 break
+            
         if return_info:
             return x, info
         else:   

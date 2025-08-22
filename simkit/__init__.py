@@ -15,6 +15,7 @@ from .grad import grad
 from .volume import volume
 from .project_into_subspace import project_into_subspace
 from .pairwise_displacement import pairwise_displacement
+from .pairwise_distance import pairwise_distance
 from .farthest_point_sampling import farthest_point_sampling
 from .volume import volume
 from .deformation_jacobian import deformation_jacobian
