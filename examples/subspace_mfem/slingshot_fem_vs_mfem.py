@@ -46,10 +46,9 @@ def simulate_slingshot_mfem(
     BSGamma = sim.B.T @ SGamma
     BQB_ext_pull = sim.B.T @ Q_ext_pull @ sim.B
     Bb_ext_pull = sim.B.T @ b_ext_pull
-    
     Bb_gravity = sim.B.T @ bg
 
-    z, s, z_dot = sim.rest_state()
+    z, s, la, z_dot = sim.rest_state()
     Zs = np.zeros((z.shape[0], pull_timesteps + free_timesteps + 1))
     As = np.zeros((s.shape[0], pull_timesteps + free_timesteps + 1))
     las = np.zeros((la.shape[0], pull_timesteps + free_timesteps + 1))
@@ -84,11 +83,12 @@ def simulate_slingshot_mfem(
 
         Zs[:, i+1] = z.flatten()
         As[:, i+1] = s.flatten()
+        las[:, i+1] = la.flatten()
 
     if return_info:
-        return Zs, As, info_history
+        return Zs, As, las, info_history
     else:
-        return Zs, As
+        return Zs, As, las
           
 
 def simulate_slingshot_fem(sim : sk.sims.elastic.ElasticFEMSim, 
