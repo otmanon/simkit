@@ -77,7 +77,7 @@ def interactive_click_demo(sim, bI):
             
 
         # if point being moved exists, and space is being held down, move the point by dragging mouse around
-        if pc is not None and psim.IsKeyDown(psim.GetKeyIndex(psim.ImGuiKey_Space)): 
+        if pc is not None and psim.IsKeyDown(psim.ImGuiKey_Space): # 32 is the ASCII code for spacebar
             ray = ps.screen_coords_to_world_ray(win_pos)   # shoot ray from camera into scene
             P = (camera_pos + d * ray).reshape(-1, 3)[:, :dim   ]   # get final position
             pc.update_point_positions(P)
@@ -86,7 +86,6 @@ def interactive_click_demo(sim, bI):
             y =  P0 - sim.X[clickedInd, :]
             Bb_handle = BSGamma @ y.reshape(-1, 1)
             Bb_ext = Bb_handle + Bb_pin + Bb_gravity
-            
                     
 
         if isinstance(sim, sk.sims.elastic.ElasticMFEMSim):
@@ -111,7 +110,7 @@ if __name__ == "__main__":
     dirname =  os.path.dirname(__file__)
 
 
-    configs = [crabConfig()]
+    configs = [cthuluConfig()]
     for c in configs:
         print(c.name)
         [X, T] = load_mesh(c.geometry_path)

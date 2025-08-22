@@ -173,8 +173,7 @@ def simulate_slingshot_fem(sim : sk.sims.elastic.ElasticFEMSim,
 
 dirname =  os.path.dirname(__file__)
 
-
-configs = [ gatormanConfig(), TConfig()]
+configs = [ gatormanConfig()]
 pull_timesteps = 100
 free_timesteps = 300
 
