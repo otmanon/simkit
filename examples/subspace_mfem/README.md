@@ -39,8 +39,9 @@ A simulation of a heterogeneous material elastodynamic simulation will then be r
 It will output two videos in `\results\drop\` :
 
 #### FEM
-
- ![Demo](https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_fem.gif)
+<img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_fem.gif" width="300">
+<!-- 
+ ![Demo](https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_fem.gif) -->
 
 #### MFEM
 
