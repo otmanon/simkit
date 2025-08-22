@@ -87,11 +87,15 @@ Run
 python interactive_mfem.py
 ```
 
-The above runs an interactive simulation, where a user can interactive with a heterogeneous elastic simulation in real-time via control handles.
+An important feature of our method is its use of a subspace to carry out simulation. This means that performing the numerical simulation is extremely fast.
+
+To leverage this, the above code runs an interactive simulation, where a user can interactive with a heterogeneous elastic simulation in real-time via control handles.
 
 To add a control handle, **right-click** click anywhere on the mesh.
 
 To drag the last added control handle, **hold the space bar** while hovering your mouse where you want the control handle to move.
+
+Right-clicking on another part of the mesh replaces the previous handle with the new one!
 
 <div align="center">
 <img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/interactive/interactive_crab.gif" width="300">
