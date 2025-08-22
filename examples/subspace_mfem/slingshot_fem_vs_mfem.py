@@ -52,7 +52,7 @@ def simulate_slingshot_mfem(
     z, s, z_dot = sim.rest_state()
     Zs = np.zeros((z.shape[0], pull_timesteps + free_timesteps + 1))
     As = np.zeros((s.shape[0], pull_timesteps + free_timesteps + 1))
-
+    las = np.zeros((la.shape[0], pull_timesteps + free_timesteps + 1))
         
     num_timesteps = pull_timesteps + free_timesteps
     if return_info:
@@ -70,16 +70,17 @@ def simulate_slingshot_mfem(
             Bb_ext = Bb_ext_pin + Bb_gravity
             
         if return_info:
-            z_next, s_next, info = sim.step(z, s, z_dot, Q_ext=BQB_ext,
+            z_next, s_next, la_next, info = sim.step(z, s, la, z_dot, Q_ext=BQB_ext,
                                             b_ext=Bb_ext, return_info=return_info)
             info_history[i] = info
 
         else:
-            z_next, s_next = sim.step(z, s, z_dot, Q_ext=BQB_ext,
+            z_next, s_next , la_next= sim.step(z, s, la,  z_dot, Q_ext=BQB_ext,
                                         b_ext=Bb_ext)
         z_dot = (z_next - z) / sim.sim_params.h
         z = z_next.copy()
         s = s_next.copy()
+        la = la_next.copy()
 
         Zs[:, i+1] = z.flatten()
         As[:, i+1] = s.flatten()
