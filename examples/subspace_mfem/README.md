@@ -54,23 +54,6 @@ Notice how the crab loses a lot of kinetic energy as it falls? This is because t
 In contrast, our Mixed discretization allows the Newton solver to be truncates to few iterations, while much better preserving the angular momentum!
 
 
-### Slingshot Test
-
-Run 
-
-<div align="center">
-<img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_fem.gif" width="300">
-</div>
-
-Notice how the crab loses a lot of kinetic energy as it falls? This is because the standard Newton solver used to solve the elastodynamic optimization takes forever to converge, so we have to cut it short! It's the cutting it short that induces this loss of angular momentum.
-
-#### MFEM
-<div align="center">
-<img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_mfem.gif" width="300">
-</div>
-
-In contrast, our Mixed discretization allows the Newton solver to be truncates to few iterations, while much better preserving the angular momentum!
-
 
 ### Slingshot Test
 
