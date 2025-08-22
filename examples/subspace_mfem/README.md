@@ -39,7 +39,9 @@ A simulation of a heterogeneous material elastodynamic simulation will then be r
 It will output two videos in `\results\drop\` :
 
 #### FEM
- <iframe width="560" height="315" src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_fem.mp4" frameborder="0" allowfullscreen></iframe>
+
+ ![Demo](https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_fem.gif)
+
 #### MFEM
 
 ### Slingshot Test
