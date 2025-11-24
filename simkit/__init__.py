@@ -31,6 +31,14 @@ from .subspace_rotation import subspace_rotation
 from .limit_actuation_dirichlet_energy import limit_actuation_dirichlet_energy
 from .psd_project import psd_project
 from .average_onto_simplex import average_onto_simplex
+from .edge_lengths import edge_lengths
+
+from .edge_displacement_jacobian import edge_displacement_jacobian
+from .edge_length_jacobian import edge_length_jacobian
+
+from .hinge_angles import hinge_angles
+from .hinge_hessian import *
+from .hinge_jacobian import *
 
 # submodules
 from . import sims
