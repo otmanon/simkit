@@ -4,7 +4,6 @@ import numpy as np
 from .pairwise_distance import pairwise_distance
 
 
-
 def create_selection(name, X, t):
     if name == "center":
         pinned, pinnedI = center_indices(X, t)
