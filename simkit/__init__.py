@@ -39,7 +39,10 @@ from .edge_length_jacobian import edge_length_jacobian
 from .hinge_angles import hinge_angles
 from .hinge_hessian import *
 from .hinge_jacobian import *
+from .joint_lengths import joint_lengths
 
+from .common_selections import *
+from .shape_outlines import *
 # submodules
 from . import sims
 from . import energies

@@ -13,22 +13,17 @@ def emu_energy_F(F, d, a, vol):
     energy = np.sum(vol.reshape(-1, 1,1) * a.reshape(-1, 1, 1) * dFFd) * 0.5
     return energy
 
-
-
-
 def emu_gradient_dF(F, d, a, vol):
     de = d[:, :, None].copy()
     ddT =  de @ de.transpose(0, 2, 1)
     P =  F @  ddT * (vol.reshape(-1, 1, 1) * a.reshape(-1, 1, 1))
     return P
 
-
 def emu_gradient_dx(X, d, a, vol, J):
     F = (J @ X.reshape(-1, 1)).reshape(-1, 2, 2)
     P = emu_gradient_dF(F, d, a, vol)
     g = J.T @ P.reshape(-1, 1)
     return g
-
 
 
 def emu_force_matrix(X, d, vol, J):
@@ -40,8 +35,6 @@ def emu_force_matrix(X, d, vol, J):
     K = N @ P_mat
     return K
 
-
-
 def emu_hessian_d2F(F, d, a, vol):
 
     dim = F.shape[-1]
@@ -52,7 +45,6 @@ def emu_hessian_d2F(F, d, a, vol):
 
     Q2 = Q * vol.reshape(-1, 1, 1) * a.reshape(-1, 1, 1)
     return Q2
-
 
 def emu_hessian_d2x(X, d, a, vol, J):
     dim = F.shape[-1]
