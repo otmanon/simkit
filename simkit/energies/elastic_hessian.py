@@ -1,14 +1,14 @@
 import numpy as np
 import scipy as sp
 
-from .fcr_hessian import fcr_hessian_d2F
-from .linear_elasticity_hessian import linear_elasticity_hessian_d2F
-from .neo_hookean_hessian import neo_hookean_hessian_d2F, neo_hookean_filtered_hessian_d2F
-from .arap_hessian import arap_hessian_d2F, arap_hessian_d2S
+from .fcr import fcr_hessian_d2F
+from .linear_elasticity import linear_elasticity_hessian_d2F
+from .neo_hookean import neo_hookean_hessian_d2F
+from .arap import arap_hessian_d2F, arap_hessian_d2S
 from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
-from .linear_elasticity_hessian import linear_elasticity_hessian_d2x
-from .arap_hessian import arap_hessian_d2x
+from .linear_elasticity import linear_elasticity_hessian_d2x
+from .arap import arap_hessian_d2x
 # from .fcr_hessian import fcr_hessian_d2x
 
 
@@ -24,8 +24,6 @@ def elastic_hessian_d2F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol : np
         Q =  fcr_hessian_d2F(F, mu, lam, vol)
     elif material == 'neo-hookean':
         Q =  neo_hookean_hessian_d2F(F, mu, lam, vol)
-    elif material == 'neo-hookean-filtered':
-        Q =  neo_hookean_filtered_hessian_d2F(F, mu, lam, vol)
     else:
         raise ValueError("Unknown material type: " + material)
     
