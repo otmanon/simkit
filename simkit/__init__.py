@@ -32,11 +32,11 @@ from .limit_actuation_dirichlet_energy import limit_actuation_dirichlet_energy
 from .psd_project import psd_project
 from .average_onto_simplex import average_onto_simplex
 from .edge_lengths import edge_lengths
-
+from .gradient_cfd import gradient_cfd
 from .edge_displacement_jacobian import edge_displacement_jacobian
 from .edge_length_jacobian import edge_length_jacobian
-
-from .hinge_angles import hinge_angles
+from .random_edges import *
+from .hinge_angles import *
 from .hinge_hessian import *
 from .hinge_jacobian import *
 from .joint_lengths import joint_lengths
