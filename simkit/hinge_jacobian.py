@@ -9,7 +9,7 @@ def hinge_jacobian_compact(X, H):
     
         
     # Numerical regularization parameter
-    epsilon = 0
+    epsilon = 1e-6
     
     # Precompute common denominators with regularization
     dist_AB_sq = np.maximum(Ax**2 - 2*Ax*Bx + Ay**2 - 2*Ay*By + Bx**2 + By**2, epsilon)
