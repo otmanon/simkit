@@ -1,11 +1,9 @@
 import numpy as np
 
-from .fcr_energy import fcr_energy_F
-from .linear_elasticity_energy import linear_elasticity_energy_F
-from .arap_energy import arap_energy_F, arap_energy_S
-from .neo_hookean_energy import neo_hookean_energy_F, neo_hookean_filtered_energy_F
-
-
+from .fcr import fcr_energy_F
+from .linear_elasticity import linear_elasticity_energy_F
+from .arap import arap_energy_F, arap_energy_S
+from .neo_hookean import neo_hookean_energy_F
 def elastic_energy(F: np.ndarray,  mu: np.ndarray, lam: np.ndarray, vol : np.ndarray, material):
 
     if material == 'linear-elasticity':
@@ -16,8 +14,6 @@ def elastic_energy(F: np.ndarray,  mu: np.ndarray, lam: np.ndarray, vol : np.nda
         e = fcr_energy_F(F, mu, lam, vol)
     elif material == 'neo-hookean':
         e = neo_hookean_energy_F(F, mu, lam, vol)
-    elif material == 'neo-hookean-filtered':
-        e = neo_hookean_filtered_energy_F(F, mu, lam, vol)
     else:
         raise ValueError("Unknown material type: " + material)
     return e
