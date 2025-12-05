@@ -1,6 +1,5 @@
 import numpy as np
 
-from .arap_energy import arap_energy_F
 
 from ..volume import volume
 from ..deformation_jacobian import deformation_jacobian
