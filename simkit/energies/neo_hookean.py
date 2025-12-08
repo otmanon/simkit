@@ -1,5 +1,5 @@
 import numpy as np
-
+import scipy as sp
 from ..mat2py import _4vector_2D_ordering_, _9vector_3D_ordering_, _4x4matrix_2D_ordering_, _9x9matrix_3D_ordering_
 
 def neo_hookean_energy_F(F, mu, lam, vol):

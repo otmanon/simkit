@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 
 from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume

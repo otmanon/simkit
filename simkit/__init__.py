@@ -40,6 +40,10 @@ from .hinge_angles import *
 from .hinge_hessian import *
 from .hinge_jacobian import *
 from .joint_lengths import joint_lengths
+from .eigs import eigs
+from .lbs_jacobian import lbs_jacobian
+from .dirichlet_laplacian import dirichlet_laplacian
+from .spectral_clustering import spectral_clustering
 
 from .common_selections import *
 from .shape_outlines import *
