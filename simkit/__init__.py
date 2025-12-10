@@ -40,6 +40,7 @@ from .hinge_angles import *
 from .hinge_hessian import *
 from .hinge_jacobian import *
 from .joint_lengths import joint_lengths
+from .eigs import eigs
 
 from .common_selections import *
 from .shape_outlines import *
