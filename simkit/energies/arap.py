@@ -1,5 +1,10 @@
 import numpy as np
+import scipy as sp
 
+from ..polar_svd import polar_svd
+from ..deformation_jacobian import deformation_jacobian
+from ..volume import volume
+from ..rotation_gradient import rotation_gradient_F
 def arap_energy_S(s, mu, vol):
     assert (s.ndim == 2 or s.ndim == 3)
     if s.ndim == 3:
