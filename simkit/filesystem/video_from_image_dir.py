@@ -184,6 +184,7 @@ def create_video_with_ffmpeg(image_folder, video_name, fps=60):
     # Construct the ffmpeg command
     ffmpeg_command = [
         "ffmpeg",
+        "-y",
         "-r", str(fps),  # Frame rate
         "-f", "image2",  # Image sequence input
         "-i", os.path.join(image_folder, "%04d.png"),  # Input images as numbered sequence

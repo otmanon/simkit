@@ -33,6 +33,7 @@ from .psd_project import psd_project
 from .average_onto_simplex import average_onto_simplex
 from .edge_lengths import edge_lengths
 from .gradient_cfd import gradient_cfd
+from .hessian_cfd import hessian_cfd
 from .edge_displacement_jacobian import edge_displacement_jacobian
 from .edge_length_jacobian import edge_length_jacobian
 from .random_edges import *
@@ -44,6 +45,8 @@ from .eigs import eigs
 from .lbs_jacobian import lbs_jacobian
 from .dirichlet_laplacian import dirichlet_laplacian
 from .spectral_clustering import spectral_clustering
+from .simplex_vertex_map import simplex_vertex_map
+
 
 from .common_selections import *
 from .shape_outlines import *
