@@ -46,7 +46,7 @@ from .lbs_jacobian import lbs_jacobian
 from .dirichlet_laplacian import dirichlet_laplacian
 from .spectral_clustering import spectral_clustering
 from .simplex_vertex_map import simplex_vertex_map
-
+from .rotation_strain_coordinates import rotation_strain_coordinates, RSPrecompute
 
 from .common_selections import *
 from .shape_outlines import *
