@@ -6,8 +6,6 @@ from ..filesystem.video_from_image_dir import video_from_image_dir
 
 def view_animation(X, T, U, pI=None, path=None, ground_plane='none', eye_pos=None, eye_target=None, fps=30, radius=0.05, pos=True):
 
-
-
     dirstem = None
     if path is not None:
         stem = Path(path).stem
