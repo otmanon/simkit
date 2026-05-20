@@ -1,15 +1,19 @@
-import numpy as np
+import os
 import sys
-sys.path.append("../../")
 
 import igl
+import numpy as np
 import polyscope as ps
 import scipy as sp
-import simkit as sk
-import os
 
-from utils import *
-from config import *
+import simkit as sk
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+
+from utils import *  # noqa: E402,F401,F403
+from config import *  # noqa: E402,F401,F403
 
 
 def simulate_drop_mfem(sim : sk.sims.elastic.ElasticMFEMSim, bI,
@@ -116,7 +120,7 @@ if __name__ == "__main__":
         
         W, E, B, cI, cW, labels = compute_subspace(X, T, c.m, c.k, mu=c.ym)
 
-        video_path_mfem = dirname + "/results/drop2/" + c.name + "_mfem.mp4"
+        video_path_mfem = os.path.join(dirname, "results", "drop", c.name + "_mfem.mp4")
         mfem_sim = create_mfem_sim(X, T, c.ym, c.rho, 
                                 c.h, c.max_iter, 
                                 c.do_line_search,
@@ -130,7 +134,7 @@ if __name__ == "__main__":
                     look_at=c.look_at)
 
 
-        video_path_fem = dirname + "/results/drop2/" + c.name + "_fem.mp4"
+        video_path_fem = os.path.join(dirname, "results", "drop", c.name + "_fem.mp4")
         fem_sim = create_fem_sim(X, T, c.ym, 
                                 c.rho, c.h, 
                                 c.max_iter,
@@ -142,42 +146,4 @@ if __name__ == "__main__":
         view_animation(X, T, (fem_sim.B @ Zs),
                     path=video_path_fem, eye_pos=c.eye_pos,
                     look_at=c.look_at)
-
-
-
-
-
-    # # dp_hist = np.array(info_history[0]['dx'])[:, : , 0]
-    # # search_directions = np.array(dp_hist)
-    # # step_sizes = np.array(info_history[0]['alphas'])
-    # # du = np.cumsum(search_directions * step_sizes[:, None], axis=0)
-    # view_animation(X, T, (fem_sim.B @ Zs))
-
-    # mfem_sim = create_mfem_sim(X, T, ym, rho, h, max_iter, do_line_search)
-    # [Zs, As,  info_history] = simulate_mfem(mfem_sim, num_timesteps, return_info=True)
-    # step_sizes = np.array(info_history[0]['alphas'])
-    # dp_hist = np.array(info_history[0]['dp'])[:, :, 0]
-
-# alphas = np.array([info['alphas'] for info in info_history])
-# search_directions = np.array([mfem_sim.z_a_from_p(dp)[0] for dp in dp_hist])
-# du = np.cumsum(search_directions * step_sizes[:, None], axis=0)
-# grads_s = np.array([mfem_sim.z_a_from_p(info['g'][0])[1] for info in info_history])
-# print("alphas", alphas)
-# print("gs", np.array([np.linalg.norm(info['g'][-1]) for info in info_history]))
-# view_animation(X, T, (mfem_sim.B @ du.T))
-# view_animation(X, T, (mfem_sim.B @ Zs))
-
-# view_animation(X, T, (mfem_sim.B @ Zs))
-# g_norms_mfem = [np.linalg.norm(mfem_sim.z_a_from_p(info['g'][-1])[0] )for info in info_history]
-
-
-# view_animation(X, T, (fem_sim.B @ Zs))
-
-# view_animation(X, T, Zs, As, Z_dots, path=result_dir + "/mfem_animation.mp4")
-# plot_grad_norms(info_history, path=result_dir + "/mfem_grad_norms.png")
-
-# fem_sim = create_fem_sim(X, T, ym, rho, h, max_iter, do_line_search)
-# [Zs, info_history] = simulate_fem(fem_sim, num_timesteps, return_info=True)
-# view_animation(X, T, Zs, path=result_dir + "/fem_animation.mp4")
-# plot_grad_norms(info_history, path=result_dir + "/fem_grad_norms.png")
 

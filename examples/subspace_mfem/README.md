@@ -1,47 +1,32 @@
-
 # Subspace MFEM
 
-This is a python codebase implementing some demos of the contributions proposed by the SIGGRAPH Asia 2023 paper "[Subspace Mixed Finite Elements for Real-Time Heterogeneous Elastodynamics](https://www.dgp.toronto.edu/projects/subspace-mfem/)".
+Demos for the SIGGRAPH Asia 2023 paper [*Subspace Mixed Finite Elements for Real-Time Heterogeneous Elastodynamics*](https://www.dgp.toronto.edu/projects/subspace-mfem/).
 
+## Requirements
 
-# Installation
-First install [simkit](https://github.com/otmanon/simkit.git) a python library containing many of the core simulation utilities upon which these demos are built.
-```
-git clone --recursive https://github.com/otmanon/simkit.git
+Install `simkit` with the visualization, mesh, learn and video extras from the repo root (see the top-level [README](../../README.md) for the conda setup). At minimum:
 
-cd simkit/
-```
-
-It's recommended to use a python environment manager like conda! The code is tested in python 3.10
-
-```
-conda create -n subspace_mfem python=3.10
-conda activate subspace_mfem
+```bash
+pip install -e ".[mesh,viz,learn,video]"
 ```
 
-Finally install simkit:
+The demos pull meshes from the [`data/`](../../data) submodule, so make sure it's initialised:
 
-```
-pip install . 
-```
-
-Navigate to the  `\examples\subspace_mfem\` directory.
-
-```
-cd \examples\subspace_mfem\
+```bash
+git submodule update --init --recursive
 ```
 
-# Demos
-Once inside the `simkit\examples\subspace_mfem\` repository, you will be met with a handful of demos in the format of `*.py` files!
+## Demos
 
-### Drop Test
-Run 
-```
-python drop_fem_vs_mfem.py
+All three scripts can be run from the repository root.
+
+### Drop test
+
+```bash
+python examples/subspace_mfem/drop_fem_vs_mfem.py
 ```
 
-A simulation of a heterogeneous material elastodynamic simulation will then be run with both standard FEM, and our Mixed FEM technique!
-It will output two videos in `\results\drop\` :
+A heterogeneous-material elastodynamic simulation is run with both a standard FEM solver and our Mixed FEM technique, and the two videos are written to `examples/subspace_mfem/results/drop/` (gitignored).
 
 #### FEM
 
@@ -49,59 +34,54 @@ It will output two videos in `\results\drop\` :
   <img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_fem.gif" width="300">
 </div>
 
-Notice how the crab loses a lot of kinetic energy as it falls? This is because the standard Newton solver used to solve the elastodynamic optimization takes forever to converge, so we have to cut it short! It's the cutting it short that induces this loss of angular momentum.
+The crab loses kinetic energy as it falls: the standard Newton solver is slow to converge, so when we cut it short we induce a loss of angular momentum.
 
 #### MFEM
+
 <div align="center">
   <img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/drop/crab_mfem.gif" width="300">
 </div>
 
-In contrast, our Mixed discretization allows the Newton solver to be truncates to few iterations, while much better preserving the angular momentum!
+The Mixed discretization lets the Newton solver be truncated to just a few iterations while preserving angular momentum much better.
 
+### Slingshot test
 
-
-### Slingshot Test
-
-Run 
-```
-python slingshot_fem_vs_mfem.py
+```bash
+python examples/subspace_mfem/slingshot_fem_vs_mfem.py
 ```
 
-By running the above, we show this loss of kinetic energy occurs again even in more involved simulations.
-These simulations pin a few parts of the mesh, and pull on another part of the mesh along a specified direction and then lets go, effectively creating a slingshot.
-
+A few vertices of the mesh are pinned, another set is pulled along a specified direction and then released, effectively creating a slingshot.
 
 #### FEM
+
 <div align="center">
-<img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/slingshot/gatorman_fem.gif" width="300">
+  <img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/slingshot/gatorman_fem.gif" width="300">
 </div>
 
-Notice the stiff sword resists rotating.
+The stiff sword resists rotating.
 
 #### MFEM
+
 <div align="center">
-<img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/slingshot/gatorman_mfem.gif" width="300">
+  <img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/slingshot/gatorman_mfem.gif" width="300">
 </div>
 
-With our mixed formulation, the sword rotates more freely and dynamically!
+With the mixed formulation, the sword rotates more freely and dynamically.
 
-### Interactive Clicking 
+### Interactive clicking
 
-Run 
+```bash
+python examples/subspace_mfem/interactive_mfem.py
 ```
-python interactive_mfem.py
-```
 
-An important feature of our method is its use of a subspace to carry out simulation. This means that performing the numerical simulation is extremely fast.
-
-To leverage this, the above code runs an interactive simulation, where a user can interactive with a heterogeneous elastic simulation in real-time via control handles.
-
-To add a control handle, **right-click** click anywhere on the mesh.
-
-To drag the last added control handle, **hold the space bar** while hovering your mouse where you want the control handle to move.
-
-Right-clicking on another part of the mesh replaces the previous handle with the new one!
+Because the method runs in a subspace, the numerical simulation is fast enough to be driven interactively. Right-click anywhere on the mesh to drop a control handle; **hold space** while moving the mouse to drag the most-recently-added handle. Right-clicking elsewhere replaces the active handle.
 
 <div align="center">
 <img src="https://github.com/otmanon/simkit/blob/main/examples/subspace_mfem/results/interactive/interactive_crab.gif" width="600">
 </div>
+
+## Files
+
+- `drop_fem_vs_mfem.py`, `slingshot_fem_vs_mfem.py`, `interactive_mfem.py` -- the three demos.
+- `config.py` -- per-mesh configuration objects (Young's modulus, time step, subspace size, ...).
+- `utils.py` -- shared helpers (mesh loading, subspace computation, sim construction, polyscope playback).

@@ -1,13 +1,35 @@
+"""Modal Muscles: 2D actuator-mode locomotion demo.
+
+A small wrapper around :class:`simkit.sims.elastic.ModalMuscleSim` that
+optimises a tiny set of sinusoidal actuation parameters with CMA-ES to make a
+2D creature walk forward, in the spirit of *Modal Muscles* / *Actuators a la
+Mode*.
+
+Run from the repository root::
+
+    python examples/modal_muscles/actuators_a_la_mode_2D.py
+
+Cached subspaces and CMA-ES histories are written to
+``examples/modal_muscles/results/2d/<mesh_name>/`` (gitignored).
+"""
+
 import os
+import sys
+
 import igl
 import matplotlib.pyplot as plt
-import scipy as sp
 import numpy as np
+import scipy as sp
+
 import simkit as sk
 
-from simkit.polyscope.view_displacement_modes import view_displacement_modes
+# animation_viewers.py lives next to this script; make the local import work
+# regardless of the current working directory.
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
 
-from animation_viewers import animation_viewer_2D
+from animation_viewers import animation_viewer_2D  # noqa: E402
 
 def objective(Zs, B, X, T, forward_dir=np.array([1, 0]), SB=None, GAJB=None):
     z0 = Zs[:, 0]
@@ -100,7 +122,7 @@ class SolutionTransform():
 
 
 
-dir = os.path.join(os.path.dirname(__file__))
+dir = _SCRIPT_DIR
 name = "horse"
 m = 6
 nc = 30
@@ -108,17 +130,18 @@ k = 5
 fps = 120
 
 modeset = [3, 4]
-max_s = 1
+max_s = 2
 period = 50
 phase = 0
 dim_a = len(modeset)
 num_timesteps = 500
 vis_data = False
 read_cache = False
-data_dir = os.path.join(dir, '..\\..\\data\\2d', name)
-result_dir = os.path.join(dir, 'results\\2d\\',name)
+data_dir = os.path.join(dir, "..", "..", "data", "2d", name)
+result_dir = os.path.join(dir, "results", "2d", name)
+os.makedirs(result_dir, exist_ok=True)
 
-[X, _, _, T, _, _] = igl.readOBJ(os.path.join( data_dir,name +'.obj'))
+[X, _, _, T, _, _] = igl.readOBJ(os.path.join(data_dir, name + ".obj"))
 X = X[:, :2]
 X = sk.normalize_and_center(X)
 X[:, 1] = X[:, 1] - np.min(X[:, 1]) + 1e-6

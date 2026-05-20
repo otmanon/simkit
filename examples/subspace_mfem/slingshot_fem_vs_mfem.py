@@ -1,15 +1,19 @@
-import numpy as np
+import os
 import sys
-sys.path.append("../../")
 
 import igl
+import numpy as np
 import polyscope as ps
 import scipy as sp
-import simkit as sk
-import os
 
-from utils import *
-from config import *
+import simkit as sk
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+
+from utils import *  # noqa: E402,F401,F403
+from config import *  # noqa: E402,F401,F403
 
 def simulate_slingshot_mfem(
     sim : sk.sims.elastic.ElasticMFEMSim, 
@@ -172,55 +176,51 @@ def simulate_slingshot_fem(sim : sk.sims.elastic.ElasticFEMSim,
 
 
 
-dirname =  os.path.dirname(__file__)
+if __name__ == "__main__":
+    dirname = os.path.dirname(__file__)
 
-configs = [ gatormanConfig()]
-pull_timesteps = 100
-free_timesteps = 300
+    configs = [gatormanConfig()]
+    pull_timesteps = 100
+    free_timesteps = 300
 
-for c in configs:
-    print(c.name)
-    [X, T] = load_mesh(c.geometry_path)
-    dim = X.shape[1]
-    X = normalize_mesh(X)
+    for c in configs:
+        print(c.name)
+        [X, T] = load_mesh(c.geometry_path)
+        dim = X.shape[1]
+        X = normalize_mesh(X)
 
+        W, E, B, cI, cW, labels = compute_subspace(X, T, c.m, c.k, mu=c.ym, bI=c.bI)
 
-    W, E, B, cI, cW, labels = compute_subspace(X, T, c.m, c.k, mu=c.ym, bI=c.bI)
+        video_path_mfem = os.path.join(dirname, "results", "slingshot", c.name + "_mfem.mp4")
+        mfem_sim = create_mfem_sim(X, T, c.ym, c.rho,
+                                c.h, c.max_iter,
+                                c.do_line_search,
+                                B=B, cI=cI, cW=cW)
 
-    # sk.polyscope.view_scalar_modes(X, T, W)
-    
-    video_path_mfem = dirname + "/results/slingshot/" + c.name + "_mfem.mp4"
-    mfem_sim = create_mfem_sim(X, T, c.ym, c.rho, 
-                            c.h, c.max_iter, 
-                            c.do_line_search,
-                            B=B, cI=cI, cW=cW)
-    
-    [Zs, As, Las] = simulate_slingshot_mfem(mfem_sim, c.bI, 
-                                       c.pullI,
-                                       c.pull_disp,
-                                       pull_timesteps,
-                                       free_timesteps, 
-                                       return_info=False)
-    view_animation(X, T, (mfem_sim.B @ Zs), 
-                path=video_path_mfem,
-                eye_pos=c.eye_pos,
-                look_at=c.look_at)
+        [Zs, As, Las] = simulate_slingshot_mfem(mfem_sim, c.bI,
+                                           c.pullI,
+                                           c.pull_disp,
+                                           pull_timesteps,
+                                           free_timesteps,
+                                           return_info=False)
+        view_animation(X, T, (mfem_sim.B @ Zs),
+                    path=video_path_mfem,
+                    eye_pos=c.eye_pos,
+                    look_at=c.look_at)
 
-
-    video_path_fem = dirname + "/results/slingshot/" + c.name + "_fem.mp4"
-    fem_sim = create_fem_sim(X, T, c.ym, 
-                            c.rho, c.h, 
-                            c.max_iter,
-                            c.do_line_search,
-                            B=B, cI=cI, cW=cW)
-    Zs = simulate_slingshot_fem(fem_sim, c.bI, 
-                                c.pullI,
-                                c.pull_disp,
-                                pull_timesteps,
-                                free_timesteps, 
-                                return_info=False)
-    view_animation(X, T, (fem_sim.B @ Zs),
-                path=video_path_fem,
-                eye_pos=c.eye_pos,
-                look_at=c.look_at)
-
+        video_path_fem = os.path.join(dirname, "results", "slingshot", c.name + "_fem.mp4")
+        fem_sim = create_fem_sim(X, T, c.ym,
+                                c.rho, c.h,
+                                c.max_iter,
+                                c.do_line_search,
+                                B=B, cI=cI, cW=cW)
+        Zs = simulate_slingshot_fem(fem_sim, c.bI,
+                                    c.pullI,
+                                    c.pull_disp,
+                                    pull_timesteps,
+                                    free_timesteps,
+                                    return_info=False)
+        view_animation(X, T, (fem_sim.B @ Zs),
+                    path=video_path_fem,
+                    eye_pos=c.eye_pos,
+                    look_at=c.look_at)

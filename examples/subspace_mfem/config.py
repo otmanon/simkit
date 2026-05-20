@@ -1,23 +1,15 @@
+"""Per-mesh demo configurations for the subspace_mfem examples.
 
-import sys
-sys.path.append("../../")
+Each ``*Config`` exposes simulation knobs (Young's modulus, time step,
+subspace size, ...) plus mesh-specific input paths that the demo scripts
+consume.
+"""
+
+import numpy as np
+
 import simkit as sk
-import numpy as npc
 
-# class Config:
-#     def __init__(self):
-#         self.ym = sk.filesystem.get_data_directory() + "/2d/T/mu.npy"
-#         self.h = 1e-2
-#         self.rho = 1e3
-#         self.m = 5
-#         self.k = 96
-#         self.max_iter = 3
-#         self.do_line_search = True
-#         self.name = "T"
-#         self.geometry_path = sk.filesystem.get_data_directory() + "/2d/T/T.obj"
-#         self.bI = sk.filesystem.get_data_directory() + "/2d/T/bI.npy"
-        
-      
+
 class TConfig():
     def __init__(self):
         self.ym = sk.filesystem.get_data_directory() + "/2d/T/mu.npy"
@@ -89,9 +81,3 @@ class gatormanConfig():
         
         self.pullI = sk.filesystem.get_data_directory() + "/3d/gatorman/pullI.npy"
         self.pull_disp = np.array([[0, 0, 2]])
-        
-        
-        
-        
-        
-        
