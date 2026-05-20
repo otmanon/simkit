@@ -6,8 +6,8 @@ import numpy as np
 from .simplex_vertex_map import simplex_vertex_map
 
 def deformation_jacobian(X : np.array, T : np.array):
-    '''
-    Linear mapping between positions and deformation gradients, assuming x has been flattened with default order="C":
+    """
+    Linear mapping between positions and deformation gradients, assuming x has been flattened with default order="C".
 
     Parameters
     ----------
@@ -34,7 +34,7 @@ def deformation_jacobian(X : np.array, T : np.array):
     F = [[Fxx Fxy Fxz]]
         [[Fyx Fyy Fyz]]
         [[Fzx Fzy Fzz]]
-    '''
+    """
     dt = T.shape[-1]
     T = T.reshape(-1, dt)
     nt = T.shape[0]    
@@ -94,12 +94,12 @@ def membrane_deformation_jacobian(X : np.array, T : np.array):
     V : (n, dim) array
         The vertices of the mesh
 
-    T : (t, 3|4) array
-        Simplex indices
+    T : (t, 3) array
+        Triangle indices
 
     Returns
     -------
-    J : (d*d*t, d*n) sparse matrix
+    J : ((d-1)*d*t, d*n) sparse matrix
         The deformation Jacobian matrix
 
     Example
@@ -107,13 +107,13 @@ def membrane_deformation_jacobian(X : np.array, T : np.array):
     ```python
     x = X.reshape(-1, 1)
     f = J @ x
-    F = f.reshape(-1, 3, 3)
+    F = f.reshape(-1, 3, 2)
     ```
 
     In the above, F will have the form:
-    F = [[Fxx Fxy Fxz]]
-        [[Fyx Fyy Fyz]]
-        [[Fzx Fzy Fzz]]
+    F = [[Fxu Fxv]]
+        [[Fyu Fyv]]
+        [[Fzu Fzv]]
     '''
     dt = T.shape[-1]
     T = T.reshape(-1, dt)
