@@ -1,37 +1,53 @@
+"""Fast Complementary Dynamics: left/right rig-driven beam demo.
+
+Reproduces a minimal slice of "Fast Complementary Dynamics via Skinning
+Eigenmodes" (Benchekroun et al., SIGGRAPH 2023). A 2D beam is driven by an
+animator rig (a single global handle) and we sweep that handle left/right.
+
+Two worlds are exercised side-by-side:
+
+- ``CoDyLeftRightWorld`` uses Fast Complementary Dynamics: the simulation
+  subspace is orthogonal to the rig, so secondary motion is purely
+  complementary.
+- ``PinLeftRightWorld`` uses Dirichlet pins as a baseline.
+
+Run from the repository root with the ``viz`` and ``video`` extras installed::
+
+    python examples/fast_complementary_dynamics/left_right_control.py
+
+Resulting ``.mp4`` and ``.gif`` files are written to
+``examples/fast_complementary_dynamics/results/`` (gitignored).
+"""
+
 import os
+import shutil
+from pathlib import Path
+
 import igl
-import polyscope as ps
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
-import gpytoolbox as gpy # TODO: do we want gpy as a dependency?
-import matplotlib.pyplot as plt
-from pathlib import Path
-import shutil
 
-from simkit.sims.elastic.FastCoDySim import FastCoDySim, FastCoDySimParams
-from simkit.lbs_jacobian import lbs_jacobian
-from simkit.skinning_eigenmodes import skinning_eigenmodes
-from simkit.spectral_cubature import spectral_cubature
+from simkit.common_selections import center_indices
+from simkit.dirichlet_penalty import dirichlet_penalty
 from simkit.diffuse_field import diffuse_field
-from simkit.project_into_subspace import project_into_subspace
-from simkit.massmatrix import massmatrix
-from simkit.lbs_weight_space_constraint import lbs_weight_space_constraint
-from simkit.normalize_and_center import normalize_and_center
-from simkit.orthonormalize import orthonormalize
-
+from simkit.filesystem.mp4_to_gif import mp4_to_gif
 from simkit.filesystem.video_from_image_dir import video_from_image_dir
-from simkit.filesystem.mp4_to_gif     import mp4_to_gif
-from simkit.common_selections import *
-
-from simkit.matplotlib.TriangleMesh import TriangleMesh, light_red, purple
+from simkit.lbs_jacobian import lbs_jacobian
+from simkit.lbs_weight_space_constraint import lbs_weight_space_constraint
+from simkit.massmatrix import massmatrix
 from simkit.matplotlib.Frame import Frame
 from simkit.matplotlib.PointCloud import PointCloud
+from simkit.matplotlib.TriangleMesh import TriangleMesh, light_red
+from simkit.normalize_and_center import normalize_and_center
+from simkit.orthonormalize import orthonormalize
+from simkit.sims.elastic.FastCoDySim import FastCoDySim, FastCoDySimParams
+from simkit.skinning_eigenmodes import skinning_eigenmodes
+from simkit.spectral_cubature import spectral_cubature
 
-from simkit.dirichlet_penalty import dirichlet_penalty
 
-
-# Load a mesh in (X,T) from a file
-dir = os.path.dirname(os.path.realpath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+RESULTS_DIR = os.path.join(SCRIPT_DIR, "results")
 
 class PinLeftRightWorld():
     def __init__(self, X, T, bI=None):
@@ -84,7 +100,7 @@ class PinLeftRightWorld():
             
             bc = np.zeros((self.bI.shape[0], 2))
             bc[:, 0] = a * np.sin(2 * np.pi * i / period)
-            b = dirichlet_penalty(self.bI, bc, X.shape[0], self.gamma, only_b=True)[0]
+            b = dirichlet_penalty(self.bI, bc, self.X.shape[0], self.gamma, only_b=True)[0]
 
             z_next = self.sim.step(z, p, z_dot, p_dot, p_next, b_ext=self.B.T @ b)
 
@@ -303,100 +319,33 @@ class CoDyLeftRightWorld():
                 shutil.rmtree(dir)
 
 
-# [X, T] = gpy.regular_square_mesh(20, 20)
-# X = normalize_and_center(X)
-
-# world_cd = CoDyLeftRightWorld(X, T)
-# video_path = os.path.join(dir, "results", "cody_left_right.mp4")
-# [Zs, Ps] = world_cd.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-# world_cd.render( Zs, Ps, path=video_path)
-
-# video_path = os.path.join(dir, "results", "rig_left_right.mp4")
-# world_cd.render_rig( Ps, path=video_path)
-
-# bI = center_indices(X, 0.1)[1]
-# world_pin = PinLeftRightWorld(X, T)
-# video_path = os.path.join(dir, "results", "pin_0.1_left_right.mp4")
-# [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-# world_pin.render( Zs, Ps, path=video_path)
-
-# bI = center_indices(X, 0.4)[1]
-# world_pin = PinLeftRightWorld(X, T, bI=bI)
-# video_path = os.path.join(dir, "results", "pin_0.4_left_right.mp4")
-# [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-# world_pin.render( Zs, Ps, path=video_path)
+def _make_beam(width=40, height=5, thickness=0.1):
+    """Construct the rotated, thin 2D beam used in the demo."""
+    [X, T] = igl.triangulated_grid(width, height)
+    X[:, 1] *= thickness
+    Y = X.copy()
+    X[:, 0] = -Y[:, 1]
+    X[:, 1] = Y[:, 0]
+    X = normalize_and_center(X)
+    return X, T
 
 
+def main():
+    os.makedirs(RESULTS_DIR, exist_ok=True)
 
-[X, T] = gpy.regular_square_mesh(40, 5)
-X[:, 1] *= 0.1
-Y = X.copy()
-X[:, 0] = -Y[:, 1]
-X[:, 1] = Y[:, 0]
-X = normalize_and_center(X)
+    X, T = _make_beam()
 
-world_cd = CoDyLeftRightWorld(X, T)
-video_path = os.path.join(dir, "results", "beam_cody_left_right.mp4")
-[Zs, Ps] = world_cd.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-world_cd.render( Zs, Ps, path=video_path)
-# video_path = os.path.join(dir, "results", "beam_rig_left_right.mp4")
-# world_cd.render_rig( Ps, path=video_path)
+    # Complementary Dynamics: rig drives the global handle, simulation
+    # subspace is orthogonal to the rig.
+    world_cd = CoDyLeftRightWorld(X, T)
+    Zs, Ps = world_cd.simulate_periodic_x(num_timesteps=300, period=150, a=3)
+    world_cd.render(Zs, Ps, path=os.path.join(RESULTS_DIR, "beam_cody_left_right.mp4"))
 
-
-bI = center_indices(X, 0.1)[1]
-world_pin = PinLeftRightWorld(X, T)
-video_path = os.path.join(dir, "results", "beam_pin_0.1_left_right.mp4")
-[Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-world_pin.render( Zs, Ps, path=video_path)
-
-# bI = center_indices(X, 0.4)[1]
-# world_pin = PinLeftRightWorld(X, T, bI=bI)
-# video_path = os.path.join(dir, "results", "beam_pin_0.4_left_right.mp4")
-# [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-# world_pin.render( Zs, Ps, path=video_path)
+    # Pinned baseline: a small center region is hard-pinned and swept left/right.
+    world_pin = PinLeftRightWorld(X, T, bI=center_indices(X, 0.1)[1])
+    Zs, Ps = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
+    world_pin.render(Zs, Ps, path=os.path.join(RESULTS_DIR, "beam_pin_0.1_left_right.mp4"))
 
 
-# [X, _, _, T, _, _] = igl.read_obj(dir + "/../../data/2d/cthulu/cthulu.obj")
-# X = X[:, :2]
-# X = normalize_and_center(X)
-# X*=1.25
-# bI = center_indices(X, 0.1)[1]
-# world_pin = PinLeftRightWorld(X, T, bI=bI)
-# video_path = os.path.join(dir, "results", "cthulu_center_pin_0.1_left_right.mp4")
-# [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-# world_pin.render( Zs, Ps, path=video_path)
-
-
-# [X, _, _, T, _, _] = igl.read_obj(dir + "/../../data/2d/cthulu/cthulu.obj")
-# X = X[:, :2]
-# X = normalize_and_center(X)
-# X*=1.25
-# bI = center_top_indices(X, 0.1)[1]
-# world_pin = PinLeftRightWorld(X, T, bI=bI)
-# video_path = os.path.join(dir, "results", "cthulu_center_top_pin_0.1_left_right.mp4")
-# [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-# world_pin.render( Zs, Ps, path=video_path)
-
-
-
-# [X, _, _, T, _, _] = igl.read_obj(dir + "/../../data/2d/cthulu/cthulu.obj")
-# X = X[:, :2]
-# X = normalize_and_center(X)
-# X*=1.25
-# bI = top_indices(X, 0.1)[1]
-# world_pin = PinLeftRightWorld(X, T, bI=bI)
-# video_path = os.path.join(dir, "results", "cthulu_top_pin_0.1_left_right.mp4")
-# [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-# world_pin.render( Zs, Ps, path=video_path)
-
-
-
-
-# [X, _, _, T, _, _] = igl.read_obj(dir + "/../../data/2d/cthulu/cthulu.obj")
-# X = X[:, :2]
-# X = normalize_and_center(X)
-# X*=1.25
-# world_pin = CoDyLeftRightWorld(X, T)
-# video_path = os.path.join(dir, "results", "cthulu_cd_left_right.mp4")
-# [Zs, Ps] = world_pin.simulate_periodic_x(num_timesteps=300, period=150, a=3)
-# world_pin.render( Zs, Ps, path=video_path)
+if __name__ == "__main__":
+    main()

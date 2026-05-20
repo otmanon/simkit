@@ -1,16 +1,20 @@
-import numpy as np
+import os
 import sys
-sys.path.append("../../")
 
 import igl
+import numpy as np
 import polyscope as ps
 import polyscope.imgui as psim
 import scipy as sp
-import simkit as sk
-import os
 
-from utils import *
-from config import *
+import simkit as sk
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPT_DIR)
+
+from utils import *  # noqa: E402,F401,F403
+from config import *  # noqa: E402,F401,F403
 
 
 def interactive_click_demo(sim, bI):
