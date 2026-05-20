@@ -3,17 +3,19 @@ import os
 
 import numpy as np
 import polyscope as ps
+<<<<<<< HEAD
 from PIL import Image
 
 from simkit.filesystem.mp4_to_gif import mp4_to_gif
 
 from ..filesystem.video_from_image_dir import video_from_image_dir
+=======
+import time
+from simkit.filesystem.video_from_image_dir import video_from_image_dir
+>>>>>>> 94e9aa463d2c90a15341332f65011e300f06cbca
 
 
 def view_displacement_modes(X, T, W, a=0.1, period=24, path=None, uv=None, texture_png=None, edge_width=1, fps=120, material='default'):
-
-
-
 
     dirstem = None
     if path is not None:
@@ -80,23 +82,30 @@ def view_displacement_modes(X, T, W, a=0.1, period=24, path=None, uv=None, textu
             if i == period:
                 i = 0
                 j +=1
+                
+            if j >= W.shape[1]:
+                break
 
-            
-            geo.update_vertex_positions(X + D)
-
-        
+            if dt == 2:
+                geo.update_node_positions(X + D)
+            elif dt == 3:
+                geo.update_vertex_positions(X + D)
+            elif dt == 4:
+                geo.update_vertex_positions(X + D)
+            else:
+                geo.update_point_positions(X + D)
 
             i += 1
             count+=1 
             ps.frame_tick()
-        else:
-            break
+            if path is None:
+                time.sleep(0.01)
+             
+    if path is None:
+        ps.show()
+    else:
+        ps.screenshot(dirstem + "/" + str(count).zfill(4) + ".png", transparent_bg=False)
 
-
-    # ps.set_user_callback(callback)
-    # ps.show()
-
-    if path is not None:
         video_from_image_dir(dirstem, path, fps=fps)
         mp4_to_gif(path, path[:-4] + ".gif")
     return

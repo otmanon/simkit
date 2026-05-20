@@ -37,10 +37,26 @@ from .fold_in_vector_subspace import fold_in_vector_subspace
 from .fold_vector_hessian import fold_vector_hessian
 from .lbs_jacobian import lbs_jacobian
 from .log_likelihood import conditional_likelihoods_diagonal
-from .spectral_clustering import spectral_clustering
 from .eigs import eigs
 from .sample_gaussian_force import sample_gaussian_force
+from .edge_lengths import edge_lengths
+from .gradient_cfd import gradient_cfd
+from .hessian_cfd import hessian_cfd
+from .edge_displacement_jacobian import edge_displacement_jacobian
+from .edge_length_jacobian import edge_length_jacobian
+from .random_edges import *
+from .hinge_angles import *
+from .hinge_hessian import *
+from .hinge_jacobian import *
+from .joint_lengths import joint_lengths
+from .eigs import eigs
+from .lbs_jacobian import lbs_jacobian
+from .dirichlet_laplacian import dirichlet_laplacian
+from .spectral_clustering import spectral_clustering
+from .simplex_vertex_map import simplex_vertex_map
 
+from .common_selections import *
+from .shape_outlines import *
 # submodules
 from . import sims
 from . import energies

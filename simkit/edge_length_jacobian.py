@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 import scipy as sp
 import numpy as np
 
+=======
+
+import numpy as np
+import scipy as sp
+>>>>>>> 94e9aa463d2c90a15341332f65011e300f06cbca
 
 def edge_length_jacobian(X, E):
     '''
