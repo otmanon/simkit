@@ -94,6 +94,31 @@ source_suffix = {
     ".md": "markdown",
 }
 
-html_theme = "furo"
+html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
 html_title = f"{project} {release}"
+
+html_theme_options = {
+    "github_url": "https://github.com/otmanon/simkit",
+    "navbar_align": "left",
+    "show_prev_next": False,
+    "header_links_before_dropdown": 6,
+    "use_edit_page_button": True,
+    "icon_links": [
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/simkit/",
+            "icon": "fa-brands fa-python",
+        },
+    ],
+    "footer_start": ["copyright"],
+    "footer_end": ["sphinx-version", "theme-version"],
+    "secondary_sidebar_items": ["page-toc", "edit-this-page", "sourcelink"],
+}
+
+html_context = {
+    "github_user": "otmanon",
+    "github_repo": "simkit",
+    "github_version": "main",
+    "doc_path": "docs",
+}
