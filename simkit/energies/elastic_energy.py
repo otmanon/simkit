@@ -4,6 +4,8 @@ from .fcr import fcr_energy_F
 from .linear_elasticity import linear_elasticity_energy_F
 from .arap import arap_energy_F, arap_energy_S
 from .neo_hookean import neo_hookean_energy_F
+
+
 def elastic_energy(F: np.ndarray,  mu: np.ndarray, lam: np.ndarray, vol : np.ndarray, material):
 
     if material == 'linear-elasticity':
