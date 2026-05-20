@@ -31,6 +31,15 @@ from .subspace_rotation import subspace_rotation
 from .limit_actuation_dirichlet_energy import limit_actuation_dirichlet_energy
 from .psd_project import psd_project
 from .average_onto_simplex import average_onto_simplex
+from .closest_point_map import closest_point_map
+from .diffuse_scalar import diffuse_scalar
+from .fold_in_vector_subspace import fold_in_vector_subspace
+from .fold_vector_hessian import fold_vector_hessian
+from .lbs_jacobian import lbs_jacobian
+from .log_likelihood import conditional_likelihoods_diagonal
+from .spectral_clustering import spectral_clustering
+from .eigs import eigs
+from .sample_gaussian_force import sample_gaussian_force
 
 # submodules
 from . import sims
@@ -39,3 +48,4 @@ from . import matplotlib
 from . import polyscope
 from . import filesystem
 from . import solvers
+from . import blender

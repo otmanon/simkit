@@ -32,12 +32,21 @@ def log_likelihoods_diagonal(U : np.ndarray, covs, covs_inv=None, sumlogcovs=Non
         
         cov = covs[i]
         if covs_inv is None:
-            Ci = sp.sparse.diags(1.0/cov.diagonal()).tocsc()
+            diag = cov.diagonal()
+            # Check for zero or negative diagonal elements
+            if np.any(diag <= 0):
+                lls[i] = -np.inf
+                continue
+            Ci = sp.sparse.diags(1.0/diag).tocsc()
         else:
             Ci = covs_inv[i]
         
         if marginalize_thresh is not None:
             inds = np.where(cov.diagonal() > marginalize_thresh)[0]
+            if len(inds) == 0:
+                # If no elements pass the threshold, skip this covariance
+                lls[i] = -np.inf
+                continue
             d = d[inds, :]
             Ci = Ci[inds, :][:, inds]
 
@@ -57,7 +66,7 @@ def log_likelihoods_diagonal(U : np.ndarray, covs, covs_inv=None, sumlogcovs=Non
             sumlogcov = sumlogcovs[i]
         
         nn = d.shape[0]
-        ll = -0.5 * np.sum(d.T @ (Ci @ d)) - 0.5 * sumlogcov -0.5* np.log(2 * np.pi) * nn
+        ll = -0.5 * (d.T @ (Ci @ d)) - 0.5 * sumlogcov - 0.5 * nn * np.log(2 * np.pi)
 
         lls[i] = ll
     return lls
@@ -81,7 +90,14 @@ def log_likelihoods_cov_inv(U : np.ndarray, covs_inv,  mus : np.ndarray=None, ma
     for i in range(len(covs_inv)):
         mu = mus[:, i].reshape(-1, 1)
         d = U - mu
-        Ci =  covs_inv[i]
+        Ci = covs_inv[i]
+        
+        # Check for zero or negative diagonal elements in inverse covariance
+        if hasattr(Ci, 'diagonal'):
+            diag = Ci.diagonal()
+            if np.any(diag <= 0):
+                lls[i] = -np.inf
+                continue
 
         if marginalize is not None:
             if len(marginalize) == len(covs_inv):
@@ -91,7 +107,7 @@ def log_likelihoods_cov_inv(U : np.ndarray, covs_inv,  mus : np.ndarray=None, ma
                 d = d[marginalize, :]
             
         nn = d.shape[0]
-        ll = -0.5 * np.sum(d.T @ Ci @ d) - 0.5 * np.sum(np.log(((Ci.diagonal())))) -0.5* np.log(2 * np.pi) * nn
+        ll = -0.5 * (d.T @ Ci @ d) - 0.5 * np.sum(np.log(Ci.diagonal())) - 0.5 * nn * np.log(2 * np.pi)
 
         lls[i] = ll
     return lls

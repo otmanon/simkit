@@ -3,3 +3,5 @@ from .view_displacement_modes import view_displacement_modes
 from .view_clusters import view_clusters
 from .view_cubature import view_cubature
 from .view_sample_points import view_sample_points
+from .view_scalar_fields import view_scalar_fields
+from .view_scalar_field import view_scalar_field

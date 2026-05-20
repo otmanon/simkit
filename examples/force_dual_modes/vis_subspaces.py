@@ -6,7 +6,6 @@ import numpy as np
 from PIL import Image
 import scipy as sp
 import igl.triangle
-from sympy import eye
 
 from simkit import common_selections
 from simkit.average_onto_simplex import average_onto_simplex
@@ -17,8 +16,7 @@ from simkit.blender.render_texture import render_texture
 from simkit.dirichlet_penalty import dirichlet_penalty
 from simkit.eigs import eigs
 from simkit.fold_vector_hessian import fold_vector_hessian
-from simkit.force_dual_modes import force_dual_skinning_eigenmodes_diagonal
-from simkit.linear_elasticity_hessian import linear_elasticity_hessian
+
 from simkit.massmatrix import massmatrix
 from simkit.normalize_and_center import normalize_and_center
 from simkit.polyscope.view_cubature import view_cubature
@@ -55,7 +53,7 @@ pinned = common_selections.center_indices(X, 0.15)[1]
 mu, lam = ympr_to_lame(ym=1e6, pr=0.45)
 M = massmatrix(X=X, T=T)
 M_sqrt = sp.sparse.diags(np.sqrt(M.diagonal()))
-H = linear_elasticity_hessian(X=X, T=T, mu=mu, lam=lam)
+H = sk.energies.linear_elasticity_hessian(X=X, T=T, mu=mu, lam=lam)
 H_pin = dirichlet_penalty(pinned, X[pinned], X.shape[0], 1e8)[0]
 H = H + H_pin
 sigma_F = M_sqrt @ sp.sparse.diags(variance.flatten()) @ M_sqrt

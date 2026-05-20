@@ -9,6 +9,7 @@ from ..polar_svd import polar_svd
 
 
 def arap_gradient_dF(F, mu, vol):
+    mu = mu.reshape(-1, 1)
     dim = F.shape[-1]
     F = F.reshape(-1, dim, dim)
     [R, S] = polar_svd(F)
