@@ -70,7 +70,7 @@ dev = [
 docs = [
     "sphinx>=7",
     "sphinx-autoapi>=3",
-    "furo",
+    "pydata-sphinx-theme>=0.15",
     "myst-parser",
 ]
 
