@@ -37,7 +37,7 @@ def compute_with_cache_check(func, cache_path, read_cache=True):
         output = func()
         if not isinstance(output, tuple):
             output = (output,)
-        np.savez(cache_path, **{f'v{i}': arg for i, arg in enumerate(output)})
+        np.savez(cache_path, **{f'v{i}': np.asarray(arg).astype(np.object) for i, arg in enumerate(output)})
         
     if not isinstance(output, tuple):
         output = (output,)

@@ -65,7 +65,7 @@ class ElasticFEMSimParams():
 
 class ElasticFEMSim(Sim):
 
-    def __init__(self, X : np.ndarray, T : np.ndarray, B : np.ndarray | sp.sparse.csc_matrix =None, cI : np.ndarray=None,  cW : np.ndarray=None, sim_params : ElasticFEMSimParams = ElasticFEMSimParams(), x0=None, q=None):
+    def __init__(self, X : np.ndarray, T : np.ndarray, B : np.ndarray | sp.sparse.csc_matrix =None, cI : np.ndarray=None,  cW : np.ndarray=None, sim_params : ElasticFEMSimParams = ElasticFEMSimParams(),  q=None):
         """
 
         Parameters

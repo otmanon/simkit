@@ -86,4 +86,4 @@ def eigs(A, k=5, M=None):
         B = B[:, :k]
         D = D[:k]
 
-    return D, B
+    return D.real, B.real

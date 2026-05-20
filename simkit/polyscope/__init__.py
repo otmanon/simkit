@@ -5,3 +5,4 @@ from .view_cubature import view_cubature
 from .view_sample_points import view_sample_points
 from .view_scalar_fields import view_scalar_fields
 from .view_scalar_field import view_scalar_field
+from .view_animation import view_animation
