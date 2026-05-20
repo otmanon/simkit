@@ -2,7 +2,7 @@
 import sys
 sys.path.append("../../")
 import simkit as sk
-import numpy as np
+import numpy as npc
 
 # class Config:
 #     def __init__(self):

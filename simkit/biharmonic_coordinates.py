@@ -7,6 +7,26 @@ from .massmatrix import massmatrix
 
 def biharmonic_coordinates(X, T, bI):
 
+    """
+    Compute the biharmonic coordinates of the mesh with handles at indices bI/
+    
+    
+    Parameters
+    ----------
+    X (n, d) array of vertex positions
+    T (t, s) array of simplex indices
+    bI (b,) array of boundary vertex indices
+    
+    Returns
+    -------
+    W (n, b) array of biharmonic coordinates
+    
+    Example
+    -------
+    ```python
+    X = np.random.rand(100, 3)
+    """
+    
     L = dirichlet_laplacian(X, T)
     M = massmatrix(X, T)
     Mi = sp.sparse.diags(1/M.diagonal())

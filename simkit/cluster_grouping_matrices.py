@@ -5,20 +5,27 @@ import scipy as sp
 
 from .volume import volume
 
-'''
-Computes grouping matrices for the cluster labels l, and the mesh V, T
 
-Inputs
-l - label for each tet
-V - mesh vertices
-T - mesh tets
-
-Outputs
-G - c x t grouping matrix
-Gm - c x t grouping matrix with mass normalization
-'''
 def cluster_grouping_matrices(l, V, T, return_mass=False):
-
+    
+    """
+    Compute the grouping matrices for the cluster labels l, and the mesh V, T.
+    
+    Parameters
+    ----------
+    l (t,) array of cluster labels
+    V (n, d) array of vertex positions
+    T (t, s) array of simplex indices
+    return_mass (bool, optional): whether to return the mass of each cluster
+    
+    Returns
+    -------
+    G (c, t) grouping matrix
+    Gm (c, t) grouping matrix with mass normalization
+    mc (c,) array of cluster masses (if return_mass is True)
+    mt (t,) array of simplex masses (if return_mass is True)
+    f (t,) array of cluster mass fractions (if return_mass is True)
+    """
     t = T.shape[0]
     c = l.max() + 1
     assert(T.shape[1] == 4 or T.shape[1] == 3)

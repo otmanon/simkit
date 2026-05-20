@@ -36,6 +36,39 @@ def neo_hookean_energy_F(F, mu, lam, vol):
 
 
 
+import torch
+def neo_hookean_energy_F_torch(F, mu, lam, vol):
+
+    dim = F.shape[-1]
+
+    F = F.reshape(-1, dim, dim)
+    
+    if dim == 2:
+        # convert the cpp code to python
+        F_00 = F[:, 0, 0].reshape(-1, 1)
+        F_01 = F[:, 0, 1].reshape(-1, 1)
+        F_10 = F[:, 1, 0].reshape(-1, 1)
+        F_11 = F[:, 1, 1].reshape(-1, 1)
+
+        e = mu * (-F_00 * F_11 + F_01 * F_10 + 1.0) + (lam * (-(F_00 * F_11) + F_01 * F_10 + 1.0)**2) / 2.0 + (mu * (F_00**2 + F_01**2 + F_10**2 + F_11**2 - 2.0)) / 2.0
+    
+    if dim == 3:
+        F_00 = F[:, 0, 0].reshape(-1, 1)
+        F_01 = F[:, 0, 1].reshape(-1, 1)
+        F_02 = F[:, 0, 2].reshape(-1, 1)
+        F_10 = F[:, 1, 0].reshape(-1, 1)
+        F_11 = F[:, 1, 1].reshape(-1, 1)
+        F_12 = F[:, 1, 2].reshape(-1, 1)
+        F_20 = F[:, 2, 0].reshape(-1, 1)
+        F_21 = F[:, 2, 1].reshape(-1, 1)
+        F_22 = F[:, 2, 2].reshape(-1, 1)
+
+        e = mu * (-F_00 * F_11 * F_22 + F_00 * F_12 * F_21 + F_01 * F_10 * F_22 - F_01 * F_12 * F_20 - F_02 * F_10 * F_21 + F_02 * F_11 * F_20 + 1.0) + (lam * (-(F_00 * F_11 * F_22) + F_00 * F_12 * F_21 + F_01 * F_10 * F_22 - F_01 * F_12 * F_20 - F_02 * F_10 * F_21 + F_02 * F_11 * F_20 + 1.0)**2) / 2.0 + (mu * (F_00**2 + F_01**2 + F_02**2 + F_10**2 + F_11**2 + F_12**2 + F_20**2 + F_21**2 + F_22**2 - 3.0)) / 2.0
+
+
+    E = (e * vol.reshape(-1, 1))
+    return E.sum()
+
 def neo_hookean_gradient_dF(F, mu, lam, vol):
 
     dim = F.shape[-1]
