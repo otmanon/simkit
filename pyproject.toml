@@ -20,27 +20,59 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
+# Hard requirements only. Heavier or specialized dependencies are exposed as
+# named extras below so casual installs stay lean.
 dependencies = [
-    "scipy",
     "numpy",
-    "polyscope",
-    "libigl",
-    "matplotlib",
-    "scikit-learn",
-    "opencv-python",
-    "cvxopt",
+    "scipy",
 ]
 
 [project.optional-dependencies]
+# Core mesh/geometry utilities (deformation jacobian, mass matrix, volume, ...).
+mesh = ["libigl"]
+# Plotting / interactive visualization. Pulls in libigl too because some
+# plotters render mesh-based artifacts.
+viz = ["matplotlib", "polyscope==2.5.0", "libigl"]
+# Clustering and nearest-neighbor utilities.
+learn = ["scikit-learn"]
+# Sparse eigensolvers (cvxopt provides UMFPACK bindings used by simkit.eigs).
+solvers = ["cvxopt"]
+# Video / GIF export helpers in simkit.filesystem.
+video = ["opencv-python"]
+# CMA-ES solver (simkit.solvers.CMAESSolver).
 cmaes = ["cma"]
-all = ["cma"]
+# Blender rendering helpers.
+blender = ["blendertoolbox", "bpy"]
+# Everything end-user-facing.
+all = [
+    "libigl",
+    "matplotlib",
+    "polyscope==2.5.0",
+    "scikit-learn",
+    "cvxopt",
+    "opencv-python",
+    "cma",
+    "blendertoolbox",
+    "bpy",
+]
+# Development tooling.
+dev = [
+    "pytest>=7",
+    "pytest-cov",
+]
+# Documentation tooling.
+docs = [
+    "sphinx>=7",
+    "sphinx-autoapi>=3",
+    "furo",
+    "myst-parser",
+]
 
 [project.urls]
 Homepage = "https://github.com/otmanon/simkit"
@@ -48,9 +80,20 @@ Repository = "https://github.com/otmanon/simkit"
 Documentation = "https://github.com/otmanon/simkit"
 Issues = "https://github.com/otmanon/simkit/issues"
 
+[tool.setuptools]
+license-files = ["LICENSE.MIT"]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["simkit*"]
 
 [tool.setuptools.package-data]
-simkit = ["*.py", "**/*.py"] 
+simkit = ["*.py", "**/*.py"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-ra"

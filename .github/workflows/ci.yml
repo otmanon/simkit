@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-lean:
+    name: Tests (lean install, py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install (numpy + scipy + pytest only)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Verify simkit imports with only the lean install
+        run: python -c "import simkit; print(simkit.__name__, 'imported OK')"
+
+      - name: Run pytest
+        run: pytest -ra
+
+  test-full:
+    name: Tests (full install, py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    # Optional installs (cvxopt, libigl, polyscope, bpy, ...) occasionally break
+    # on PyPI; don't fail the whole pipeline when that happens.
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: System deps for cvxopt
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsuitesparse-dev
+
+      - name: Install simkit with all end-user extras
+        run: |
+          python -m pip install --upgrade pip
+          # We omit [blender] because bpy is a ~200MB wheel that doesn't add
+          # coverage we don't already get elsewhere.
+          pip install -e ".[mesh,viz,learn,solvers,video,cmaes,dev]"
+
+      - name: Run pytest
+        run: pytest -ra
+
+  build-sdist-wheel:
+    name: Build sdist + wheel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Build
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --sdist --wheel --outdir dist
+
+      - name: Inspect built distributions
+        run: |
+          python -m pip install --upgrade twine
+          twine check dist/*
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
