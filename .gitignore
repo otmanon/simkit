@@ -1,8 +1,15 @@
-# Python
+# ---------------------------------------------------------------------------
+# Python bytecode + compiled extensions
+# ---------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# ---------------------------------------------------------------------------
+# Packaging / distribution artifacts
+#   produced by:  python -m build, pip install -e ., setup.py sdist, twine
+# ---------------------------------------------------------------------------
 .Python
 build/
 develop-eggs/
@@ -17,75 +24,72 @@ sdist/
 var/
 wheels/
 *.egg-info/
+*.egg
 .installed.cfg
 MANIFEST
+pip-wheel-metadata/
 
+# ---------------------------------------------------------------------------
 # Virtual environments
+# ---------------------------------------------------------------------------
 venv/
 env/
+ENV/
 .env/
 .venv/
-ENV/
+env.bak/
+venv.bak/
 
-# IDEs and editors
+# ---------------------------------------------------------------------------
+# Test, coverage, type-check, lint caches
+# ---------------------------------------------------------------------------
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.tox/
+.nox/
+.cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+nosetests.xml
+*.cover
+*.py,cover
+
+# ---------------------------------------------------------------------------
+# Documentation build output
+#   produced by:  sphinx-build, sphinx-autoapi
+# ---------------------------------------------------------------------------
+docs/_build/
+docs/autoapi/
+
+# ---------------------------------------------------------------------------
+# Notebooks
+# ---------------------------------------------------------------------------
+.ipynb_checkpoints/
+
+# ---------------------------------------------------------------------------
+# Polyscope / Dear ImGui session files (dropped wherever a script is run)
+# ---------------------------------------------------------------------------
+.polyscope.ini
+imgui.ini
+
+# ---------------------------------------------------------------------------
+# Editors / IDEs
+# ---------------------------------------------------------------------------
 .idea/
 .vscode/
 *.swp
 *.swo
 *~
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Logs and databases
-*.log
-*.sqlite
-*.db
-
-# OS generated files
+# ---------------------------------------------------------------------------
+# OS metadata
+# ---------------------------------------------------------------------------
 .DS_Store
 .DS_Store?
 ._*
@@ -93,3 +97,17 @@ dmypy.json
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Logs / databases
+# ---------------------------------------------------------------------------
+*.log
+*.sqlite
+*.db
+
+# ---------------------------------------------------------------------------
+# Project-specific media artifacts produced by examples / renders
+# ---------------------------------------------------------------------------
+*.mp4
+*.png
+*.gif

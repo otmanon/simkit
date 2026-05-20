@@ -43,7 +43,7 @@ just isn't exported, and a one-line warning tells you exactly what to install.
 | `blender`  | `bpy`, `blendertoolbox`                    | Blender rendering helpers                                        |
 | `all`      | union of the above                         | Everything end-user-facing                                       |
 | `dev`      | `pytest`, `pytest-cov`                     | Running the test suite                                           |
-| `docs`     | `sphinx`, `sphinx-autoapi`, `furo`, ...    | Building the documentation                                       |
+| `docs`     | `sphinx`, `sphinx-autoapi`, `pydata-sphinx-theme`, ... | Building the documentation                            |
 
 Install one or more extras with the usual `pip` syntax:
 
@@ -73,7 +73,7 @@ pytest
 ## Building the documentation
 
 The docs are generated from the docstrings in the `simkit` package using
-Sphinx + `sphinx-autoapi`. To build them locally:
+Sphinx + `sphinx-autoapi` + the PyData theme. To build them locally:
 
 ```bash
 pip install -e ".[docs]"
@@ -83,3 +83,56 @@ sphinx-build -b html docs docs/_build/html
 Then open `docs/_build/html/index.html` in your browser. Every function in
 `simkit/` is automatically picked up and rendered into the API reference --
 just write a good docstring and rebuild.
+
+## Release / dev workflow
+
+Two equivalent ways to do every build/test/release/docs task. Pick whichever
+you prefer.
+
+- **`scripts/COMMANDS.md`** — raw, copy/paste-able bash commands organized by
+  task. Read it top-to-bottom or grab whichever block you need. No
+  abstraction, no functions, just shell commands.
+- **`scripts/release.sh`** — the same commands wrapped as subcommands so you
+  can run e.g. `./scripts/release.sh build` instead of pasting. There's also
+  a `Makefile` with `make build` / `make docs` / etc. targets.
+
+First-time setup on a new machine:
+
+```bash
+chmod +x scripts/release.sh
+conda activate simkit   # so `python` points at the right interpreter
+```
+
+Quick reference for the script form:
+
+| What | Command |
+| --- | --- |
+| Build sdist + wheel | `./scripts/release.sh build` (or `make build`) |
+| Upload to TestPyPI | `./scripts/release.sh upload-test` |
+| Install from TestPyPI in a throwaway venv | `./scripts/release.sh test-install` |
+| Upload to **real** PyPI | `./scripts/release.sh upload-prod` |
+| Build the docs | `./scripts/release.sh docs` |
+| Build + open the docs | `./scripts/release.sh docs-open` |
+| Remove all build/docs/cache junk | `./scripts/release.sh clean` |
+
+### Local upload vs GitHub Actions Trusted Publishing
+
+The script has the full tradeoff in a header comment. Summarized:
+
+- **Local** (`upload-test` / `upload-prod`): fastest path, but requires a
+  PyPI API token on your laptop and the build runs in your local
+  environment. Best for the very first upload (claiming the project name)
+  or one-off hotfixes.
+- **GitHub Actions** (`.github/workflows/release.yml`, triggered by pushing
+  a `vX.Y.Z` git tag): no secrets stored anywhere thanks to Trusted
+  Publishing; every release is a reproducible build from a tagged commit;
+  auto-publishes to TestPyPI first, then PyPI. Best for every release
+  after the first.
+
+Recommended flow: claim the project on PyPI/TestPyPI with one local upload,
+then switch to tag-triggered GitHub Actions for everything afterward:
+
+```bash
+git tag v0.1.0
+git push --tags
+```
