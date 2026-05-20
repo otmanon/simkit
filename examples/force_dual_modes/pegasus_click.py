@@ -9,15 +9,15 @@ import time
 import sys
 from PIL import Image
 
-from simkit.volume import volume
 
 
 
 sys.path.append(os.path.dirname(__file__) + "/../../../")
+
+import simkit as sk
 from simkit.orthonormalize import orthonormalize
 from simkit.polyscope.view_scalar_field import view_scalar_field
 from simkit.spectral_clustering import spectral_clustering
-from simkit.sims.elastic.AdaptiveClickFEMSim import AdaptiveClickFEMSim
 from simkit.blender.render_vertex_scalars import render_vertex_scalars
 from simkit.average_onto_simplex import average_onto_simplex
 from simkit.blender.render_scene_animation import render_scene_animation
@@ -26,24 +26,26 @@ from simkit.diffuse_scalar import diffuse_scalar
 from simkit.farthest_point_sampling import farthest_point_sampling
 from simkit.filesystem.compute_with_cache_check import compute_with_cache_check
 from simkit.fold_in_vector_subspace import fold_in_vector_subspace
-from simkit.force_dual_modes import force_dual_modes_diagonal
+# from simkit.force_dual_modes import force_dual_modes_diagonal
 from simkit.lbs_jacobian import lbs_jacobian
-from simkit.log_likelihood import conditional_likelihoods_diagonal
+from simkit.log_likelihood import conditional_likelihoods_diagonal, log_likelihoods_diagonal
 from simkit.polyscope.view_animation import view_animation
 from simkit.polyscope.view_scalar_fields import view_scalar_fields
-from simkit.sims.elastic.AdaptiveSphereContactFEMSim import AdaptiveSphereContactFEMSim
+# from simkit.sims.elastic.AdaptiveSphereContactFEMSim import AdaptiveSphereContactFEMSim
 from simkit.sims.elastic.ElasticFEMSim import ElasticFEMSimParams
 from simkit.spectral_cubature import spectral_cubature
 from simkit.eigs import eigs
 from simkit.fold_vector_hessian import fold_vector_hessian
 from simkit.normalize_and_center import normalize_and_center
 from simkit.ympr_to_lame import ympr_to_lame
-from simkit.linear_elasticity_hessian import linear_elasticity_hessian
+# from simkit.linear_elasticity_hessian import linear_elasticity_hessian
 from simkit.dirichlet_penalty import dirichlet_penalty
 from simkit.massmatrix import massmatrix
 
+from gmm_force_expansion import gmm_force_expansion
+from AdaptiveClickFEMSim import AdaptiveClickFEMSim
 
-def interactive_mouse_app(mode, sim, Bs, cIs, cWs, diagonal_distributions, uv=None, tex=None, M_tex=None, F_tex=None):
+def interactive_mouse_app(mode, sim, Bs, cIs, cWs, diagonal_distributions, uv=None, tex=None, M_tex=None, F_tex=None, marginalize_ind=None):
     Sigma_Fs = [sp.sparse.diags(diagonal_distributions[i].flatten()).tocsc() for i in range(len(diagonal_distributions))]
    
    
@@ -114,7 +116,7 @@ def interactive_mouse_app(mode, sim, Bs, cIs, cWs, diagonal_distributions, uv=No
     
         if sim.num_handles > 0:
             force = sim.query_handle_force(z)
-            marginalize_ind = np.where(np.abs(force) > 1e-6)[0]
+            # marginalize_ind = np.where(np.abs(force) > 1e-6)[0]
             cl, cll = conditional_likelihoods_diagonal(force, Sigma_Fs, marginalize=marginalize_ind)               
                 
             new_force_mixture_index = np.argmax(cl)
@@ -145,7 +147,7 @@ def interactive_mouse_app(mode, sim, Bs, cIs, cWs, diagonal_distributions, uv=No
     ps.show()
     
     
-def simulate(mode, bI_func, bc_pos_func, sim, Bs, cIs, cWs, diagonal_distributions, num_timesteps, Sigma_Fs_inv=None, sumlogcovs=None):
+def simulate(mode, bI_func, bc_pos_func, sim : AdaptiveClickFEMSim, Bs, cIs, cWs, diagonal_distributions, num_timesteps, Sigma_Fs_inv=None, sumlogcovs=None, marginalize_ind=None):
     # Sigma_Fs = [sp.sparse.diags(diagonal_distributions[i].flatten()).tocsc() for i in range(len(diagonal_distributions))]
    
     z, z_dot = sim.rest_state()
@@ -155,37 +157,95 @@ def simulate(mode, bI_func, bc_pos_func, sim, Bs, cIs, cWs, diagonal_distributio
     M = massmatrix(sim.X, sim.T)
     Me = sp.sparse.kron(M, sp.sparse.eye(dim)).tocsc()
     
-    Z = np.zeros((z.shape[0], num_timesteps))
+    max_dim = 0
+    for i in range(len(Bs)):
+        max_dim = max(max_dim, Bs[i].shape[1])
+        
+    Z = np.zeros((max_dim, num_timesteps))
     mode_indices = np.zeros(num_timesteps, dtype=int)
     vI = bI_func(0)
-    sim.add_handle(vI, bc_pos_func(0)) 
+    bc_handle = bc_pos_func(0)
+    for i,vi in enumerate(vI):
+        sim.add_handle(np.array([vi]), bc_handle[i]) 
+    
+    i = 0
+    # import polyscope as ps
+    # ps.init()
+    # ps.set_ground_plane_mode("none")
+    # mesh_new = ps.register_volume_mesh("mesh", X, T)
     for i in range(num_timesteps):
         # if point being moved exists, and space is being held down, move the point by dragging mouse around
-        vI_new = bI_func(i)
-        if vI_new != vI:
-            sim.remove_handle(0)
-            sim.add_handle(vI_new, bc_pos_func(i))
-            vI = vI_new
-        sim.update_handle_position(0, bc_pos_func(i))
+        # vI_new = bI_func(i)
+        # if vI_new != vI:
+        #     sim.remove_handle(0)
+        #     sim.add_handle(vI_new, bc_pos_func(i))
+        #     vI = vI_new#
+        
+        bc_handle = bc_pos_func(i)
+        for c,vi in enumerate(vI):
+            sim.update_handle_position(c, bc_handle[c])
+            
         if sim.num_handles > 0:
             force = sim.query_handle_force(z)
-            marginalize_ind = np.where(np.abs(force) > 1e-6)[0]
-            cl, cll = conditional_likelihoods_diagonal(force, Sigma_Fs, covs_inv=Sigma_Fs_inv, sumlogcovs=sumlogcovs, marginalize=marginalize_ind)               
+            marginalize_ind = np.where(np.abs(force) > 1e-12)[0]
+            log_likelihood = log_likelihoods_diagonal(force, Sigma_Fs, covs_inv=Sigma_Fs_inv, sumlogcovs=sumlogcovs, marginalize=marginalize_ind)
+            cl, cll = conditional_likelihoods_diagonal(force, Sigma_Fs, covs_inv=Sigma_Fs_inv, sumlogcovs=sumlogcovs, marginalize=marginalize_ind)#, marginalize=marginalize_ind)               
             new_force_mixture_index = np.argmax(cl)
             if new_force_mixture_index != mode:
+                print("########################################################")
+                print("Mode Changed at time: " + str(i))
+                print("Marginalized indices: " + str(marginalize_ind))
+                print("old mode: " + str(mode))
+                print("new mode: " + str(new_force_mixture_index))
+                print("force: " + str(force[marginalize_ind]))
+                print("cl: " + str(cl))
+                print("cll: " + str(cll))
+                print("ll : " + str(log_likelihood))
                 mode = new_force_mixture_index
-                # B_old = sim.B.copy()  
+                B_old = sim.B.copy()  
+                B_new = Bs[mode]
+                BMB = B_new.T @ (Me @ B_new)
+                BMB_old = B_new.T @ (Me @ B_old)
+                z_new = np.linalg.solve(BMB, BMB_old @ z).reshape(-1, 1)
+                z_dot_new = np.linalg.solve(BMB, BMB_old @ z_dot).reshape(-1, 1)
                 
-                # BMB = Bs[mode].T @ Me @ Bs[mode]
-                # BMB_old = Bs[mode].T @ Me @ B_old
-                z = np.zeros((z.shape[0], 1)) #sp.sparse.linalg.spsolve(BMB, BMB_old @ z).reshape(-1, 1)
-                z_dot = np.zeros((z_dot.shape[0], 1)) #sp.sparse.linalg.spsolve(BMB, BMB_old @ z_dot).reshape(-1, 1)
+                # u_new = B_new @ z_new
+                # u_old = B_old @ z
+                # import polyscope as ps
+                # ps.init()
+                # ps.set_ground_plane_mode("none")
+                # ps.remove_all_structures()
+                # # pc = ps.register_point_cloud("pc", X[bI_handle, :])
+                # mesh_new = ps.register_volume_mesh("mesh", X + u_new.reshape(-1, 3), T)
+                # mesh_old = ps.register_volume_mesh("mesh_old", X + u_old.reshape(-1, 3), T)
+                # pc_end = ps.register_point_cloud("pc_end", bc_handle_end)
+                # pc_start = ps.register_point_cloud("pc_start", bc_handle_start)
+                # u_handle = sim.SB @ z
+                # pc_handle = ps.register_point_cloud("pc_handle", X0[bI_handle, :] + u_handle.reshape(-1, 3))
+                # # pc_handle.add_vector_quantity("force", force[marginalize_ind].reshape(-1, 3))
+                # # mesh.add_scalar_quantity("u_new", X + u_new.reshape(-1, 3), enabled=True)
+                # # pc.add_scalar_quantity("u_old", X + u_old.reshape(-1, 3), enabled=True)
+                # ps.show()
+                # z = np.zeros((z.shape[0], 1)) #sp.sparse.linalg.spsolve(BMB, BMB_old @ z).reshape(-1, 1)
+                # z_dot = np.zeros((z_dot.shape[0], 1)) #sp.sparse.linalg.spsolve(BMB, BMB_old @ z_dot).reshape(-1, 1)
                 # sim.update_subspace(B, cI, cW)
-                sim.update_subspace(Bs[mode], cIs[mode], cWs[mode])
+                sim.update_subspace(B_new, cIs[mode], cWs[mode])
+                z = z_new.copy()
+                z_dot = z_dot_new.copy()
+                
+                # u_new = Bs[mode] @ z
+                # mesh_new.update_vertex_positions(X + u_new.reshape(-1, 3))
+                # ps.frame_tick()
+                
+   
         z_next = sim.step(z, z_dot)
-        z_dot = (z_next - z) / sim.p.h
+        z_dot = (z_next - z) / sim.sim_params.h
         z = z_next.copy()
-        Z[:, i] = z.flatten()
+        
+        u_new = Bs[mode] @ z
+        # mesh_new.update_vertex_positions(X + u_new.reshape(-1, 3))
+        # ps.frame_tick()
+        Z[:Bs[mode].shape[1], i] = z.flatten()
         
         mode_indices[i] = mode
     sim.remove_handle(0)
@@ -206,7 +266,7 @@ def compute_subspace(X, T, H, M,  subspace_dim, num_cubature_points, method):
         B = sp.sparse.identity(X.shape[0]*X.shape[1])
         W = sp.sparse.identity(X.shape[0]*X.shape[1])
         cI = np.arange(T.shape[0])
-        cW = volume(X, T)
+        cW = sk.volume(X, T)
         return [B], [W], cI[None, :], cW[None, :], [np.ones((1, X.shape[0]*X.shape[1]))]
     
     if method == "skinning_eigenmodes":
@@ -220,7 +280,7 @@ def compute_subspace(X, T, H, M,  subspace_dim, num_cubature_points, method):
         
         return B[None, :], W[None, :], cI[None, :], cW[None, :], [np.ones((1, X.shape[0]*X.shape[1]))]
 
-    elif method == "force_dual_skinning_eigenmodes":
+    elif method == "force_dual_skinning_eigenmodes" or method == "force_dual_skinning_eigenmodes_expanded":
         # build distribution 
         # initialize empty numpy arrays instead of lists
         Bs = np.zeros((distributions.shape[1], X.shape[0]*X.shape[1], subspace_dim*12))
@@ -248,7 +308,38 @@ def compute_subspace(X, T, H, M,  subspace_dim, num_cubature_points, method):
             Ma = massmatrix(X, F)
             m   = Ma.diagonal()
 
-        return Bs, Ws, cIs, cWs, diagonal_distributions
+    if method == "force_dual_skinning_eigenmodes_expanded":
+        diagonal_distributions_expanded, force_mixture_subspaces = gmm_force_expansion(diagonal_distributions, 2)
+        Bs_expanded = [] 
+        Ws_expanded = []
+        cIs_expanded = []
+        cWs_expanded = []
+        for i in range(len(diagonal_distributions_expanded)):
+            
+            W = np.concatenate(Ws[force_mixture_subspaces[i], :, :].transpose(0, 2, 1), axis=0).T
+            B = lbs_jacobian(X, W)
+            cI, cW = spectral_cubature(X, T, W, num_cubature_points)  
+            
+            Ws_expanded.append(W)
+            Bs_expanded.append(B)
+            cIs_expanded.append(cI)
+            cWs_expanded.append(cW)
+            
+            # B = np.concatenate(Bs[force_mixture_subspaces[i], :, :].transpose(0, 2, 1), axis=0).T
+            # Bs_expanded.append(B)
+            # # sk.polyscope.view_displacement_modes(X, T, B)
+            # Ws_expanded[i, :, :] = Ws[force_mixture_subspaces[i], :, :]
+            # cI, cW = spectral_cubature(X, T, Ws_expanded[i, :, :], num_cubature_points)  
+            # cIs_expanded[i, :] = cI
+            # cWs_expanded[i, :] = cW
+            # diagonal_distributions_expanded[i] = diagonal_distributions_expanded[i]
+        
+        Bs = Bs_expanded
+        Ws = Ws_expanded
+        cIs = cIs_expanded
+        cWs = cWs_expanded
+        diagonal_distributions = np.array(diagonal_distributions_expanded)
+    return Bs, Ws, cIs, cWs, diagonal_distributions
 
 
 start_pos_wing = np.array([[0.962, 0.57, 0.15]])
@@ -257,55 +348,68 @@ end_pos_wing = np.array([[0.253, -0.2, -0.0]])
 start_pos_horn = np.array([[0.012, 0.53, -0.79]])
 end_pos_horn = np.array([[0.02, 0.06, -0.90]]) 
 
-
-num_timesteps_wing = 200
-
-num_timesteps_horn = 200
-
+num_timesteps_wing = 100
+num_timesteps_horn = 100
+num_timesteps_return = 100
+num_timesteps = num_timesteps_wing + num_timesteps_horn + num_timesteps_return
 def bI_func(i):
-    if i < num_timesteps_wing:
-        return igl.point_mesh_squared_distance(start_pos_wing, X, np.arange(X.shape[0])[:, None])[1]
-    else:
-        return igl.point_mesh_squared_distance(start_pos_horn, X, np.arange(X.shape[0])[:, None])[1]
+    return bI_handle
+    # if i < num_timesteps_wing:
+    #     return igl.point_mesh_squared_distance(start_pos_wing, X, np.arange(X.shape[0])[:, None])[1]
+    # else:
+    #     return igl.point_mesh_squared_distance(start_pos_horn, X, np.arange(X.shape[0])[:, None])[1]
     
     
 # def bI_func
-def bc_pos_func(i):    
-    if i < num_timesteps_wing//2:
-        return start_pos_wing + (end_pos_wing - start_pos_wing) * i / (num_timesteps_wing // 2)
-    elif i < num_timesteps_wing:
-        return end_pos_wing + (start_pos_wing - end_pos_wing) * (i - num_timesteps_wing//2) / (num_timesteps_wing // 2)
-    elif i < num_timesteps_wing + num_timesteps_horn//2:
-        return start_pos_horn + (end_pos_horn - start_pos_horn) * (i - num_timesteps_wing) / (num_timesteps_horn // 2)
-    else:
-        return end_pos_horn + (start_pos_horn - end_pos_horn) * (i - num_timesteps_wing - num_timesteps_horn//2) / (num_timesteps_horn // 2)
-
+def bc_pos_func(i): 
+    
+    bc_handle = np.zeros((2, 3), dtype=float)
+    
+    # if i <  num_timesteps:
+    #     bc_handle = bc_handle_start + (bc_handle_end - bc_handle_start) * i / (num_timesteps_return)
+    if i < num_timesteps_wing:
+        bc_handle[1] = bc_handle_start[1] + (bc_handle_end[1] - bc_handle_start[1]) * i / (num_timesteps_wing)
+        bc_handle[0] = bc_handle_start[0]
+    elif i < num_timesteps_wing + num_timesteps_horn:
+        bc_handle[0] = bc_handle_start[0] + (bc_handle_end[0] - bc_handle_start[0]) * (i - num_timesteps_wing) / (num_timesteps_horn)
+        bc_handle[1] = bc_handle_end[1]
+    
+    # if i < num_timesteps_horn:
+    #     bc_handle[0] = bc_handle_start[0] + (bc_handle_end[0] - bc_handle_start[0]) * i / (num_timesteps_horn)
+    #     bc_handle[0] = bc_handle_start[0]
+    # elif i < num_timesteps_wing + num_timesteps_horn:
+    #     bc_handle[0] = bc_handle_start[0] + (bc_handle_end[0] - bc_handle_start[0]) * (i - num_timesteps_horn) / (num_timesteps_wing)
+    #     bc_handle[1] = bc_handle_end[1]
+    elif i < num_timesteps_wing + num_timesteps_horn + num_timesteps_return:
+        bc_handle = bc_handle_end + (bc_handle_start - bc_handle_end) * (i - num_timesteps_wing - num_timesteps_horn) / (num_timesteps_return)
+    return bc_handle
 name = "pegasus"
-methods = [  "force_dual_skinning_eigenmodes",   "full"] #,  "skinning_eigenmodes", ]
+methods = ["skinning_eigenmodes"] #  "force_dual_skinning_eigenmodes_expanded"] #,  "skinning_eigenmodes", ]
 
 # method = "skinning_eigenmodes"#
 directory = os.path.dirname(__file__)
-data_dir = directory + "/../../../data/3d/" + name
-load_colormap = directory + "/../../../data/colormaps/Purples_11.png"
+data_dir = directory + "/../../data/3d/" + name
+load_colormap = directory + "/../../data/colormaps/Purples_11.png"
 result_dir = directory + "/results/" + name + "/"
 
 
 distributions = np.load(data_dir + "/pegasus_distribution_global_sharp.npy")
 
-distributions = np.clip(distributions, 1e-6, 1)
+distributions = np.clip(distributions, 1e-6, 1)[:, [0, 2]]
+
 k_handle = 1e6
+distributions = distributions * k_handle
 gamma_pin = 1e8
-subspace_dim = 2
+subspace_dim = 4
 num_cubature_points = 200
-num_timesteps = 400
-read_subspace_cache = True
-read_result_cache =  True
+read_subspace_cache = False
+read_result_cache =  False
 os.makedirs(result_dir, exist_ok=True)
 [X0, T, F] = igl.readMESH(data_dir + "/" + name + ".mesh")
 F = igl.boundary_facets(T)[0]
 bI = np.unique(F)
 
-timing = True
+timing = False
 
 
 # Xs =X0[bI, :]
@@ -335,9 +439,11 @@ dim = X.shape[1]
 materials= np.load(data_dir + "/" + name + "_materials.npy")
 ym = materials[:, 0]
 pr = materials[:, 1]
-mu, lam = ympr_to_lame(ym, 0.0)
-M = massmatrix(X, T)
-H = linear_elasticity_hessian(X=X, T=T, mu=mu, lam=lam).tocsc()
+mu, lam = sk.ympr_to_lame(ym, 0.0)
+M = sk.massmatrix(X, T)
+distributions = np.sqrt(M) @ distributions
+M_inv_sqrt = sp.sparse.diags(1.0 / np.sqrt(  M.diagonal()))
+H = sk.energies.linear_elasticity_hessian(X=X, T=T, mu=mu, lam=lam).tocsc()
 
 # [_sqrD, vI, _cP] = igl.point_mesh_squared_distance(start_pos, X, np.arange(X.shape[0])[:, None])
 # view_scalar_fields(X, T, distributions)
@@ -348,6 +454,14 @@ bc = X[pinned_vertices, :]
 H_pin, b_pin = dirichlet_penalty(pinned_vertices, 0*bc, X.shape[0], gamma_pin)
 
 
+wing_index = igl.point_mesh_squared_distance(start_pos_wing, X, np.arange(X.shape[0])[:, None])[1]
+horn_index = igl.point_mesh_squared_distance(start_pos_horn, X, np.arange(X.shape[0])[:, None])[1]
+bI_handle = np.concatenate([horn_index, wing_index])
+bc_handle = X[bI_handle, :].copy()
+bc_handle_end = np.concatenate([end_pos_horn, end_pos_wing])
+bc_handle_start = bc_handle.copy()
+
+marginalize_ind = (np.repeat(bI_handle[:, None], 3, axis=1) * 3 + np.arange(3)[None, :]).flatten()
 L = fold_vector_hessian(H + H_pin, 3)
 
 Me = sp.sparse.kron(M, sp.sparse.eye(dim)).tocsc()
@@ -371,22 +485,25 @@ for method in methods:
                                                     num_cubature_points,
                                                         method)
 
-    [Bs, Ws, cIs, cWs, diagonal_distributions] = compute_with_cache_check(compute_subspace_func, 
-                                                            subspace_cache_dir,
-                                                            read_cache=read_subspace_cache)
+    [Bs, Ws, cIs, cWs, diagonal_distributions] = compute_subspace_func()
+    # [Bs, Ws, cIs, cWs, diagonal_distributions] = compute_with_cache_check(compute_subspace_func, 
+    #                                                         subspace_cache_dir,
+    #                                                         read_cache=read_subspace_cache)
     
-
+    Sigma_Fs = [sp.sparse.diags(diagonal_distributions[i].flatten()).tocsc() for i in range(len(diagonal_distributions))]
+    Sigma_Fs_inv = [sp.sparse.diags(1.0 / Sigma_Fs[i].diagonal()).tocsc() for i in range(len(Sigma_Fs))]
+    sumlogcovs =[np.sum(np.log(Sigma_Fs[i].diagonal())) for i in range(len(Sigma_Fs))
+                ]
+    
+    
     if timing:
         sim_params = ElasticFEMSimParams(ym=ym, pr=0.45, h=0.01, Q0=H_pin, b0=b_pin)
         sim_params.solver_p.max_iter = 1
         sim_params.solver_p.tolerance = 0
         
-        Sigma_Fs = [sp.sparse.diags(diagonal_distributions[i].flatten()).tocsc() for i in range(len(diagonal_distributions))]
-        Sigma_Fs_inv = [sp.sparse.diags(1.0 / Sigma_Fs[i].diagonal()).tocsc() for i in range(len(Sigma_Fs))]
-        sumlogcovs =[np.sum(np.log(Sigma_Fs[i].diagonal())) for i in range(len(Sigma_Fs))
-                    ]
+
         mode = 0
-        sim = AdaptiveClickFEMSim(k_handle, X, T,Bs[mode], cIs[mode], cWs[mode], p=sim_params, x0=X.reshape(-1, 1))
+        sim = AdaptiveClickFEMSim(k_handle, X, T,Bs[mode], cIs[mode], cWs[mode], sim_params=sim_params, q=X.reshape(-1, 1))
         Zs = None
         mode_indices = None
         def compute_result():
@@ -394,6 +511,8 @@ for method in methods:
             [Zs, mode_indices] = simulate(mode, bI_func, bc_pos_func,  sim, Bs, cIs, cWs, Sigma_Fs, num_timesteps, Sigma_Fs_inv=Sigma_Fs_inv, sumlogcovs=sumlogcovs)   
             return Zs, mode_indices
      
+        # Zs, mode_indices = compute_result()
+        
         #print number of vertices
         print("Pegasus " + method + " vertices: " + str(X.shape[0]))
         # print subspace dimension  
@@ -447,30 +566,46 @@ for method in methods:
             sim_params.solver_p.tolerance = 0
             
             mode = 0
-            sim = AdaptiveClickFEMSim(k_handle, X, T,Bs[mode], cIs[mode], cWs[mode], p=sim_params, x0=X.reshape(-1, 1))
+            sim = AdaptiveClickFEMSim(k_handle, X, T,Bs[mode], cIs[mode], cWs[mode], sim_params=sim_params, q=X.reshape(-1, 1))
         
-            [Zs, mode_indices] = simulate(mode, bI_func, bc_pos_func,  sim, Bs, cIs, cWs, diagonal_distributions, num_timesteps)   
+            [Zs, mode_indices] = simulate(mode, bI_func, bc_pos_func,  sim, Bs, cIs, cWs,  Sigma_Fs, num_timesteps, Sigma_Fs_inv=Sigma_Fs_inv, sumlogcovs=sumlogcovs, marginalize_ind=marginalize_ind)   
             return Zs, mode_indices
         
         result_cache_dir = result_dir + "/" + method + "_result.npz"
-        [Zs, mode_indices] = compute_with_cache_check(compute_result, result_cache_dir, read_cache=read_result_cache)    
+        [Zs, mode_indices] = compute_result()
+        # [Zs, mode_indices] = compute_with_cache_check(compute_result, result_cache_dir, read_cache=read_result_cache)    
         
-        Us = (Bs[ mode_indices, :] @ Zs.T[:, :, None]).reshape(mode_indices.shape[0], -1, 3)
-    
-        mode = 0
-        sim_params = ElasticFEMSimParams(ym=ym, pr=0.45, h=0.01, Q0=H_pin, b0=b_pin)
-        sim_params.solver_p.max_iter = 1
-        sim_params.solver_p.tolerance = 0    
-        sim = AdaptiveClickFEMSim(k_handle, X, T,Bs[mode], cIs[mode], cWs[mode], p=sim_params, x0=X.reshape(-1, 1))
-        # interactive_mouse_app(mode, sim, Bs, cIs, cWs, diagonal_distributions, uv=tex_uv, tex=tex_png, M_tex=map, F_tex=F_tex)
+        Us = np.zeros((X.shape[0], X.shape[1], num_timesteps))
+        for t in range(num_timesteps):
+            mode_indices[t] = mode_indices[t]
+            B = Bs[ mode_indices[t]]
+            dim_B = B.shape[1]
+            Us[:, :, t] = ( B@ Zs[:dim_B, t ]).reshape(-1, 3)
+        # Us = (Bs[ mode_indices, :] @ Zs.T[:, :, None]).reshape(mode_indices.shape[0], -1, 3)
+        view_animation(X, T, Us.reshape(X.shape[0]*X.shape[1], -1))
         
-        # view_animation(X, T, Us.transpose(1, 2, 0).reshape(X.shape[0]*X.shape[1], -1))
+        # sk.polyscope.view_scalar_fields(X, T, distributions)
+        # sk.polyscope.view_displacement_modes(X, T, Bs[1])
+        # mode = 0
+        # sim_params = ElasticFEMSimParams(ym=ym, pr=0.45, h=0.01, Q0=H_pin, b0=b_pin)
+        # sim_params.solver_p.max_iter = 1
+        # sim_params.solver_p.tolerance = 0    
+        # sim = AdaptiveClickFEMSim(k_handle, X, T,Bs[mode], cIs[mode], cWs[mode], sim_params=sim_params, q=X.reshape(-1, 1))
+        # # interactive_mouse_app(mode, sim, Bs, cIs, cWs, diagonal_distributions, uv=tex_uv, tex=tex_png, M_tex=map, F_tex=F_tex)
         
+        # import polyscope as ps
+        # ps.init()
+        # ps.set_ground_plane_mode("none")
+        # mesh = ps.register_surface_mesh("mesh", X, T)
+        # pc = ps.register_point_cloud("pc", X[bI_handle, :])
+        # ps.show()
         
         # X_tex_ball += X[vI, :]
-        Us_ball = np.zeros(( num_timesteps, X_tex_ball.shape[0], dim,))
+        Us_ball_1 = np.zeros(( num_timesteps, X_tex_ball.shape[0], dim,))
+        Us_ball_2 = np.zeros(( num_timesteps, X_tex_ball.shape[0], dim,))
         for i in range(num_timesteps):
-            Us_ball[i, :,:] = bc_pos_func(i)# - X[bI_func(i), :]
+            Us_ball_1[i, :,:] = bc_pos_func(i)[0]# - X[bI_func(i), :]
+            Us_ball_2[i, :,:] = bc_pos_func(i)[1]# - X[bI_func(i), :]
 
         # # render_scalar_fields(X, T, diagonal_distributions)
         
@@ -489,14 +624,21 @@ for method in methods:
             {
                 'X': (( M_tex @ X.reshape(-1, 1))).reshape(-1, dim),
                 'F': F_tex,
-                'U': (M_tex @ Us.transpose(1, 2, 0).reshape(-1, num_timesteps)).reshape(X_tex.shape[0], dim, -1)[:, :, frames],#.reshape(X.shape[0], dim, -1),
+                'U': (M_tex @ Us.reshape(-1, num_timesteps)).reshape(X_tex.shape[0], dim, -1)[:, :, frames],#.reshape(X.shape[0], dim, -1),
                 'tex_png': tex_path,
                 'tex_uv': tex_uv
             },
             {
                 'X': X_tex_ball,
                 'F': F_tex_ball,
-                'U': (Us_ball).transpose(1, 2, 0).reshape(-1, num_timesteps).reshape(X_tex_ball.shape[0], dim, -1)[:, :, frames],  # Static collider
+                'U': (Us_ball_1).transpose(1, 2, 0).reshape(-1, num_timesteps).reshape(X_tex_ball.shape[0], dim, -1)[:, :, frames],  # Static collider
+                'tex_png': tex_ball_png,
+                'tex_uv': tex_ball_uv
+            },
+            {
+                'X': X_tex_ball,
+                'F': F_tex_ball,
+                'U': (Us_ball_2).transpose(1, 2, 0).reshape(-1, num_timesteps).reshape(X_tex_ball.shape[0], dim, -1)[:, :, frames],  # Static collider
                 'tex_png': tex_ball_png,
                 'tex_uv': tex_ball_uv
             }
@@ -505,14 +647,15 @@ for method in methods:
         # val = diagonal_distributions.reshape( -1, X.shape[0], X.shape[1])
         # vals = np.mean(val, axis=2).T
         
-        # # view_scalar_fields(X, T, val[:, :, 2].T)
-        render_path = result_dir + "/" + method + "_load_render/"
-        render_vertex_scalars(X, F, distributions, render_path,load_colormap,
-                            imgRes_x=imgRes_x, imgRes_y=imgRes_y, numSamples=numSamples, 
-                            camLocation = camLocation, lookAtLocation=lookAtLocation, lightAngle=lightAngle, 
-                            lightStrength=lightStrength, lightAngle2=lightAngle2, lightStrength2=lightStrength2,
-                            shade_smooth=True
-                            )
+        # view_scalar_fields(X, T, val[:, :, 2].T)
+        # render_path = result_dir + "/" + method + "_load_render/"
+        # M_inv_sqrt_e = sp.sparse.kron(M_inv_sqrt, sp.sparse.eye(dim))
+        # render_vertex_scalars(X, F, M_inv_sqrt_e @ diagonal_distributions.T, render_path,load_colormap,
+        #                     imgRes_x=imgRes_x, imgRes_y=imgRes_y, numSamples=numSamples, 
+        #                     camLocation = camLocation, lookAtLocation=lookAtLocation, lightAngle=lightAngle, 
+        #                     lightStrength=lightStrength, lightAngle2=lightAngle2, lightStrength2=lightStrength2,
+        #                     shade_smooth=True
+        #                     )
         render_path = result_dir + "/" + method + "_sim_render.mp4"
         render_scene_animation(render_path, imgRes_x, imgRes_y, numSamples, 
                             camLocation = camLocation, lookAtLocation=lookAtLocation, lightAngle=lightAngle, 

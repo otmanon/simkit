@@ -3,11 +3,14 @@ import os
 
 import numpy as np
 import polyscope as ps
+from PIL import Image
+
+from simkit.filesystem.mp4_to_gif import mp4_to_gif
 
 from ..filesystem.video_from_image_dir import video_from_image_dir
 
 
-def view_displacement_modes(X, T, W, a=0.1, period=24, path=None, edge_width=1, fps=120):
+def view_displacement_modes(X, T, W, a=0.1, period=24, path=None, uv=None, texture_png=None, edge_width=1, fps=120, material='default'):
 
 
 
@@ -26,13 +29,26 @@ def view_displacement_modes(X, T, W, a=0.1, period=24, path=None, edge_width=1, 
     dt = T.shape[1]
     dim = X.shape[1]
     if dt == 1:
-        geo = ps.register_point_cloud("geo", X)
+        geo = ps.register_point_cloud("geo", X, material=material)
     elif dt == 2:
-        geo = ps.register_curve_network("geo", X, T)
+        geo = ps.register_curve_network("geo", X, T, material=material)
     elif dt == 3:
-        geo = ps.register_surface_mesh("geo", X, T, edge_width=edge_width)
+        geo = ps.register_surface_mesh("geo", X, T, edge_width=edge_width, material=material)
+                
+        if texture_png is not None and uv is not None:
+            geo.add_parameterization_quantity("test_param",  uv,
+                                            defined_on='vertices')
+            
+            # if its a string then read the image with PIL. use it direclty
+            if isinstance(texture_png, str):
+                texture_png = np.array(Image.open(texture_png)) / 255
+            
+            geo.add_color_quantity("test_vals", texture_png,
+                                        defined_on='texture', param_name="test_param",
+                                            enabled=True)
+        
     elif dt == 4:
-        geo = ps.register_volume_mesh("geo", X, T, edge_width=edge_width)
+        geo = ps.register_volume_mesh("geo", X, T, edge_width=edge_width, material=material)
 
     dw = W.shape[1]
 
@@ -82,4 +98,5 @@ def view_displacement_modes(X, T, W, a=0.1, period=24, path=None, edge_width=1, 
 
     if path is not None:
         video_from_image_dir(dirstem, path, fps=fps)
+        mp4_to_gif(path, path[:-4] + ".gif")
     return
