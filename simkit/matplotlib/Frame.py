@@ -28,7 +28,7 @@ class Frame():
 
     def update_frame(self, A):
         self.A = A
-        self.X = A[:, None, -1] + self.X0
+        self.X = A[:, None, -1].T + self.X0
         self.V = A[:, :-1] @ self.V0
 
         self.qu.set_UVC(self.V[:, 0], self.V[:, 1])
