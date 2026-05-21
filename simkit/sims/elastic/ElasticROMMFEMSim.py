@@ -6,9 +6,9 @@ import os
 
 import simkit
 from simkit.solvers import Solver, SolverParams, NewtonSolver
-from simkit.energies import elastic_energy_S, elastic_gradient_dS, elastic_hessian_d2S
+from simkit.energies import elastic_energy_S, elastic_gradient_S, elastic_hessian_S
 from simkit.energies import quadratic_energy, quadratic_gradient, quadratic_hessian
-from simkit.energies import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
+from simkit.energies import kinetic_energy_be_z, kinetic_gradient_be_z, kinetic_hessian_be_z, KineticEnergyZPrecomp
 from simkit.sims.Sim import *
 
 class SQPMFEMSolverParams(SolverParams):
@@ -260,11 +260,12 @@ class ElasticROMMFEMSim(Sim):
 
         return  kin_z_precomp, GJB, mu, lam, vol, C, Ci, BMB, BMy
 
-    def dynamic_precomp(self, z, z_dot, Q_ext=None, b_ext=None):
+    def dynamic_precomp(self, z_curr, z_prev, Q_ext=None, b_ext=None):
         """
         Computation done once every timestep and never again
         """
-        self.y = z + self.params.h * z_dot
+        self.z_curr = z_curr
+        self.z_prev = z_prev
 
         # add to current Q_ext
         if Q_ext is not None:
@@ -298,11 +299,11 @@ class ElasticROMMFEMSim(Sim):
         A = a.reshape(-1, dim * (dim + 1) // 2)
         F = (self.GJB @ z).reshape(-1, dim, dim) # deformation gradient at cubature tets
         
-        elastic = elastic_energy_S(A, self.mu, self.lam,  self.vol, self.params.material)
+        elastic = elastic_energy_z(z, self.mu, self.lam,  self.vol, self.params.material, self.el_pre)
 
         quad =  quadratic_energy(z, self.Q, self.b)
 
-        kinetic = kinetic_energy_z(z, self.y, self.params.h, self.kin_pre)
+        kinetic = kinetic_energy_be_z(z, self.z_curr, self.z_prev, self.params.h, self.kin_pre)
 
         constraint = (np.linalg.norm(simkit.stretch(F) - self.C @ a)) * self.params.gamma # merit function
 
