@@ -6,7 +6,11 @@ def triangle_areas(X, F):
     x0 = X[F[:, 0], :]
     x1 = X[F[:, 1], :]
     x2 = X[F[:, 2], :]
-    return triangle_area_element(x0, x1, x2)
+    
+    e = X[F[:, 1:]] - X[F[:, [0]]]   # (m, 3, 3): rows e1, e2, e3
+    A = (np.linalg.det(e)) / 2.0
+
+    return A
 
 def triangle_areas_gradient(X, F):
     x0 = X[F[:, 0], :]
