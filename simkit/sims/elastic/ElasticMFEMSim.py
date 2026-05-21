@@ -6,9 +6,9 @@ import os
 
 import simkit
 from simkit.solvers import Solver, SolverParams, NewtonSolver
-from simkit.energies import elastic_energy_S, elastic_gradient_dS, elastic_hessian_d2S
+from simkit.energies import elastic_energy_S, elastic_gradient_S, elastic_hessian_S
 from simkit.energies import quadratic_energy, quadratic_gradient, quadratic_hessian
-from simkit.energies import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
+from simkit.energies import kinetic_energy_be_z, kinetic_gradient_be_z, kinetic_hessian_be_z, KineticEnergyZPrecomp
 from simkit.sims.Sim import *
 
 class SQPMFEMSolverParams(SolverParams):
@@ -279,11 +279,12 @@ class ElasticMFEMSim(Sim):
 
         return  kin_z_precomp, GJB, GJq, mu, lam, vol, C, Ci, BMB, BMy
 
-    def dynamic_precomp(self, z, z_dot, Q_ext=None, b_ext=None):
+    def dynamic_precomp(self, z_curr, z_prev, Q_ext=None, b_ext=None):
         """
         Computation done once every timestep and never again
         """
-        self.y = z + self.sim_params.h * z_dot
+        self.z_curr = z_curr
+        self.z_prev = z_prev
 
         # add to current Q_ext
         if Q_ext is not None:
@@ -305,7 +306,7 @@ class ElasticMFEMSim(Sim):
                 self.b = b_ext + self.sim_params.b0
         else:
             if self.sim_params.b0 is None:
-                self.b = np.zeros((z.shape[0], 1))
+                self.b = np.zeros((z_curr.shape[0], 1))
             else:
                 self.b = self.sim_params.b0
 
@@ -320,7 +321,7 @@ class ElasticMFEMSim(Sim):
 
         quad =  quadratic_energy(z, self.Q, self.b)
 
-        kinetic = kinetic_energy_z(z, self.y, self.sim_params.h, self.kin_pre)
+        kinetic = kinetic_energy_be_z(z, self.z_curr, self.z_prev, self.sim_params.h, self.kin_pre)
 
         # # c = simkit.stretch(F) - self.C @ a
         if self.dim == 2:
@@ -423,7 +424,7 @@ class ElasticMFEMSim(Sim):
  
         A = a.reshape(-1, dim * (dim + 1) // 2)
 
-        H_x = kinetic_hessian_z(self.sim_params.h, self.kin_pre)+ \
+        H_x = kinetic_hessian_be_z(self.sim_params.h, self.kin_pre)+ \
             quadratic_hessian(self.Q)
         
         
@@ -433,8 +434,8 @@ class ElasticMFEMSim(Sim):
         G_x = dsdz @ W
         # G_x = simkit.stretch_gradient_dz(z, self.GJB, Ci=self.Ci, dim=dim, GJq=self.GJq) 
 
-        H_s =  elastic_hessian_d2S(A, self.mu, self.lam, self.vol, self.sim_params.material) 
-    
+        H_s =  elastic_hessian_S(A, self.mu, self.lam, self.vol, self.sim_params.material) 
+        H_s = sp.sparse.block_diag([h for h in H_s])
         G_s = -W#sp.sparse.identity(a.shape[0])
         G_si = sp.sparse.diags(1.0/G_s.diagonal())
 
@@ -457,21 +458,21 @@ class ElasticMFEMSim(Sim):
  
  
  
-        g_x = kinetic_gradient_z(z, self.y, self.sim_params.h, self.kin_pre) \
+        g_x = kinetic_gradient_be_z(z, self.z_curr, self.z_prev, self.sim_params.h, self.kin_pre) \
                 + quadratic_gradient(z, self.Q, self.b) \
                 + dsdz @ (w * l)
         
 
-        g_s =  elastic_gradient_dS(A,  self.mu, self.lam, self.vol, self.sim_params.material)\
+        g_s =  elastic_gradient_S(A,  self.mu, self.lam, self.vol, self.sim_params.material).reshape(-1, 1)\
                 - (w * l)
         
         g_mu = (w * (self.Ci @ simkit.stretch(F) - a))
         return g_x, g_s, g_mu
     
-    def step(self, z : np.ndarray, a : np.ndarray, l : np.ndarray, z_dot : np.ndarray, Q_ext=None, b_ext=None,  return_info=False):
+    def step(self, z_curr : np.ndarray, z_prev : np.ndarray, a : np.ndarray, l : np.ndarray, Q_ext=None, b_ext=None,  return_info=False):
     
-        self.dynamic_precomp(z, z_dot, Q_ext, b_ext)
-        p = np.vstack([z, a, l])
+        self.dynamic_precomp(z_curr, z_prev, Q_ext, b_ext)
+        p = np.vstack([z_curr, a, l])
 
         if return_info:
             p, info = self.solver.solve(p, return_info=return_info)

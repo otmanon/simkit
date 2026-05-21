@@ -3,8 +3,8 @@ import numpy as np
 import scipy as sp
 
 from ...solvers import NewtonSolver, NewtonSolverParams
-from ...energies import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
-from ...energies import elastic_energy_z, elastic_gradient_dz, elastic_hessian_d2z, ElasticEnergyZPrecomp
+from ...energies import kinetic_energy_be_z, kinetic_gradient_be_z, kinetic_hessian_be_z, KineticEnergyZPrecomp
+from ...energies import elastic_energy_z, elastic_gradient_z, elastic_hessian_z, ElasticEnergyZPrecomp
 from ...energies import quadratic_energy, quadratic_gradient, quadratic_hessian
 from ...sims.Sim import *
 from ...solvers import NewtonSolver, NewtonSolverParams
@@ -173,14 +173,16 @@ class ElasticFEMSim(Sim):
         self.dynamic_precomp_done = False
         return  kin_z_precomp, elastic_z_precomp, mu, lam, vol, mu0, lam0, vol0, J, Mv
 
-    def dynamic_precomp(self, z, z_dot, BQB_ext=None, Bb_ext=None):
+    def dynamic_precomp(self, z_curr, z_prev, BQB_ext=None, Bb_ext=None):
         """
         Computation done once every timestep and never again. 
         Used for dynamics which involve external forces and hessians that 
         may change every timestep, but not every newton iteration
         """
-        self.y = z + self.sim_params.h * z_dot
 
+        self.z_curr = z_curr
+        self.z_prev = z_prev
+        
         if BQB_ext is not None:
             self.Q = BQB_ext + self.BQ0B
         else:
@@ -195,28 +197,28 @@ class ElasticFEMSim(Sim):
         self.dynamic_precomp_done = True
 
     def energy(self, z : np.ndarray):
-        k = kinetic_energy_z(z, self.y ,self.sim_params.h, self.kin_pre)
+        k = kinetic_energy_be_z(z, self.z_curr, self.z_prev, self.sim_params.h, self.kin_pre)
         v = elastic_energy_z(z,  self.mu, self.lam, self.vol, self.sim_params.material,  self.el_pre)
         quad =  quadratic_energy(z, self.Q, self.b)
         total = k + v + quad
         return total
 
     def gradient(self, z : np.ndarray):
-        k = kinetic_gradient_z(z, self.y, self.sim_params.h, self.kin_pre)
-        v = elastic_gradient_dz(z, self.mu, self.lam, self.vol, self.sim_params.material, self.el_pre)
+        k = kinetic_gradient_be_z(z, self.z_curr, self.z_prev, self.sim_params.h, self.kin_pre)
+        v = elastic_gradient_z(z, self.mu, self.lam, self.vol, self.sim_params.material, self.el_pre)
         quad = quadratic_gradient(z, self.Q, self.b)
         total = v  + k + quad 
         return total
 
     def hessian(self, z : np.ndarray):
-        v = elastic_hessian_d2z(z, self.mu, self.lam, self.vol, self.sim_params.material, self.el_pre)
-        k = kinetic_hessian_z(self.sim_params.h, self.kin_pre)
+        v = elastic_hessian_z(z, self.mu, self.lam, self.vol, self.sim_params.material, self.el_pre)
+        k = kinetic_hessian_be_z(self.sim_params.h, self.kin_pre)
         quad = quadratic_hessian(self.Q)
         total = v + k + quad
         return total
 
     
-    def step(self, z : np.ndarray, z_dot : np.ndarray, Q_ext=None, b_ext=None, return_info=False):
+    def step(self, z_curr : np.ndarray, z_prev : np.ndarray, Q_ext=None, b_ext=None, return_info=False):
         """
         Steps the simulation state forward in time.
 
@@ -240,8 +242,10 @@ class ElasticFEMSim(Sim):
         z_next : (num_vertices*dim | subspace_dim, 1) np.ndarray
             Subspace state after one simulation time step
         """
-        self.dynamic_precomp(z, z_dot, Q_ext, b_ext)
-        z0 = z.copy() 
+        self.dynamic_precomp(z_curr, z_prev, Q_ext, b_ext)
+    
+        v =  (z_curr - z_prev) / self.sim_params.h
+        z0 = z_curr + v * self.sim_params.h
         
         if return_info:
             z_next, info = self.solver.solve(z0, return_info=return_info)

@@ -4,9 +4,9 @@ import scipy as sp
 
 import simkit
 from simkit.solvers import NewtonSolver, NewtonSolverParams
-from simkit.energies import elastic_energy_z, elastic_gradient_dz, elastic_hessian_d2z, ElasticEnergyZPrecomp
+from simkit.energies import elastic_energy_z, elastic_gradient_z, elastic_hessian_z, ElasticEnergyZPrecomp
 from simkit.energies import quadratic_energy, quadratic_gradient, quadratic_hessian
-from simkit.energies import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
+from simkit.energies import kinetic_energy_be_z, kinetic_gradient_be_z, kinetic_hessian_be_z, KineticEnergyZPrecomp
 
 from simkit.sims.Sim import *
 from simkit.sims.State import State
@@ -150,22 +150,22 @@ class ElasticROMFEMSim(Sim):
         self.dynamic_precomp_done = True
 
     def energy(self, z : np.ndarray):
-        k = kinetic_energy_z(z, self.y ,self.p.h, self.kin_pre)
+        k = kinetic_energy_be_z(z, self.z_curr, self.z_prev, self.p.h, self.kin_pre)
         v = elastic_energy_z(z,  self.mu, self.lam, self.vol, self.p.material,  self.el_pre)
         quad =  quadratic_energy(z, self.Q, self.b)
         total = k + v + quad
         return total
 
     def gradient(self, z : np.ndarray):
-        k = kinetic_gradient_z(z, self.y, self.p.h, self.kin_pre)
-        v = elastic_gradient_dz(z, self.mu, self.lam, self.vol, self.p.material, self.el_pre)
+        k = kinetic_gradient_be_z(z, self.z_curr, self.z_prev, self.p.h, self.kin_pre)
+        v = elastic_gradient_z(z, self.mu, self.lam, self.vol, self.p.material, self.el_pre)
         quad = quadratic_gradient(z, self.Q, self.b)
         total = v  + k + quad
         return total
 
     def hessian(self, z : np.ndarray):
-        v = elastic_hessian_d2z(z, self.mu, self.lam, self.vol, self.p.material, self.el_pre)
-        k = kinetic_hessian_z(self.p.h, self.kin_pre)
+        v = elastic_hessian_z(z, self.mu, self.lam, self.vol, self.p.material, self.el_pre)
+        k = kinetic_hessian_be_z(self.p.h, self.kin_pre)
         quad = quadratic_hessian(self.Q)
         total = v + k + quad
         return total
