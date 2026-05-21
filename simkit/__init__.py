@@ -67,57 +67,31 @@ _cmaes = _OptionalImport("cmaes")
 # ---------------------------------------------------------------------------
 with _core:
     from .backtracking_line_search import backtracking_line_search
-with _core:
     from .ympr_to_lame import ympr_to_lame
-with _core:
     from .normalize_and_center import normalize_and_center
-with _core:
     from .orthonormalize import orthonormalize
-with _core:
     from .polar_svd import polar_svd
-with _core:
     from .stretch_gradient import *  # noqa: F401,F403
-with _core:
     from .selection_matrix import selection_matrix
-with _core:
     from .symmetric_stretch_map import symmetric_stretch_map
-with _core:
     from .dirichlet_penalty import dirichlet_penalty
-with _core:
     from .grad import grad
-with _core:
     from .project_into_subspace import project_into_subspace
-with _core:
     from .pairwise_displacement import pairwise_displacement
-with _core:
     from .pairwise_distance import pairwise_distance
-with _core:
     from .psd_project import psd_project
-with _core:
     from .average_onto_simplex import average_onto_simplex
-with _core:
     from .edge_lengths import edge_lengths
-with _core:
     from .gradient_cfd import gradient_cfd
-with _core:
     from .hessian_cfd import hessian_cfd
-with _core:
     from .edge_displacement_jacobian import edge_displacement_jacobian
-with _core:
     from .edge_length_jacobian import edge_length_jacobian
-with _core:
     from .random_edges import *  # noqa: F401,F403
-with _core:
     from .hinge_angles import *  # noqa: F401,F403
-with _core:
     from .hinge_hessian import *  # noqa: F401,F403
-with _core:
     from .hinge_jacobian import *  # noqa: F401,F403
-with _core:
     from .simplex_vertex_map import simplex_vertex_map
-with _core:
     from .common_selections import *  # noqa: F401,F403
-with _core:
     from .lbs_jacobian import lbs_jacobian
 
 # ---------------------------------------------------------------------------
@@ -125,43 +99,29 @@ with _core:
 # ---------------------------------------------------------------------------
 with _mesh:
     from .deformation_jacobian import deformation_jacobian
-with _mesh:
     from .massmatrix import massmatrix
-with _mesh:
     from .volume import volume
-with _mesh:
     from .skinning_eigenmodes import skinning_eigenmodes
-with _mesh:
     from .cluster_grouping_matrices import cluster_grouping_matrices
-with _mesh:
     from .joint_lengths import joint_lengths
-with _mesh:
     from .dirichlet_laplacian import dirichlet_laplacian
-with _mesh:
     from .linear_modal_analysis import linear_modal_analysis
-with _mesh:
     from .shape_outlines import *  # noqa: F401,F403
-with _mesh:
     from .stretch import stretch
-with _mesh:
     from .subspace_com import subspace_com
-with _mesh:
     from .subspace_rotation import subspace_rotation
-with _mesh:
     from .gravity_force import gravity_force
-with _mesh:
     from .limit_actuation_dirichlet_energy import limit_actuation_dirichlet_energy
-with _mesh:
     from .spectral_cubature import spectral_cubature
-with _mesh:
     from .rotation_strain_coordinates import rotation_strain_coordinates, RSPrecompute
+    from . import sims  # noqa: F401
+    from . import energies  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # scikit-learn-dependent (pip install 'simkit[learn]').
 # ---------------------------------------------------------------------------
 with _learn:
     from .farthest_point_sampling import farthest_point_sampling
-with _learn:
     from .spectral_clustering import spectral_clustering
 
 # ---------------------------------------------------------------------------
@@ -173,16 +133,13 @@ with _solvers:
 # ---------------------------------------------------------------------------
 # Submodules.
 # ---------------------------------------------------------------------------
-with _mesh:
-    from . import sims  # noqa: F401
-with _mesh:
-    from . import energies  # noqa: F401
 with _viz:
     from . import matplotlib  # noqa: F401
-with _viz:
     from . import polyscope  # noqa: F401
+    
 with _video:
     from . import filesystem  # noqa: F401
+    
 with _cmaes:
     from . import solvers  # noqa: F401
 
