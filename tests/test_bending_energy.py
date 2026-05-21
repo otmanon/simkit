@@ -3,14 +3,13 @@
 Bending energy for a 2-D beam, parameterised by hinge angles ``theta`` at
 interior vertices. We build a simple straight beam (rest angles ``theta0 = 0``),
 verify the energy is zero in the rest configuration, increases when the beam
-is bent, and that the analytic gradient and Hessian match a central
-finite difference of the energy in the flattened-position layout.
+is bent, and that the analytic gradient and Hessian match a central finite
+difference of the energy in the flattened-position layout.
 
-Note: the shipped Hessian deliberately omits the third-order ``d^2 theta/dx^2``
-term (see comments in ``bending_energy.py``) so the comparison against a
-finite difference of the analytic *gradient* (which does contain that term)
-is only valid at the rest configuration where ``dtheta = 0`` and the omitted
-term vanishes identically.
+The global tier uses the ``_x`` suffix (position variable). The shipped
+Hessian is the *true* second derivative: the Gauss-Newton term plus the
+geometric ``d^2 theta / dx^2`` term, so the comparison against a finite
+difference of the analytic gradient is valid away from the rest state.
 """
 
 from __future__ import annotations
@@ -19,9 +18,9 @@ import numpy as np
 import pytest
 
 from simkit.energies.bending_energy import (
-    bending_energy,
-    bending_gradient,
-    bending_hessian,
+    bending_energy_x,
+    bending_gradient_x,
+    bending_hessian_x,
 )
 from simkit.gradient_cfd import gradient_cfd
 
@@ -48,14 +47,14 @@ def _straight_beam(n_nodes: int = 5):
 def test_bending_energy_zero_at_rest_and_increases_on_bend() -> None:
     X, H, theta0, ymI, l = _straight_beam(n_nodes=5)
     x_rest = X.flatten().reshape(-1, 1)
-    e_rest = float(bending_energy(x_rest, H, theta0, ymI, l))
+    e_rest = float(bending_energy_x(x_rest, H, theta0, ymI, l))
     assert e_rest == pytest.approx(0.0, abs=1e-12)
 
     # Bend the beam: push the middle node up.
     X_bent = X.copy()
     X_bent[2, 1] += 0.5
     x_bent = X_bent.flatten().reshape(-1, 1)
-    e_bent = float(bending_energy(x_bent, H, theta0, ymI, l))
+    e_bent = float(bending_energy_x(x_bent, H, theta0, ymI, l))
     assert e_bent > e_rest
 
 
@@ -68,25 +67,33 @@ def test_bending_gradient_matches_fd() -> None:
     x = X_def.flatten().reshape(-1, 1)
 
     def energy_flat(x_flat: np.ndarray) -> np.ndarray:
-        return np.array([float(bending_energy(x_flat, H, theta0, ymI, l))])
+        return np.array([float(bending_energy_x(x_flat, H, theta0, ymI, l))])
 
-    g = np.asarray(bending_gradient(x, H, theta0, ymI, l)).flatten()
+    g = np.asarray(bending_gradient_x(x, H, theta0, ymI, l)).flatten()
     g_fd = gradient_cfd(energy_flat, x.flatten(), FD_STEP).flatten()
     assert np.allclose(g, g_fd, atol=TOL)
 
 
-def test_bending_hessian_matches_fd_at_rest() -> None:
-    # The shipped Hessian omits the ``d^2 theta/dx^2`` term. At the rest
-    # configuration ``dtheta = 0`` so that omission has no effect and the
-    # Hessian agrees with a finite difference of the gradient.
+def test_bending_hessian_matches_fd() -> None:
+    # The shipped Hessian includes the geometric ``d^2 theta / dx^2`` term, so
+    # it should match a finite difference of the gradient at a deformed (non
+    # rest) configuration, not just at rest.
     X, H, theta0, ymI, l = _straight_beam(n_nodes=5)
-    x = X.flatten().reshape(-1, 1)
+    rng = np.random.default_rng(0)
+    X_def = X + 0.05 * rng.standard_normal(X.shape)
+    x = X_def.flatten().reshape(-1, 1)
 
     def grad_flat(x_flat: np.ndarray) -> np.ndarray:
         return np.asarray(
-            bending_gradient(x_flat, H, theta0, ymI, l)
+            bending_gradient_x(x_flat, H, theta0, ymI, l)
         ).flatten()
 
-    H_ana = np.asarray(bending_hessian(x, H, theta0, ymI, l).todense())
+    H_ana = np.asarray(bending_hessian_x(x, H, theta0, ymI, l).todense())
     H_fd = gradient_cfd(grad_flat, x.flatten(), FD_STEP)
     assert np.allclose(H_ana, H_fd, atol=1e-4)
+
+
+if __name__ == "__main__":
+    test_bending_energy_zero_at_rest_and_increases_on_bend()
+    test_bending_gradient_matches_fd()
+    test_bending_hessian_matches_fd()

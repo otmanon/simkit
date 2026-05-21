@@ -175,26 +175,26 @@ def test_sticking_friction_increases_with_y() -> None:
     y_small = np.array([0.0, 0.0, 0.0]).reshape(-1, 1)
     y_large = np.array([0.5, 1.0, 1.5]).reshape(-1, 1)
 
-    e_small = float(np.asarray(sticking_friction_interpolant(y_small, eps_v, h)).sum())
-    e_large = float(np.asarray(sticking_friction_interpolant(y_large, eps_v, h)).sum())
+    e_small = float(np.asarray(sticking_friction_interpolant(y_small)).sum())
+    e_large = float(np.asarray(sticking_friction_interpolant(y_large)).sum())
 
     assert e_small == pytest.approx(0.0, abs=1e-12)
     assert e_large > e_small
 
 
 def test_sticking_friction_gradient_matches_fd() -> None:
-    eps_v, h = 0.1, 1.0
+
     y = np.array([0.2, 0.5, 1.2]).reshape(-1, 1)
-    g = np.asarray(sticking_friction_interpolant_gradient(y, eps_v, h)).reshape(-1, 1)
-    g_fd = _fd_diag(lambda x: sticking_friction_interpolant(x, eps_v, h), y)
+    g = np.asarray(sticking_friction_interpolant_gradient(y)).reshape(-1, 1)
+    g_fd = _fd_diag(lambda x: sticking_friction_interpolant(x), y)
     assert np.allclose(g, g_fd, atol=TOL)
 
 
 def test_sticking_friction_hessian_matches_fd() -> None:
-    eps_v, h = 0.1, 1.0
+
     y = np.array([0.2, 0.5, 1.2]).reshape(-1, 1)
-    h_ana = np.asarray(sticking_friction_interpolant_hessian(y, eps_v, h)).reshape(-1, 1)
-    h_fd = _fd_diag(lambda x: sticking_friction_interpolant_gradient(x, eps_v, h), y)
+    h_ana = np.asarray(sticking_friction_interpolant_hessian(y)).reshape(-1, 1)
+    h_fd = _fd_diag(lambda x: sticking_friction_interpolant_gradient(x), y)
     assert np.allclose(h_ana, h_fd, atol=TOL)
 
 
