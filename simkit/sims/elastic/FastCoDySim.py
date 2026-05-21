@@ -2,17 +2,17 @@ import igl
 import numpy as np
 import scipy as sp
 
-from simkit import polar_svd
-from simkit import project_into_subspace
-from simkit import ympr_to_lame
-from simkit import volume
-from simkit import massmatrix
-from simkit import deformation_jacobian, selection_matrix
-from simkit import cluster_grouping_matrices
-from simkit.solvers import BlockCoordSolver, BlockCoordSolverParams
-from simkit.energies import elastic_energy_z, elastic_gradient_dz, elastic_hessian_d2z, ElasticEnergyZPrecomp
-from simkit.energies import quadratic_energy, quadratic_gradient, quadratic_hessian
-from simkit.energies import kinetic_energy_z, kinetic_gradient_z, kinetic_hessian_z, KineticEnergyZPrecomp
+from ... import polar_svd
+from ... import project_into_subspace
+from ... import ympr_to_lame
+from ... import volume
+from ... import massmatrix
+from ... import deformation_jacobian, selection_matrix
+from ... import cluster_grouping_matrices
+from ...solvers import BlockCoordSolver, BlockCoordSolverParams
+from ...energies import elastic_energy_z, elastic_gradient_z, elastic_hessian_z, ElasticEnergyZPrecomp
+from ...energies import quadratic_energy, quadratic_gradient, quadratic_hessian
+from ...energies import kinetic_energy_be_z, kinetic_gradient_be_z, kinetic_hessian_be_z, KineticEnergyZPrecomp
 
 from simkit.sims.Sim import *
 from simkit.sims.State import State
@@ -156,6 +156,8 @@ class FastCoDySim(Sim):
 
         h = self.params.h
         self.y = z + h * z_dot 
+        self.z_curr = z.copy()
+        self.z_prev = z - h * z_dot
         self.q =   p_next - (p + h * p_dot)
         # same for b
         if b_ext is not None:
@@ -167,7 +169,7 @@ class FastCoDySim(Sim):
         self.dynamic_precomp_done = True
 
     def energy(self, z : np.ndarray):
-        k = kinetic_energy_z(z, self.y ,self.params.h, self.kin_pre)
+        k = kinetic_energy_be_z(z, self.z_curr, self.z_prev, self.params.h, self.kin_pre)
 
         r = self.local_step(z)
         
