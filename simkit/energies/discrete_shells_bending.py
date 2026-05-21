@@ -523,6 +523,7 @@ def discrete_shells_bending_gradient_x(X: np.ndarray, D: np.ndarray, theta0: np.
         Per-edge edge vectors.
     We : scipy.sparse matrix, optional
         The dihedral wedge map. If provided,a voids recomputation.
+        
     Returns
     -------
     de_dx : np.ndarray (n*3, 1)
