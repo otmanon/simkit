@@ -1,5 +1,7 @@
 
 import numpy as np
+
+
 def kinetic_energy(x : np.ndarray, y : np.ndarray, M, h : float):
     """
     Computes the kinetic energy of the elastic system

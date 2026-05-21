@@ -1,21 +1,21 @@
 
 import numpy as np
 
-from .linear_elasticity import linear_elasticity_gradient_dF
-from .neo_hookean import neo_hookean_gradient_dF
-from .fcr import fcr_gradient_dF
-from .arap import arap_gradient_dF, arap_gradient_dS
+from .linear_elasticity import linear_elasticity_gradient_element_F
+from .neo_hookean import neo_hookean_gradient_element_F
+from .fcr import fcr_gradient_element_F
+from .arap import arap_gradient_element_F, arap_gradient_element_S
 
 def elastic_gradient_dF(F: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol, material):
     
     if material == 'linear-elasticity':
-        return linear_elasticity_gradient_dF(F, mu, lam, vol) 
+        return linear_elasticity_gradient_element_F(F, mu, lam) 
     elif material == 'arap':
-        return arap_gradient_dF(F, mu, vol)
+        return arap_gradient_element_F(F, mu)
     elif material == 'fcr':
-        return fcr_gradient_dF(F, mu, lam, vol)
+        return fcr_gradient_element_F(F, mu, lam)
     elif material == 'neo-hookean':
-        return neo_hookean_gradient_dF(F, mu, lam, vol)
+        return neo_hookean_gradient_element_F(F, mu, lam)
     else:
         raise ValueError("Unknown material type: "  + material)
     return
