@@ -1,33 +1,31 @@
 import numpy as np
 
-from .fcr import fcr_energy_F
-from .linear_elasticity import linear_elasticity_energy_F
-from .arap import arap_energy_F, arap_energy_S
-from .neo_hookean import neo_hookean_energy_F
+from .fcr import fcr_energy_element_F
+from .linear_elasticity import linear_elasticity_energy_element_F
+from .arap import arap_energy_element_F, arap_energy_S
+from .neo_hookean import neo_hookean_energy_element_F
 
 
-def elastic_energy(F: np.ndarray,  mu: np.ndarray, lam: np.ndarray, vol : np.ndarray, material):
+def elastic_energy(F: np.ndarray,  mu: np.ndarray, lam: np.ndarray, material):
 
     if material == 'linear-elasticity':
-        e = linear_elasticity_energy_F(F,  mu, lam,  vol)
+        e = linear_elasticity_energy_element_F(F, mu, lam)
     elif material == 'arap':
-        e = arap_energy_F(F,  mu,  vol)
+        e = arap_energy_element_F(F, mu)
     elif material == 'fcr':
-        e = fcr_energy_F(F, mu, lam, vol)
+        e = fcr_energy_element_F(F, mu, lam)
     elif material == 'neo-hookean':
-        e = neo_hookean_energy_F(F, mu, lam, vol)
+        e = neo_hookean_energy_element_F(F, mu, lam)
     else:
         raise ValueError("Unknown material type: " + material)
     return e
 
 
 def elastic_energy_x(X: np.ndarray, J: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol : np.ndarray, material):
-
     dim = X.shape[1]
     x = X.reshape(-1, 1)
     F = (J @ x).reshape(-1, dim, dim)  
-    
-    e = elastic_energy(F, mu, lam, vol, material)
+    e = elastic_energy(F, mu, lam, material)
     return e
 
 
@@ -65,7 +63,7 @@ def elastic_energy_z(z: np.ndarray, mu : np.ndarray, lam:np.ndarray, vol : np.nd
     if F is None:
         dim = precomp.dim
         F = (precomp.JB @ z + precomp.Jx0).reshape(-1, dim, dim)
-    e = elastic_energy(F, mu, lam, vol, material)
+    e = elastic_energy(F, mu, lam, material)
     return e
 
 
@@ -75,7 +73,7 @@ def elastic_energy_filtered_z(z: np.ndarray, mu : np.ndarray, lam:np.ndarray, vo
     if F is None:
         dim = precomp.dim
         F = (precomp.JB @ z + precomp.Jx0).reshape(-1, dim, dim)
-    e = elastic_energy(F, mu, lam, vol, material)
+    e = elastic_energy(F, mu, lam, material)
     
     e += 0.5 * z.T @ precomp.BJAMuJB @ z + z.T @ precomp.BJAMuJx0
     return e

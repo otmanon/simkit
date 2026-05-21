@@ -29,3 +29,4 @@ def test_ympr_to_lame_matches_closed_form() -> None:
 
     assert math.isclose(mu, expected_mu, rel_tol=1e-12)
     assert math.isclose(lam, expected_lam, rel_tol=1e-12)
+    

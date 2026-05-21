@@ -1,6 +1,6 @@
 import numpy as np
 
-from rob import *
+
 import scipy as sp
 
 from ..dihedral_angles import dihedral_angles
@@ -16,12 +16,12 @@ def discrete_shells_bending_energy_dtheta(theta, theta0, ym_bending, he, le):
 
 def discrete_shells_bending_gradient_dtheta(theta, theta0, ym_bending, he, le):
     dtheta = theta - theta0
-    w = le /he
+    w = np.linalg.norm(le, axis=1).reshape(-1, 1) / he
     dpsi_dtheta = 2 * w * dtheta * ym_bending
     return dpsi_dtheta
 
 def discrete_shells_bending_hessian_d2theta(theta, theta0, ym_bending, he, le):
-    w = le /he
+    w = np.linalg.norm(le, axis=1).reshape(-1, 1) / he
     dpsi_dtheta2 = 2 * ym_bending * w
     return dpsi_dtheta2
 
