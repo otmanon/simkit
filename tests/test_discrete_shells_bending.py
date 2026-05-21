@@ -13,9 +13,9 @@ import pytest
 
 from simkit.dihedral_angles import dihedral_angles
 from simkit.energies.discrete_shells_bending import (
-    discrete_shells_bending_energy_dx,
-    discrete_shells_bending_gradient_dx,
-    discrete_shells_bending_hessian_d2x,
+    discrete_shells_bending_energy_x,
+    discrete_shells_bending_gradient_x,
+    discrete_shells_bending_hessian_x,
 )
 from simkit.gradient_cfd import gradient_cfd
 
@@ -57,13 +57,13 @@ def _two_triangle_hinge():
 
 def test_dsb_energy_zero_at_rest_and_increases_on_bend() -> None:
     X, D, theta0, ym_bending, he, le = _two_triangle_hinge()
-    e_rest = float(discrete_shells_bending_energy_dx(X, D, theta0, ym_bending, he, le))
+    e_rest = float(discrete_shells_bending_energy_x(X, D, theta0, ym_bending, he, le))
     assert e_rest == pytest.approx(0.0, abs=1e-12)
 
     X_bent = X.copy()
     X_bent[2, 2] += 0.5  # lift x2 out of the plane to introduce a dihedral
     e_bent = float(
-        discrete_shells_bending_energy_dx(X_bent, D, theta0, ym_bending, he, le)
+        discrete_shells_bending_energy_x(X_bent, D, theta0, ym_bending, he, le)
     )
     assert e_bent > e_rest
 
@@ -75,40 +75,42 @@ def test_dsb_gradient_matches_fd() -> None:
 
     def energy_flat(x_flat: np.ndarray) -> np.ndarray:
         return np.array(
-            [float(discrete_shells_bending_energy_dx(
+            [float(discrete_shells_bending_energy_x(
                 x_flat.reshape(-1, 3), D, theta0, ym_bending, he, le
             ))]
         )
 
     g = np.asarray(
-        discrete_shells_bending_gradient_dx(X_def, D, theta0, ym_bending, he, le)
+        discrete_shells_bending_gradient_x(X_def, D, theta0, ym_bending, he, le)
     ).flatten()
     g_fd = gradient_cfd(energy_flat, X_def.flatten(), FD_STEP).flatten()
     assert np.allclose(g, g_fd, atol=TOL)
 
 
-def test_dsb_hessian_matches_fd_at_rest() -> None:
-    # At ``dtheta = 0`` the curvature term in the Hessian vanishes, so the rest
-    # configuration is the cleanest place to compare to a finite difference of
-    # the gradient.
+def test_dsb_hessian_matches_fd() -> None:
+    # The shipped Hessian is the true second derivative (Gauss-Newton plus the
+    # geometric curvature term), so it should match a finite difference of the
+    # gradient at a deformed (non-rest) configuration.
     X, D, theta0, ym_bending, he, le = _two_triangle_hinge()
+    rng = np.random.default_rng(0)
+    X_def = X + 0.05 * rng.standard_normal(X.shape)
 
     def grad_flat(x_flat: np.ndarray) -> np.ndarray:
         return np.asarray(
-            discrete_shells_bending_gradient_dx(
+            discrete_shells_bending_gradient_x(
                 x_flat.reshape(-1, 3), D, theta0, ym_bending, he, le
             )
         ).flatten()
 
     H_ana = np.asarray(
-        discrete_shells_bending_hessian_d2x(X, D, theta0, ym_bending, he, le).todense()
+        discrete_shells_bending_hessian_x(X_def, D, theta0, ym_bending, he, le).todense()
     )
-    H_fd = gradient_cfd(grad_flat, X.flatten(), FD_STEP)
+    H_fd = gradient_cfd(grad_flat, X_def.flatten(), FD_STEP)
     assert np.allclose(H_ana, H_fd, atol=TOL)
 
 
 if __name__ == "__main__":
     test_dsb_energy_zero_at_rest_and_increases_on_bend()
     test_dsb_gradient_matches_fd()
-    test_dsb_hessian_matches_fd_at_rest()
+    test_dsb_hessian_matches_fd()
     print("All tests passed.")

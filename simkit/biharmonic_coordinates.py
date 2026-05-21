@@ -8,7 +8,7 @@ from .massmatrix import massmatrix
 def biharmonic_coordinates(X, T, bI):
 
     """
-    Compute the biharmonic coordinates of the mesh with handles at indices bI/
+    Compute the biharmonic coordinates of the mesh with handles at indices bI.
     
     
     Parameters

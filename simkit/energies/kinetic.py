@@ -1,100 +1,59 @@
-
-# import numpy as np
-
-
-# def kinetic_energy(x : np.ndarray, y : np.ndarray, M, h : float):
-#     """
-#     Computes the kinetic energy of the elastic system
-
-#     Parameters
-#     ----------
-#     x : (n*d, 1) numpy array
-#         positions of the elastic system
-
-#     y : (n*d, 1) numpy array
-#         inertial target positions (2 x_curr -  x_prev or equivalently x_curr + h * x_dot_curr)
-
-#     Returns
-#     -------
-#     k : float
-#         Kinetic energy of the elastic system
-#     """
-#     d = x - y
-#     g = 0.5 * d.T @ M @ d * (1/ (h**2))
-#     return g
-
-
-
-# class KineticEnergyZPrecomp():
-#     def __init__(self, B,  M):
-#         self.BMB = B.T @ M @ B
-    
-        
-# def kinetic_energy_z(z : np.ndarray, y : np.ndarray, h, precomp : KineticEnergyZPrecomp):
-#     """
-#     Computes the kinetic energy of the reduced elastic system where the reduced dofs z are the reduced positions x = Bz
-
-#     Parameters
-#     ----------
-#     z : (r, 1) numpy array
-#         reduced positions of the elastic system
-
-#     y : (n*d, 1) numpy array
-#         inertial target positions (2 x_curr -  x_prev or equivalently x_curr + h * x_dot_curr)
-
-#     Returns
-#     -------
-#     k : float
-#         Kinetic energy of the elastic system
-#     """
-    
-#     d = z - y
-#     E = 0.5 * d.T @ precomp.BMB @ d * (1/ (h**2))
-
-#     return E
-
-
-
-# def kinetic_gradient(x : np.ndarray, y : np.ndarray, M, h : float):
-#     d = x - y
-#     g = M @ d * (1/ (h**2))
-#     return g
-
-
-
-
-# def kinetic_gradient_z(z : np.ndarray, y : np.ndarray, h, precomp):
-#     d = z - y
-#     g = precomp.BMB @ d * (1/ (h**2))
-#     return g
-
-
-
-# def kinetic_hessian(M, h : float):
-   
-#     H = M *(1/ (h**2))
-#     return H
-
-
-# def kinetic_hessian_z(h, precomp : KineticEnergyZPrecomp):
-#     H = precomp.BMB * (1/ (h**2))
-#     return H
-
-
 """Kinetic (inertial) energy for implicit time integration.
 
-A global quadratic energy ``0.5/h^2 * (x - y)^T M (x - y)`` measuring deviation
-from the inertial target ``y``. It has no per-element / ``F`` decomposition, so
-it is single-tier: full-space functions plus reduced (``_z``) variants backed by
-a small precompute.
+A global quadratic energy ``0.5 * c / h^2 * (x - y)^T M (x - y)`` measuring
+deviation from an inertial target ``y``, where ``c`` is an integrator-dependent
+constant. It has no per-element / ``F`` decomposition, so it is single-tier:
+full-space functions plus reduced (``_z``) variants backed by a small precompute.
+
+Two integrators are provided:
+
+Backward Euler (``*_be``)
+    ``c = 1`` and the target ``y`` is supplied directly (``y = x_prev + h *
+    v_prev``, equivalently ``2 x_curr - x_prev``).
+
+BDF2 (``*_bdf2``)
+    Constant-step BDF2 approximates ``x'`` with ``(3 x - 4 x_prev + x_prev2) /
+    (2 h)``. The matching inertial energy uses ``c = 9 / 4`` and the target
+    ``y = (4/3) x_prev - (1/3) x_prev2``, built internally from the two history
+    states.
 """
 
 import numpy as np
 import scipy as sp
 
+# Integrator constants (the leading factor on the 1/h^2 quadratic).
+_BE_COEFF = 1.0
+_BDF2_COEFF = 9.0 / 4.0
 
-def kinetic_energy(x: np.ndarray, y: np.ndarray, M: sp.sparse.spmatrix, h: float) -> float:
-    """Kinetic energy of the elastic system.
+
+def _bdf2_target(x_prev: np.ndarray, x_prev2: np.ndarray) -> np.ndarray:
+    """Constant-step BDF2 inertial target ``(4/3) x_prev - (1/3) x_prev2``."""
+    return (4.0 / 3.0) * x_prev - (1.0 / 3.0) * x_prev2
+
+
+# --------------------------------------------------------------------------- #
+# Shared quadratic core                                                       #
+# --------------------------------------------------------------------------- #
+def _kinetic_energy(d: np.ndarray, M: sp.sparse.spmatrix, h: float, c: float) -> float:
+    """``0.5 * c / h^2 * d^T M d`` as a Python float."""
+    return float((0.5 * c * (d.T @ M @ d) * (1 / (h ** 2))).item())
+
+
+def _kinetic_gradient(d: np.ndarray, M: sp.sparse.spmatrix, h: float, c: float) -> np.ndarray:
+    """``c / h^2 * M d``."""
+    return c * (M @ d) * (1 / (h ** 2))
+
+
+def _kinetic_hessian(M: sp.sparse.spmatrix, h: float, c: float) -> sp.sparse.spmatrix:
+    """``c / h^2 * M``."""
+    return M * (c / (h ** 2))
+
+
+# --------------------------------------------------------------------------- #
+# Backward Euler                                                              #
+# --------------------------------------------------------------------------- #
+def kinetic_energy_be(x: np.ndarray, y: np.ndarray, M: sp.sparse.spmatrix, h: float) -> float:
+    """Backward-Euler kinetic energy.
 
     Parameters
     ----------
@@ -113,12 +72,11 @@ def kinetic_energy(x: np.ndarray, y: np.ndarray, M: sp.sparse.spmatrix, h: float
     k : float
         Kinetic energy.
     """
-    d = x - y
-    return float(0.5 * (d.T @ M @ d) * (1 / (h ** 2)))
+    return _kinetic_energy(x - y, M, h, _BE_COEFF)
 
 
-def kinetic_gradient(x: np.ndarray, y: np.ndarray, M: sp.sparse.spmatrix, h: float) -> np.ndarray:
-    """Gradient of the kinetic energy w.r.t. ``x``.
+def kinetic_gradient_be(x: np.ndarray, y: np.ndarray, M: sp.sparse.spmatrix, h: float) -> np.ndarray:
+    """Gradient of the backward-Euler kinetic energy w.r.t. ``x``.
 
     Parameters
     ----------
@@ -136,12 +94,11 @@ def kinetic_gradient(x: np.ndarray, y: np.ndarray, M: sp.sparse.spmatrix, h: flo
     g : np.ndarray (n*d, 1)
         Energy gradient.
     """
-    d = x - y
-    return M @ d * (1 / (h ** 2))
+    return _kinetic_gradient(x - y, M, h, _BE_COEFF)
 
 
-def kinetic_hessian(M: sp.sparse.spmatrix, h: float) -> sp.sparse.spmatrix:
-    """Hessian of the kinetic energy w.r.t. ``x``.
+def kinetic_hessian_be(M: sp.sparse.spmatrix, h: float) -> sp.sparse.spmatrix:
+    """Hessian of the backward-Euler kinetic energy w.r.t. ``x``.
 
     Parameters
     ----------
@@ -155,9 +112,87 @@ def kinetic_hessian(M: sp.sparse.spmatrix, h: float) -> sp.sparse.spmatrix:
     H : scipy.sparse matrix (n*d, n*d)
         Energy Hessian, ``M / h^2``. PSD by construction.
     """
-    return M * (1 / (h ** 2))
+    return _kinetic_hessian(M, h, _BE_COEFF)
 
 
+# --------------------------------------------------------------------------- #
+# BDF2                                                                        #
+# --------------------------------------------------------------------------- #
+def kinetic_energy_bdf2(x: np.ndarray, x_prev: np.ndarray, x_prev2: np.ndarray, M: sp.sparse.spmatrix, h: float) -> float:
+    """Constant-step BDF2 kinetic energy.
+
+    Builds the inertial target ``y = (4/3) x_prev - (1/3) x_prev2`` from the two
+    history states and uses the BDF2 coefficient ``c = 9/4``.
+
+    Parameters
+    ----------
+    x : np.ndarray (n*d, 1)
+        Current positions.
+    x_prev : np.ndarray (n*d, 1)
+        Positions at the previous step.
+    x_prev2 : np.ndarray (n*d, 1)
+        Positions two steps back.
+    M : scipy.sparse matrix (n*d, n*d)
+        Mass matrix.
+    h : float
+        Timestep.
+
+    Returns
+    -------
+    k : float
+        Kinetic energy.
+    """
+    y = _bdf2_target(x_prev, x_prev2)
+    return _kinetic_energy(x - y, M, h, _BDF2_COEFF)
+
+
+def kinetic_gradient_bdf2(x: np.ndarray, x_prev: np.ndarray, x_prev2: np.ndarray, M: sp.sparse.spmatrix, h: float) -> np.ndarray:
+    """Gradient of the BDF2 kinetic energy w.r.t. ``x``.
+
+    Parameters
+    ----------
+    x : np.ndarray (n*d, 1)
+        Current positions.
+    x_prev : np.ndarray (n*d, 1)
+        Positions at the previous step.
+    x_prev2 : np.ndarray (n*d, 1)
+        Positions two steps back.
+    M : scipy.sparse matrix (n*d, n*d)
+        Mass matrix.
+    h : float
+        Timestep.
+
+    Returns
+    -------
+    g : np.ndarray (n*d, 1)
+        Energy gradient.
+    """
+    y = _bdf2_target(x_prev, x_prev2)
+    return _kinetic_gradient(x - y, M, h, _BDF2_COEFF)
+
+
+def kinetic_hessian_bdf2(M: sp.sparse.spmatrix, h: float) -> sp.sparse.spmatrix:
+    """Hessian of the BDF2 kinetic energy w.r.t. ``x``.
+
+    Parameters
+    ----------
+    M : scipy.sparse matrix (n*d, n*d)
+        Mass matrix.
+    h : float
+        Timestep.
+
+    Returns
+    -------
+    H : scipy.sparse matrix (n*d, n*d)
+        Energy Hessian, ``(9/4) M / h^2``. PSD by construction. Independent of
+        ``x`` and of the history states.
+    """
+    return _kinetic_hessian(M, h, _BDF2_COEFF)
+
+
+# --------------------------------------------------------------------------- #
+# Reduced (z) variants                                                        #
+# --------------------------------------------------------------------------- #
 class KineticEnergyZPrecomp:
     """Precompute for the reduced kinetic energy.
 
@@ -178,8 +213,8 @@ class KineticEnergyZPrecomp:
         self.BMB = B.T @ M @ B
 
 
-def kinetic_energy_z(z: np.ndarray, y: np.ndarray, h: float, precomp: KineticEnergyZPrecomp) -> float:
-    """Kinetic energy of the reduced system (``x = B z``).
+def kinetic_energy_be_z(z: np.ndarray, y: np.ndarray, h: float, precomp: KineticEnergyZPrecomp) -> float:
+    """Backward-Euler kinetic energy of the reduced system (``x = B z``).
 
     Parameters
     ----------
@@ -197,12 +232,11 @@ def kinetic_energy_z(z: np.ndarray, y: np.ndarray, h: float, precomp: KineticEne
     k : float
         Reduced kinetic energy.
     """
-    d = z - y
-    return float(0.5 * (d.T @ precomp.BMB @ d) * (1 / (h ** 2)))
+    return _kinetic_energy(z - y, precomp.BMB, h, _BE_COEFF)
 
 
-def kinetic_gradient_z(z: np.ndarray, y: np.ndarray, h: float, precomp: KineticEnergyZPrecomp) -> np.ndarray:
-    """Gradient of the reduced kinetic energy w.r.t. ``z``.
+def kinetic_gradient_be_z(z: np.ndarray, y: np.ndarray, h: float, precomp: KineticEnergyZPrecomp) -> np.ndarray:
+    """Gradient of the reduced backward-Euler kinetic energy w.r.t. ``z``.
 
     Parameters
     ----------
@@ -220,12 +254,11 @@ def kinetic_gradient_z(z: np.ndarray, y: np.ndarray, h: float, precomp: KineticE
     g : np.ndarray (r, 1)
         Reduced energy gradient.
     """
-    d = z - y
-    return precomp.BMB @ d * (1 / (h ** 2))
+    return _kinetic_gradient(z - y, precomp.BMB, h, _BE_COEFF)
 
 
-def kinetic_hessian_z(h: float, precomp: KineticEnergyZPrecomp) -> sp.sparse.spmatrix:
-    """Hessian of the reduced kinetic energy w.r.t. ``z``.
+def kinetic_hessian_be_z(h: float, precomp: KineticEnergyZPrecomp) -> sp.sparse.spmatrix:
+    """Hessian of the reduced backward-Euler kinetic energy w.r.t. ``z``.
 
     Parameters
     ----------
@@ -239,4 +272,75 @@ def kinetic_hessian_z(h: float, precomp: KineticEnergyZPrecomp) -> sp.sparse.spm
     H : np.ndarray or scipy.sparse matrix (r, r)
         Reduced energy Hessian, ``BMB / h^2``.
     """
-    return precomp.BMB * (1 / (h ** 2))
+    return _kinetic_hessian(precomp.BMB, h, _BE_COEFF)
+
+
+def kinetic_energy_bdf2_z(z: np.ndarray, z_prev: np.ndarray, z_prev2: np.ndarray, h: float, precomp: KineticEnergyZPrecomp) -> float:
+    """BDF2 kinetic energy of the reduced system (``x = B z``).
+
+    Builds the reduced target ``(4/3) z_prev - (1/3) z_prev2`` and uses the BDF2
+    coefficient ``c = 9/4``.
+
+    Parameters
+    ----------
+    z : np.ndarray (r, 1)
+        Reduced positions.
+    z_prev : np.ndarray (r, 1)
+        Reduced positions at the previous step.
+    z_prev2 : np.ndarray (r, 1)
+        Reduced positions two steps back.
+    h : float
+        Timestep.
+    precomp : KineticEnergyZPrecomp
+        Precompute holding the reduced mass matrix.
+
+    Returns
+    -------
+    k : float
+        Reduced kinetic energy.
+    """
+    y = _bdf2_target(z_prev, z_prev2)
+    return _kinetic_energy(z - y, precomp.BMB, h, _BDF2_COEFF)
+
+
+def kinetic_gradient_bdf2_z(z: np.ndarray, z_prev: np.ndarray, z_prev2: np.ndarray, h: float, precomp: KineticEnergyZPrecomp) -> np.ndarray:
+    """Gradient of the reduced BDF2 kinetic energy w.r.t. ``z``.
+
+    Parameters
+    ----------
+    z : np.ndarray (r, 1)
+        Reduced positions.
+    z_prev : np.ndarray (r, 1)
+        Reduced positions at the previous step.
+    z_prev2 : np.ndarray (r, 1)
+        Reduced positions two steps back.
+    h : float
+        Timestep.
+    precomp : KineticEnergyZPrecomp
+        Precompute holding the reduced mass matrix.
+
+    Returns
+    -------
+    g : np.ndarray (r, 1)
+        Reduced energy gradient.
+    """
+    y = _bdf2_target(z_prev, z_prev2)
+    return _kinetic_gradient(z - y, precomp.BMB, h, _BDF2_COEFF)
+
+
+def kinetic_hessian_bdf2_z(h: float, precomp: KineticEnergyZPrecomp) -> sp.sparse.spmatrix:
+    """Hessian of the reduced BDF2 kinetic energy w.r.t. ``z``.
+
+    Parameters
+    ----------
+    h : float
+        Timestep.
+    precomp : KineticEnergyZPrecomp
+        Precompute holding the reduced mass matrix.
+
+    Returns
+    -------
+    H : np.ndarray or scipy.sparse matrix (r, r)
+        Reduced energy Hessian, ``(9/4) BMB / h^2``.
+    """
+    return _kinetic_hessian(precomp.BMB, h, _BDF2_COEFF)

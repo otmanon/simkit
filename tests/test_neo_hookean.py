@@ -46,8 +46,8 @@ def test_neo_hookean_energy_increases_with_deformation(dim: int) -> None:
     rng = np.random.default_rng(0)
     F_rest, F_def, mu, lam, vol = _rest_and_perturbed(rng, t=4, dim=dim)
 
-    e_rest = float(neo_hookean_energy_element_F(F_rest, mu, lam).item())
-    e_def = float(neo_hookean_energy_element_F(F_def, mu, lam).item())
+    e_rest = float(neo_hookean_energy_element_F(F_rest, mu, lam).sum().item())
+    e_def = float(neo_hookean_energy_element_F(F_def, mu, lam).sum().item())
 
     assert e_rest == pytest.approx(0.0, abs=1e-10)
     assert e_def > e_rest
@@ -65,7 +65,7 @@ def test_neo_hookean_gradient_matches_fd(dim: int) -> None:
                 float(
                     neo_hookean_energy_element_F(
                         F_flat.reshape(t, dim, dim), mu, lam
-                    ).item()
+                    ).sum().item()
                 )
             ]
         )

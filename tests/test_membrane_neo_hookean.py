@@ -5,6 +5,10 @@ parametric (rest) domain. The deformation gradient ``F`` is therefore
 ``(t, 3, 2)``. At rest, ``F = [[1,0],[0,1],[0,0]]`` so the right
 Cauchy-Green tensor ``C = F^T F`` is the 2x2 identity and the energy is
 zero.
+
+The element-tier functions take per-element ``F`` and material params
+(``mu``, ``lam``) only; quadrature weighting (``vol``) is applied at the
+global tier, so it does not appear here.
 """
 
 from __future__ import annotations
@@ -38,16 +42,15 @@ def _rest_and_perturbed(rng: np.random.Generator, t: int):
     F_def = F_rest + 0.05 * rng.standard_normal(F_rest.shape)
     mu = rng.uniform(0.5, 2.0, size=(t, 1))
     lam = rng.uniform(0.5, 2.0, size=(t, 1))
-    vol = rng.uniform(0.5, 1.5, size=(t, 1))
-    return F_rest, F_def, mu, lam, vol
+    return F_rest, F_def, mu, lam
 
 
 def test_membrane_neo_hookean_energy_increases_with_deformation() -> None:
     rng = np.random.default_rng(0)
-    F_rest, F_def, mu, lam, vol = _rest_and_perturbed(rng, t=4)
+    F_rest, F_def, mu, lam = _rest_and_perturbed(rng, t=4)
 
-    e_rest = float(membrane_neo_hookean_energy_element_F(F_rest, mu, lam))
-    e_def = float(membrane_neo_hookean_energy_element_F(F_def, mu, lam))
+    e_rest = float(membrane_neo_hookean_energy_element_F(F_rest, mu, lam).sum())
+    e_def = float(membrane_neo_hookean_energy_element_F(F_def, mu, lam).sum())
 
     assert e_rest == pytest.approx(0.0, abs=1e-10)
     assert e_def > e_rest
@@ -55,7 +58,7 @@ def test_membrane_neo_hookean_energy_increases_with_deformation() -> None:
 
 def test_membrane_neo_hookean_gradient_matches_fd() -> None:
     rng = np.random.default_rng(1)
-    _, F, mu, lam, vol = _rest_and_perturbed(rng, t=3)
+    _, F, mu, lam = _rest_and_perturbed(rng, t=3)
     t = F.shape[0]
 
     def energy_flat(F_flat: np.ndarray) -> np.ndarray:
@@ -64,7 +67,7 @@ def test_membrane_neo_hookean_gradient_matches_fd() -> None:
                 float(
                     membrane_neo_hookean_energy_element_F(
                         F_flat.reshape(t, 3, 2), mu, lam
-                    )
+                    ).sum()
                 )
             ]
         )
@@ -77,12 +80,12 @@ def test_membrane_neo_hookean_gradient_matches_fd() -> None:
 
 def test_membrane_neo_hookean_hessian_matches_fd() -> None:
     rng = np.random.default_rng(2)
-    _, F, mu, lam, vol = _rest_and_perturbed(rng, t=2)
+    _, F, mu, lam = _rest_and_perturbed(rng, t=2)
     t = F.shape[0]
 
     def grad_flat(F_flat: np.ndarray) -> np.ndarray:
         return membrane_neo_hookean_gradient_element_F(
-            F_flat.reshape(t, 3, 2), mu, lam, vol
+            F_flat.reshape(t, 3, 2), mu, lam
         ).flatten()
 
     H_fd = gradient_cfd(grad_flat, F.flatten(), FD_STEP)
