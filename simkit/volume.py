@@ -1,6 +1,8 @@
-import igl
-
+import numpy as np
 from .edge_lengths import edge_lengths
+from .triangle_areas import triangle_areas
+from .tetrahedron_volumes import tetrahedron_volumes
+
 def volume(V, F):
     """
     Compute the volume of a simplex defined with nodes V and faces F.
@@ -19,9 +21,11 @@ def volume(V, F):
     if t == 2:
         vol = edge_lengths(V, F).reshape(-1, 1)
     if t == 3:
-        vol = igl.doublearea(V, F).reshape(-1, 1) / 2
+        vol = triangle_areas(V, F).reshape(-1, 1)
     elif t == 4:
-        vol = igl.volume(V, F).reshape(-1, 1)
+        vol = tetrahedron_volumes(V, F).reshape(-1, 1)
     else:
         ValueError("Only F.shape[1] == 2, 3 or 4 are supported")
     return vol
+
+
