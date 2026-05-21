@@ -294,7 +294,7 @@ class ElasticMFEMSim(Sim):
                 self.Q = Q_ext + self.sim_params.Q0
         else:
             if self.sim_params.Q0 is None:
-                self.Q = sp.sparse.csc_matrix((z.shape[0], z.shape[0])) 
+                self.Q = sp.sparse.csc_matrix((z_curr.shape[0], z_curr.shape[0])) 
             else:
                 self.Q = self.sim_params.Q0
 
@@ -360,11 +360,11 @@ class ElasticMFEMSim(Sim):
             w = np.kron(self.vol, np.array([[1, 1, 1, 2, 2, 2]]).T)
  
  
-        g_x = kinetic_gradient_z(z, self.y, self.sim_params.h, self.kin_pre) \
+        g_x = kinetic_gradient_be_z(z, self.z_curr, self.z_prev, self.sim_params.h, self.kin_pre) \
                 + quadratic_gradient(z, self.Q, self.b) \
                 + dsdz @ (w * l)
         
-        g_s = elastic_gradient_dS(A,  self.mu, self.lam, self.vol, self.sim_params.material) \
+        g_s = elastic_gradient_S(A,  self.mu, self.lam, self.vol, self.sim_params.material) \
                 - (w * l) 
                 
         g_l = (w * (self.Ci @ simkit.stretch(F) - a))
@@ -386,7 +386,7 @@ class ElasticMFEMSim(Sim):
 
         W = sp.sparse.diags(w.flatten())
  
-        H_xx = kinetic_hessian_z(self.sim_params.h, self.kin_pre)+ \
+        H_xx = kinetic_hessian_be_z(self.sim_params.h, self.kin_pre)+ \
             quadratic_hessian(self.Q)
 
         H_xs = sp.sparse.csc_matrix((z.shape[0], a.shape[0])) 
@@ -396,7 +396,7 @@ class ElasticMFEMSim(Sim):
                                           GJq=self.GJq) 
         H_xl = dsdz @ W
        
-        H_ss =  elastic_hessian_d2S(A, self.mu, self.lam, self.vol, self.sim_params.material) 
+        H_ss =  elastic_hessian_S(A, self.mu, self.lam, self.vol, self.sim_params.material) 
     
         
         H_sl = - W #sp.sparse.identity(a.shape[0])
