@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
+
+pytest.importorskip("cvxopt")
+pytestmark = pytest.mark.solvers
 
 from simkit.linear_modal_analysis import linear_modal_analysis
 

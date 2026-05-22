@@ -7,6 +7,7 @@ import pytest
 import scipy as sp
 
 pytest.importorskip("cvxopt")
+pytestmark = pytest.mark.solvers
 
 from simkit.eigs_iccm import eigs_iccm, sp2cvxopt
 
