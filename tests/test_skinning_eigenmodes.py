@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 pytest.importorskip("cvxopt")
+pytestmark = pytest.mark.solvers
 
 from simkit.skinning_eigenmodes import skinning_eigenmodes
 
