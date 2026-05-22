@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 import numpy as np
 import scipy as sp
 
-from simkit.energies import arap_hessian
+from .energies.linear_elasticity import linear_elasticity_hessian
 
 from .eigs import eigs
 from .massmatrix import massmatrix
@@ -45,7 +45,7 @@ def linear_modal_analysis(
     n = X.shape[0]
     dim = X.shape[1]
     mu = np.ones((T.shape[0], 1))
-    H = arap_hessian(X=X, T=T, mu=mu)
+    H = linear_elasticity_hessian(X=X, T=T, mu=mu, lam=mu)
     M = massmatrix(X, T)
     M = sp.sparse.kron(M, sp.sparse.identity(dim))
 

@@ -123,13 +123,14 @@ with _mesh:
 with _learn:
     from .farthest_point_sampling import farthest_point_sampling
     from .spectral_clustering import spectral_clustering
+    from .spectral_cubature import spectral_cubature
 
 # ---------------------------------------------------------------------------
 # cvxopt-dependent (pip install 'simkit[solvers]').
 # ---------------------------------------------------------------------------
 with _solvers:
     from .eigs import eigs
-
+    from .spectral_basis_localization import spectral_basis_localization
 # ---------------------------------------------------------------------------
 # Submodules.
 # ---------------------------------------------------------------------------
