@@ -60,7 +60,7 @@ def linear_modal_analysis(
         H = H[Ii, :][:, Ii]
         M = sp.sparse.diags(M.diagonal()[Ii,], 0)
 
-        [Ei, Bi] = eigs(H, k=k, M=M)
+        [Ei, Bi] = eigs(H + M*1e-6, k=k, M=M)
         B = np.zeros((n * dim, k))
         B[Ii, :] = Bi
         E = Ei
