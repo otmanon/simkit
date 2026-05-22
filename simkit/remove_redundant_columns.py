@@ -1,13 +1,13 @@
 """Remove mass-weighted redundant columns from a basis matrix."""
 
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import scipy as sp
 
 
 def remove_redundant_columns(
-    B: sp.sparse.spmatrix,
+    B: Union[np.ndarray, sp.sparse.spmatrix],
     M: Optional[sp.sparse.spmatrix] = None,
     threshold: float = 1e-16,
 ) -> np.ndarray:
@@ -18,7 +18,7 @@ def remove_redundant_columns(
 
     Parameters
     ----------
-    B : scipy.sparse matrix (n, r)
+    B : np.ndarray or scipy.sparse matrix (n, r)
         Basis or design matrix whose columns may be redundant.
     M : scipy.sparse matrix (n, n), optional
         Mass matrix for weighting. Defaults to the identity.
@@ -38,9 +38,11 @@ def remove_redundant_columns(
     msqrti = 1 / msqrt
     Msqrt = sp.sparse.diags(msqrt, 0)
     Msqrti = sp.sparse.diags(msqrti, 0)
-    Bm = Msqrt @ B
-
-    [Q, R] = np.linalg.qr(Bm, mode='reduced')
+    weighted = Msqrt @ B
+    if sp.sparse.issparse(weighted):
+        Bm = np.asarray(weighted.todense())
+    else:
+        Bm = np.asarray(weighted)
 
     [U, s, V] = np.linalg.svd(Bm, full_matrices=False)
 
