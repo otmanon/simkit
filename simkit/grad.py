@@ -36,7 +36,7 @@ def grad(
     dt = F.shape[1]
 
     TU = (U[F]).transpose([0, 2, 1])
-    if t == 3:
+    if F.shape[1] == 3:
         # triangle mesh!
         H = np.array([[-1.0, -1],
                       [1., 0],
