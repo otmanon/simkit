@@ -93,7 +93,7 @@ with _core:
     from .simplex_vertex_map import simplex_vertex_map
     from .common_selections import *  # noqa: F401,F403
     from .lbs_jacobian import lbs_jacobian
-
+    from .deformation_gradient import deformation_gradient
 # ---------------------------------------------------------------------------
 # libigl-dependent (pip install 'simkit[mesh]').
 # ---------------------------------------------------------------------------
