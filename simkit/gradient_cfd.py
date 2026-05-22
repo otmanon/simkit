@@ -1,10 +1,31 @@
+"""Central-difference gradient of a callable by finite differences."""
+
+from typing import Callable
+
 import numpy as np
 
 
-def gradient_cfd(phi, y, h):
-    """
-    Computes the finite difference gradient of a function f, with respect to each of the parameters y
-    if phi spits out a tensor of shape (dim_1, dim_2, ..., dim_d), then gradient_cfd will spit out a tensor of shape (dim_1, dim_2, ..., dim_n, dim(y))
+def gradient_cfd(
+    phi: Callable[[np.ndarray], np.ndarray], y: np.ndarray, h: float
+) -> np.ndarray:
+    """Central-difference gradient of ``phi`` with respect to ``y``.
+
+    If ``phi(y)`` has shape ``(dim_1, ..., dim_d)``, the returned gradient has
+    shape ``(dim_1, ..., dim_d, dim(y))``.
+
+    Parameters
+    ----------
+    phi : callable
+        Function mapping ``y`` to an array-valued output.
+    y : np.ndarray (n,)
+        Point at which to evaluate the gradient.
+    h : float
+        Central-difference step size.
+
+    Returns
+    -------
+    g : np.ndarray
+        Gradient tensor with an extra trailing axis of length ``n``.
     """
     y0 = y.copy()
 

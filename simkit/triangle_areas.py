@@ -25,6 +25,12 @@ Global tier (``*s``)
 
 import numpy as np
 
+from .area_normals import (
+    area_normal_element,
+    area_normal_gradient_element,
+    area_normal_hessian_element,
+)
+
 
 # --------------------------------------------------------------------------- #
 # Dimension normalization                                                     #

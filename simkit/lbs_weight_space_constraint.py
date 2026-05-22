@@ -1,25 +1,38 @@
-import scipy as sp
+"""Rewrite displacement constraints as constraints on LBS skinning weights.
+
+Transforms a linear equality ``C @ u = 0`` on per-vertex displacements into an
+equivalent (redundant-column-stripped) constraint ``A @ W = 0`` on per-vertex
+skinning weights, using the vertex positions and mass matrix for rank reduction.
+"""
+
 import numpy as np
+import scipy as sp
 
 from simkit.remove_redundant_columns import remove_redundant_columns
-from .orthonormalize import orthonormalize
+
 from .massmatrix import massmatrix
-def lbs_weight_space_constraint(V, T, C):
-    """ Rewrites a linear equality constraint that acts on per-vertex displacements (CU(W) = 0)
-        to instead act on the per-vertex skinning weights  (AW = 0).
+from .orthonormalize import orthonormalize
+
+
+def lbs_weight_space_constraint(
+    V: np.ndarray, T: np.ndarray, C: np.ndarray
+) -> np.ndarray:
+    """Linear equality on skinning weights equivalent to ``C @ u = 0``.
 
     Parameters
     ----------
-    V : (n, d) float numpy array
-        Mesh vertices
-
-    C : (c, dn) float numpy array
-        Linear equality constraint matrix that acts on per-vertex displacements
+    V : np.ndarray (n, d)
+        Mesh vertex positions.
+    T : np.ndarray (t, d+1)
+        Simplex indices (for the mass matrix).
+    C : np.ndarray (c, d*n)
+        Linear equality constraint on stacked per-vertex displacements.
 
     Returns
     -------
-    A : (n, c') float numpy array
-        Linear equality constraint matrix that acts on per-vertex skinning weights
+    A : np.ndarray (c', n)
+        Constraint matrix acting on per-vertex skinning weights (redundant
+        columns removed via :func:`remove_redundant_columns`).
     """
     C = C.T
     n = V.shape[0]
@@ -29,9 +42,9 @@ def lbs_weight_space_constraint(V, T, C):
 
     A = np.zeros((0, n))
     for i in range(0, d):
-        Id = np.arange(0, n) *d + i
+        Id = np.arange(0, n) * d + i
         Jd = np.arange(0, n)
-        Pd = sp.sparse.coo_matrix((v.flatten(), (Id, Jd)), shape=(d*n,n))
+        Pd = sp.sparse.coo_matrix((v.flatten(), (Id, Jd)), shape=(d * n, n))
         for j in range(0, d):
             Vj = V[:, j]
             Adj = C.T @ Pd @ sp.sparse.diags(Vj)
@@ -42,7 +55,7 @@ def lbs_weight_space_constraint(V, T, C):
     W = A
 
     M = massmatrix(V, T)
-    
+
     W2 = remove_redundant_columns(W.T, M=M).T
 
     return W2

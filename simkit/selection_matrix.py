@@ -1,22 +1,26 @@
-import scipy as sp
-import numpy as np
+"""Sparse selection matrix for row indexing."""
 
-def selection_matrix(cI, n):
-    """
-    Returns a selection matrix that selects the rows of a matrix
-    corresponding to the indices in cI
+import numpy as np
+import scipy as sp
+
+
+def selection_matrix(cI: np.ndarray, n: int) -> sp.sparse.csc_matrix:
+    """Build a sparse matrix that picks rows indexed by ``cI``.
+
+    Each row ``i`` of the result has a single ``1`` in column ``cI[i]``,
+    so ``G @ x`` extracts ``x[cI]`` when ``x`` is a column vector.
 
     Parameters
     ----------
-    cI : list
-        list of indices to select
+    cI : np.ndarray (m,)
+        Column indices to select (one per output row).
     n : int
-        number of rows in the matrix
+        Number of columns (length of the input vector).
 
     Returns
     -------
-    G : (len(cI), n) sparse matrix
-        selection matrix
+    G : scipy.sparse.csc_matrix (m, n)
+        Selection matrix with one nonzero per row.
     """
 
     I = np.arange(cI.shape[0])
@@ -24,6 +28,8 @@ def selection_matrix(cI, n):
 
     v = np.ones(cI.shape[0])
 
-    G = sp.sparse.csc_matrix((v, (I, J)), 
-                             shape=(cI.shape[0], n))
+    G = sp.sparse.csc_matrix(
+        (v, (I, J)),
+        shape=(cI.shape[0], n),
+    )
     return G

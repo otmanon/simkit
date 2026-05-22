@@ -1,19 +1,23 @@
+"""Map each joint (vertex triple) to its two incident mesh edges."""
+
 import numpy as np
 
-def joint_edge_map(edges, joints):
-    """
+
+def joint_edge_map(edges: np.ndarray, joints: np.ndarray) -> np.ndarray:
+    """Edge indices for the two segments of each joint.
+
     Parameters
     ----------
-    edges : (M,2) array_like of int
-        Each row is an edge as (v1, v2).
-    joints : (N,3) array_like of int
-        Each row is a joint as (v_left, v_center, v_right).
+    edges : np.ndarray (M, 2)
+        Mesh edges as vertex index pairs ``(v1, v2)``.
+    joints : np.ndarray (N, 3)
+        Joints as ``(v_left, v_center, v_right)``.
 
     Returns
     -------
-    joint_edges : (N,2) ndarray of int
-        For each joint, gives the indices into 'edges' of the two edges
-        that make up the joint: [(v_left,v_center), (v_center,v_right)].
+    joint_edges : np.ndarray (N, 2)
+        For each joint, indices into ``edges`` for ``(v_left, v_center)`` and
+        ``(v_center, v_right)``.
     """
     edges = np.asarray(edges, dtype=int)
     joints = np.asarray(joints, dtype=int)
@@ -27,6 +31,6 @@ def joint_edge_map(edges, joints):
         e1 = edge_map[tuple(sorted((i, j)))]
         e2 = edge_map[tuple(sorted((j, k)))]
         joint_edges[j_idx, 0] = e1
-        joint_edges[j_idx, 1] = e2  
+        joint_edges[j_idx, 1] = e2
 
     return joint_edges

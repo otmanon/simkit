@@ -1,37 +1,37 @@
-import scipy as sp
+"""Linear maps between full and symmetric independent stretch components.
+
+Builds block-diagonal sparse matrices that embed the ``d(d+1)/2`` independent
+entries of a symmetric ``d x d`` stretch tensor into its ``d^2`` stacked
+components (and the inverse averaging map for the off-diagonal terms).
+"""
+
+from typing import Tuple
+
 import numpy as np
+import scipy as sp
 
-def symmetric_stretch_map(t, dim):
-    """
-        [S0  S1  S2] = [s0  s3  s4]
-    S = [S3  S4  S5] = [s3  s1  s5]
-        [S6  S7  S8] = [s4  s5  s2]
 
-    vec(S) = [s0, s1, s2, s3, s4, s5, s6, s7, s8]^T
+def symmetric_stretch_map(t: int, dim: int) -> Tuple[sp.sparse.csc_matrix, sp.sparse.csc_matrix]:
+    """Block-diagonal stretch embedding and extraction maps over ``t`` elements.
 
-    s = [s0, s4, s8, s1, s2, s3]^T
+    For ``dim == 2``, six stacked entries map to three independent symmetric
+    components; for ``dim == 3``, nine entries map to six. Off-diagonal
+    coupling uses duplicate indexing with weight ``1/2`` in the inverse map.
 
-    [S0]   [1 0 0 0 0 0]
-    |S1|   |0 0 0 1 0 0| [s0]
-    |S2|   |0 0 0 0 1 0| |s1|
-    |S3| = |0 0 0 1 0 0| |s2|
-    |S4|   |0 1 0 0 0 0| |s3|
-    |S5|   |0 0 0 0 0 1| |s4|
-    |S6|   |0 0 0 0 1 0| [s5]
-    |S7|   |0 0 0 0 0 1|
-    [S8]   [0 0 1 0 0 0]      
+    Parameters
+    ----------
+    t : int
+        Number of elements (blocks along the diagonal).
+    dim : int
+        Spatial dimension (typically 2 or 3).
 
-    
-    [S0]   [1 0 0]
-    |S1| = |0 0 1] [s0]
-    |S2|   |0 0 1] |s1|
-    [S3]   [0 1 0] [s2]
-
-    [s0] =  [1  0  0  0 ] [S0]   
-    |s1| =  |0  0  0  1 ] |S1|  
-    [s2] =  [0  1/2 1/2  0] |S2|   
-                          [S3]   
-
+    Returns
+    -------
+    Se : scipy.sparse.csc_matrix (t * dim^2, t * n_sym)
+        Embeds independent symmetric components into stacked stretch entries.
+    Sei : scipy.sparse.csc_matrix (t * n_sym, t * dim^2)
+        Extracts symmetric components from stacked entries, averaging
+        off-diagonals with weight ``1/2``.
     """
     # if dim == 2:
     #     I = np.array([0, 3, 1, 2])
@@ -51,8 +51,8 @@ def symmetric_stretch_map(t, dim):
     #     Si = sp.sparse.csc_matrix((vi, (J, I)), shape=(6, dim*dim))
     # else:
     #     raise ValueError("dim must be 2 or 3")
-    
-    SI = np.arange(dim*dim, dtype=int).reshape(dim, dim)
+
+    SI = np.arange(dim * dim, dtype=int).reshape(dim, dim)
     SJ = -np.ones((dim, dim), dtype=int)
     SV = np.zeros((dim, dim), dtype=float)
     SVi = np.zeros((dim, dim), dtype=float)
@@ -65,22 +65,21 @@ def symmetric_stretch_map(t, dim):
 
     for i in range(dim):
         for j in range(dim):
-            if i==j:
+            if i == j:
                 continue
             else:
-                if j > i: # upper triangular
+                if j > i:  # upper triangular
                     SJ[i, j] = counter
                     counter += 1
-                elif j < i: # lower triangular
+                elif j < i:  # lower triangular
                     SJ[i, j] = SJ[j, i]
                 SV[i, j] = 1
-                SVi[i, j] = 1/2
-    
+                SVi[i, j] = 1 / 2
 
     # dim * dim - (dim-1)
-    # dim  + (dim-1) + (dim - 2)) 
-    S = sp.sparse.csc_matrix((SV.flatten(), (SI.flatten(), SJ.flatten())), shape=(dim*dim, SJ.max() + 1 ))
-    Si = sp.sparse.csc_matrix((SVi.flatten(), (SJ.flatten(), SI.flatten())), shape=(SJ.max()+1, dim*dim))
+    # dim  + (dim-1) + (dim - 2))
+    S = sp.sparse.csc_matrix((SV.flatten(), (SI.flatten(), SJ.flatten())), shape=(dim * dim, SJ.max() + 1))
+    Si = sp.sparse.csc_matrix((SVi.flatten(), (SJ.flatten(), SI.flatten())), shape=(SJ.max() + 1, dim * dim))
 
     Se = sp.sparse.kron(sp.sparse.identity(t), S)
     Sei = sp.sparse.kron(sp.sparse.identity(t), Si)

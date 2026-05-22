@@ -1,7 +1,27 @@
+"""Gradient of the rotation factor from polar/SVD decomposition of ``F``.
+
+Uses rotationally invariant SVD (:func:`.svd_rv.svd_rv`) and closed-form
+``dR/dF`` for 2D and 3D deformation gradients.
+"""
+
 import numpy as np
 
 from .svd_rv import svd_rv
-def rotation_gradient_F(F):
+
+
+def rotation_gradient_F(F: np.ndarray) -> np.ndarray:
+    """Rotation gradient ``dR/dF`` from the SVD of batched deformation gradients.
+
+    Parameters
+    ----------
+    F : np.ndarray (n, dim, dim)
+        Deformation gradients; ``dim`` must be 2 or 3.
+
+    Returns
+    -------
+    K : np.ndarray (n, dim*dim, dim*dim)
+        Per-element Jacobian of the rotation factor w.r.t. flattened ``F``.
+    """
     dim = F.shape[-1]
     if dim == 2:
         d = F.shape[1]

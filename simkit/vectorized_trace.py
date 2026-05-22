@@ -1,13 +1,32 @@
+"""Sparse trace operator on a stack of flattened ``d x d`` matrices.
+
+Given ``n`` matrices stored column-major as a length ``n * d * d`` vector,
+the operator returns the ``n`` traces. Used when differentiating energies
+that depend on ``tr(F)`` or similar reductions.
+"""
+
 import numpy as np
 import scipy as sp
 
-'''
-Given a flattened stack of n  dxd matrices, computes the trace operator
-that, when applied to this stack, returns another flattened stack of n values containing the traces
-of each of these matrices.
-Assumes column-major flattening.
-'''
-def vectorized_trace(n, d):
+
+def vectorized_trace(n: int, d: int) -> sp.sparse.csc_matrix:
+    """CSC matrix that extracts the trace of each ``d x d`` block.
+
+    Assumes column-major flattening: block ``i`` occupies indices
+    ``i, n + i, 2*n + i, ...`` along the diagonal in the stacked layout.
+
+    Parameters
+    ----------
+    n : int
+        Number of matrices.
+    d : int
+        Matrix side length.
+
+    Returns
+    -------
+    T : scipy.sparse.csc_matrix (n, n * d * d)
+        Trace operator; ``T @ vec`` yields length-``n`` traces.
+    """
     # trace of matrix i will have elements i, then n+i + 1, 2n+i+2
 
     ii = np.arange(n * d * d)

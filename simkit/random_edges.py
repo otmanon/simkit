@@ -1,9 +1,16 @@
-import numpy as np
+"""Random sampling of undirected edges and length-2 joint paths."""
+
 from typing import Optional
 
+import numpy as np
 
-def random_undirected_edges(num_vertices: int, num_edges: int, rng: Optional[np.random.RandomState] = None) -> np.ndarray:
-    """Sample unique undirected edges (i < j) without self-loops.
+
+def random_undirected_edges(
+    num_vertices: int,
+    num_edges: int,
+    rng: Optional[np.random.RandomState] = None,
+) -> np.ndarray:
+    """Sample unique undirected edges ``(i, j)`` with ``i < j``.
 
     Parameters
     ----------
@@ -11,13 +18,13 @@ def random_undirected_edges(num_vertices: int, num_edges: int, rng: Optional[np.
         Number of vertices.
     num_edges : int
         Number of edges to sample (clamped to the number of available pairs).
-    rng : Optional[np.random.RandomState]
-        Random state for reproducibility. If None, uses np.random.
+    rng : np.random.RandomState, optional
+        Random state for reproducibility. If ``None``, uses ``np.random``.
 
     Returns
     -------
-    np.ndarray
-        Array of shape (num_edges, 2) with vertex indices (i, j) where i < j.
+    edges : np.ndarray (num_edges, 2)
+        Vertex index pairs with ``i < j`` and no self-loops.
     """
 
     np.random.seed(0)
@@ -30,13 +37,16 @@ def random_undirected_edges(num_vertices: int, num_edges: int, rng: Optional[np.
     return all_pairs[chosen]
 
 
+def random_undirected_joints(
+    num_vertices: int,
+    num_edges: int,
+    rng: Optional[np.random.RandomState] = None,
+) -> np.ndarray:
+    """Sample unique undirected joints ``[neighbor, i, other_neighbor]``.
 
-def random_undirected_joints(num_vertices: int, num_edges: int, rng: Optional[np.random.RandomState] = None) -> np.ndarray:
-    """Sample unique undirected joints (neighbor, i, other_neighbor) without self-loops.
-
-    A joint is a length-2 path centered at vertex i with two distinct neighbors.
-    The ordering of the two neighbors is canonicalized by construction (combinatorial pairs),
-    so (a, i, b) and (b, i, a) are treated as the same joint.
+    A joint is a length-2 path centered at vertex ``i`` with two distinct
+    neighbors. Neighbor order is canonicalized by combinatorial pairs, so
+    ``(a, i, b)`` and ``(b, i, a)`` are the same joint.
 
     Parameters
     ----------
@@ -44,13 +54,13 @@ def random_undirected_joints(num_vertices: int, num_edges: int, rng: Optional[np
         Number of vertices.
     num_edges : int
         Number of joints to sample (clamped to the number of available joints).
-    rng : Optional[np.random.RandomState]
-        Random state for reproducibility. If None, uses np.random.
+    rng : np.random.RandomState, optional
+        Random state for reproducibility. If ``None``, uses ``np.random``.
 
     Returns
     -------
-    np.ndarray
-        Array of shape (num_edges, 3) with rows [neighbor, i, other_neighbor].
+    joints : np.ndarray (num_edges, 3)
+        Rows ``[neighbor, i, other_neighbor]``. Empty if ``num_vertices < 3``.
     """
 
     np.random.seed(0)
