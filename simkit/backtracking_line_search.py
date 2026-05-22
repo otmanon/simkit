@@ -1,46 +1,67 @@
+"""Backtracking line search for descent-direction optimization."""
+
+from typing import Callable, Tuple
+
 import numpy as np
 
 
-def backtracking_line_search(f,x0,g,dx,alpha=0.01,beta=0.5,max_iter=100, threshold=1e-12):
-    """
-    Backtracking line search from  "Convex Optimization"[Boyd 2006] Chapter 11 "Interior-point methods" Algorithm 9.2
+def backtracking_line_search(
+    f: Callable[[np.ndarray], float],
+    x0: np.ndarray,
+    g: np.ndarray,
+    dx: np.ndarray,
+    alpha: float = 0.01,
+    beta: float = 0.5,
+    max_iter: int = 100,
+    threshold: float = 1e-12,
+) -> Tuple[float, np.ndarray, float]:
+    """Armijo backtracking line search along a descent direction.
+
+    Implements Algorithm 9.2 from Boyd & Vandenberghe, "Convex Optimization"
+    (2004), Chapter 9. Starting from a full step ``t = 1``, shrink ``t`` by a
+    factor ``beta`` until the Armijo sufficient-decrease condition holds.
 
     Parameters
     ----------
-    f : function
-        Objective function.
-    x0 : array
-        Initial point.
-    g : array
-        Gradient at x0.
-    dx : array
-        Direction.
+    f : callable
+        Objective function mapping a point to a scalar.
+    x0 : np.ndarray
+        Current point.
+    g : np.ndarray
+        Gradient of ``f`` at ``x0``.
+    dx : np.ndarray
+        Search direction (assumed to be a descent direction).
     alpha : float, optional
-        Step size. The default is 0.01.
+        Armijo sufficient-decrease parameter in ``(0, 0.5]``. Default 0.01.
     beta : float, optional
-        Reduction factor. The default is 0.5.
+        Step reduction factor in ``(0, 1)``. Default 0.5.
     max_iter : int, optional
-        Maximum number of iterations. The default is 100.
+        Maximum number of backtracking steps. Default 100.
     threshold : float, optional
-        Threshold. The default is 1e-12.
+        Slack added to the Armijo test for numerical tolerance. Default 1e-12.
 
+    Returns
+    -------
+    t : float
+        Accepted step size, or 0.0 if no step satisfied the condition.
+    x : np.ndarray
+        Point ``x0 + t * dx`` (equal to ``x0`` if ``t`` is 0.0).
+    fx : float
+        Objective value at the returned point.
     """
-    assert(alpha>0 and alpha<=0.5);
-    assert(beta>0 and beta<1);
+    assert alpha > 0 and alpha <= 0.5
+    assert beta > 0 and beta < 1
+    assert np.ndim(x0) == np.ndim(dx)
 
-    assert(np.ndim(x0) == np.ndim(dx));
-    t = 1;
-    fx0 = f(x0);
-    for iter in range(max_iter):
-        x = x0+t*dx;
-        fx = f(x);
-        if fx<= fx0 + alpha*t*(g.T @ dx) + threshold:
-            return t, x, fx;
+    t = 1.0
+    fx0 = f(x0)
+    for _ in range(max_iter):
+        x = x0 + t * dx
+        fx = f(x)
+        # Armijo condition: actual decrease beats predicted linear decrease.
+        if fx <= fx0 + alpha * t * (g.T @ dx) + threshold:
+            return t, x, fx
+        t = beta * t                     # step too large; shrink and retry
 
-        t = beta*t;
-
-    t = 0;
-    x = x0;
-    fx = fx0;
-
-    return t, x, fx
+    # No acceptable step found: report a zero step at the original point.
+    return 0.0, x0, fx0
