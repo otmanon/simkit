@@ -114,8 +114,7 @@ with _mesh:
     from .limit_actuation_dirichlet_energy import limit_actuation_dirichlet_energy
     from .spectral_cubature import spectral_cubature
     from .rotation_strain_coordinates import rotation_strain_coordinates, RSPrecompute
-    from . import sims  # noqa: F401
-    from . import energies  # noqa: F401
+    from .joint_lengths import joint_lengths
 
 # ---------------------------------------------------------------------------
 # scikit-learn-dependent (pip install 'simkit[learn]').
