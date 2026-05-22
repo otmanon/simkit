@@ -1,32 +1,41 @@
+"""Quadratic drag force on a surface mesh immersed in a fluid.
+
+Models drag proportional to the squared relative speed along the relative
+velocity direction (implementation pending).
+"""
+
+from __future__ import annotations
+
 import numpy as np
 
 
+def drag_force(
+    V_mesh: np.ndarray,
+    N: np.ndarray,
+    V_fluid: np.ndarray,
+    C: float | None = None,
+) -> None:
+    """Drag force on surface elements from relative fluid velocity.
 
-def drag_force(V_mesh, N, V_fluid, C=None):
+    Intended model (not yet implemented):
 
-    """
-    Computes the drag force acting on the surface mesh X,T immersed in a fluid of 
-    velocity V_fluid, with a drag coefficient of c 
-    according to 
-    
-    V = (V_mesh - V_fluid)
-    F = - C* ||V||^2  V / ||V|| 
+    ``V = V_mesh - V_fluid``,
+    ``F = -C * ||V||^2 * V / ||V||``.
 
-    
-        
     Parameters
     ----------
-    V_mesh : (t, d) numpy array
-        Velocities of the tets of the surface mesh (gross, should be linearly interpolated from the verts)
-   
-    N : (t, d) numpy array
-        Normals of the tets of the surface mesh
+    V_mesh : np.ndarray (t, d)
+        Velocities of surface elements (typically interpolated from vertices).
+    N : np.ndarray (t, d)
+        Outward normals of surface elements.
+    V_fluid : np.ndarray (t, d)
+        Fluid velocity at each element.
+    C : float, optional
+        Drag coefficient.
 
-    V_fluid : (t, d) numpy array
-        Velocity of the fluid
-    C : float
-        Drag coefficient
-
+    Returns
+    -------
+    None
+        Not implemented.
     """
-
     return

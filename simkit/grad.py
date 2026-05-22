@@ -1,13 +1,41 @@
+"""Per-element gradient operator from mesh geometry and nodal values."""
+
+from typing import Tuple
+
 import numpy as np
 import scipy as sp
-def grad(X, F, U):
 
 
+def grad(
+    X: np.ndarray, F: np.ndarray, U: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Build per-element gradients of nodal field ``U`` on simplices ``F``.
+
+    Constructs the constant gradient operator from rest positions ``X`` and
+    applies it to the nodal values ``U`` on triangles (``t=3``) or tets
+    (``t=4``).
+
+    Parameters
+    ----------
+    X : np.ndarray (n, d)
+        Rest (or reference) vertex positions.
+    F : np.ndarray (t, s)
+        Simplex indices; ``s=3`` for triangles, ``s=4`` for tetrahedra.
+    U : np.ndarray (n, ...)
+        Nodal values to differentiate (typically deformed positions).
+
+    Returns
+    -------
+    grad : np.ndarray
+        Per-element gradient of ``U`` (squeezed batch dimensions).
+    HXHi : np.ndarray (t, s, d)
+        Reference-to-rest map ``H @ pinv(X @ H)`` used in the operator.
+    """
     t = F.shape[0]  # simplex size
     n = X.shape[0]
     dt = F.shape[1]
 
-    TU =(U[F]).transpose([0, 2, 1])
+    TU = (U[F]).transpose([0, 2, 1])
     if t == 3:
         # triangle mesh!
         H = np.array([[-1.0, -1],
@@ -27,24 +55,21 @@ def grad(X, F, U):
     XHi = np.linalg.pinv(XH)
     HXHi = H @ XHi
 
-
     tu = TU.reshape(-1, 3)
 
     grad = TU @ HXHi
 
-
-    d= X.shape[1]
+    d = X.shape[1]
 
     # J = np.repeat(np.F[0, :], d)
 
     Fe = np.repeat(F[:, None, :], 2, axis=1)
-    Fe = Fe*2
+    Fe = Fe * 2
     Fe[:, 1, :] += 1
-    J = Fe.reshape( -1)
+    J = Fe.reshape(-1)
     I = np.arange(J.shape[0])
     vals = np.ones(I.shape)
-    Pr = sp.sparse.csc_matrix((vals, (I, J)), shape=(d* dt * t, d*n))
-
+    Pr = sp.sparse.csc_matrix((vals, (I, J)), shape=(d * dt * t, d * n))
 
     u = HXHi[:, :, 0]
     # add 0 between every column of u
@@ -52,7 +77,6 @@ def grad(X, F, U):
     # only keep
 
     v = HXHi[:, :, 1]
-
 
     # grad = torch.squeeze(grad, dim=1)
 

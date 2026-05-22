@@ -1,10 +1,30 @@
-import numpy as np
+"""Positive semidefinite projection for batched symmetric matrices.
 
+Eigen-decomposes each matrix and clamps or projects eigenvalues before
+reassembly via ``U @ diag(s) @ U^T``.
+"""
+
+import numpy as np
 
 from .svd_rv import svd_rv
 
 
-def psd_project(H, method='proj'):
+def psd_project(H: np.ndarray, method: str = 'proj') -> np.ndarray:
+    """Project symmetric matrices to PSD by eigenvalue modification.
+
+    Parameters
+    ----------
+    H : np.ndarray (n, d, d) or (d, d)
+        Batch of symmetric matrices (or a single matrix, promoted to batch).
+    method : {'proj', 'abs'}, optional
+        ``'proj'`` floors eigenvalues below ``1e-6`` to ``1e-6``;
+        ``'abs'`` replaces eigenvalues by their absolute values.
+
+    Returns
+    -------
+    H_proj : np.ndarray (n, d, d) or (d, d)
+        PSD-projected matrices with the same batch shape as the input.
+    """
     if H.ndim == 2:
         H = H[None, :, :]
     [s, U] = np.linalg.eigh(H)
@@ -20,6 +40,5 @@ def psd_project(H, method='proj'):
     S = Id * s.reshape(-1, dim, 1)
 
     HbI = U @ S @ U.transpose(0, 2, 1)
-
 
     return HbI

@@ -1,27 +1,31 @@
-import numpy as np
-def svd_rv(F):
-    '''
-    Computes the rotation variant of the SVD for a list of n dxd matrices F,
-    such that F = U @ S @ V.transpose(0, 2, 1) while ensuring that
-    U @ V.transpose(0, 2, 1) is a rotation matrix.
+"""Rotation-corrected SVD (Rusinkiewicz-style ``svd_rv``)."""
 
-    Follows F1 from https://www.tkim.graphics/DYNAMIC_DEFORMABLES/DynamicDeformables.pdf
+from typing import Tuple
+
+import numpy as np
+
+
+def svd_rv(F: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """SVD with rotation fix so ``det(U V^T) >= 0``.
+
+    For each square matrix ``F``, returns ``U``, diagonal ``S``, and ``V`` such
+    that ``F = U S V^T`` and ``U V^T`` is a proper rotation when possible.
+    Follows the construction in Kim et al., *Dynamic Deformables*.
 
     Parameters
     ----------
-    F : (n, d, d) array
-        List of square matrices
+    F : np.ndarray (n, d, d)
+        Batch of square deformation gradients.
 
     Returns
     -------
-    U : (n, d, d) array
-        The the orthogonal singular vectors U
-    S : (n, d, d) array
-        The singular values
-    V : (n, d, d) array
-        The orthognal singular vectors V
-    '''
-
+    U : np.ndarray (n, d, d)
+        Left singular vectors (sign-corrected).
+    S : np.ndarray (n, d, d)
+        Diagonal matrices of singular values.
+    V : np.ndarray (n, d, d)
+        Right singular vectors (sign-corrected).
+    """
     dim = F.shape[-1]
     F = F.reshape(-1, dim, dim)
 
@@ -35,7 +39,7 @@ def svd_rv(F):
     S = I * S[:, None, :]
 
     L = I
-    L[:, d-1, d-1] = np.linalg.det(U @ V.transpose(0, 2, 1))
+    L[:, d - 1, d - 1] = np.linalg.det(U @ V.transpose(0, 2, 1))
 
     detU = np.linalg.det(U)
     detV = np.linalg.det(V)

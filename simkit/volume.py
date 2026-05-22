@@ -1,18 +1,30 @@
+"""Per-simplex size measure for 1D segments, triangles, or tetrahedra.
+
+Dispatches to edge length, triangle area, or tet volume depending on the
+number of vertices per simplex in ``F``.
+"""
+
 import numpy as np
+
 from .edge_lengths import edge_lengths
 from .triangle_areas import triangle_areas
 from .tetrahedron_volumes import tetrahedron_volumes
 
-def volume(V, F):
-    """
-    Compute the volume of a simplex defined with nodes V and faces F.
+
+def volume(V: np.ndarray, F: np.ndarray) -> np.ndarray:
+    """Per-simplex length, area, or volume from mesh nodes and connectivity.
 
     Parameters
     ----------
-    V : (n, 3) array
-        Nodes of the mesh
-    F : (m, 2|3|4) array
-        Simpleces of the mesh (either edges, triangles or tets)
+    V : np.ndarray (n, 3)
+        Mesh vertex positions.
+    F : np.ndarray (m, 2), (m, 3), or (m, 4)
+        Simplex indices: segments (2), triangles (3), or tetrahedra (4).
+
+    Returns
+    -------
+    vol : np.ndarray (m, 1)
+        Per-simplex measure (edge length, triangle area, or tet volume).
     """
     dim = V.shape[1]
 
@@ -27,5 +39,3 @@ def volume(V, F):
     else:
         ValueError("Only F.shape[1] == 2, 3 or 4 are supported")
     return vol
-
-

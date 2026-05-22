@@ -1,11 +1,47 @@
-import scipy as sp
+"""Generalized eigenmodes of the ARAP Hessian under the mass matrix.
+
+Solves the sparse generalized eigenproblem for the lowest ``k`` modes, with
+optional elimination of constrained (boundary) DOFs.
+"""
+
+from typing import Optional, Tuple
+
 import numpy as np
+import scipy as sp
 
 from simkit.energies import arap_hessian
-from .massmatrix import massmatrix
-from .eigs import eigs
 
-def linear_modal_analysis(X, T, k, bI=None):
+from .eigs import eigs
+from .massmatrix import massmatrix
+
+
+def linear_modal_analysis(
+    X: np.ndarray,
+    T: np.ndarray,
+    k: int,
+    bI: Optional[np.ndarray] = None,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Lowest ``k`` linear vibration modes from ARAP stiffness and mass.
+
+    Parameters
+    ----------
+    X : np.ndarray (n, dim)
+        Vertex positions.
+    T : np.ndarray (t, dim+1)
+        Simplex indices.
+    k : int
+        Number of modes to compute.
+    bI : np.ndarray (n_b,), optional
+        Indices of constrained vertices. Their DOFs are eliminated before the
+        eigen solve and re-inserted as zeros in the full basis.
+
+    Returns
+    -------
+    E : np.ndarray (k,)
+        Generalized eigenvalues (squared frequencies), real part only.
+    B : np.ndarray (n*dim, k)
+        Eigenvectors (modal displacements), real part only.
+    """
     n = X.shape[0]
     dim = X.shape[1]
     H = arap_hessian(X=X, T=T)
@@ -14,17 +50,17 @@ def linear_modal_analysis(X, T, k, bI=None):
 
     if bI is not None:
         bI = np.array(bI)
-        assert(bI.ndim==1)
-        bIr = np.repeat(bI[:, None], X.shape[1], axis=1) 
+        assert bI.ndim == 1
+        bIr = np.repeat(bI[:, None], X.shape[1], axis=1)
 
         bIe = bIr * X.shape[1] + np.arange(dim)
 
-        Ii = np.setdiff1d(np.arange(n*dim), bIe)
+        Ii = np.setdiff1d(np.arange(n * dim), bIe)
         H = H[Ii, :][:, Ii]
         M = sp.sparse.diags(M.diagonal()[Ii,], 0)
 
         [Ei, Bi] = eigs(H, k=k, M=M)
-        B = np.zeros((n*dim, k))
+        B = np.zeros((n * dim, k))
         B[Ii, :] = Bi
         E = Ei
     else:

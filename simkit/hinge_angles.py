@@ -1,33 +1,72 @@
+"""2D hinge (joint) angles and angular velocities.
+
+Each hinge is a vertex triple ``(A, B, C)`` with the angle measured at ``B``
+between edges ``B->A`` and ``B->C``. Angles use ``atan2`` of the 2D cross and
+dot products so they are signed and valid over the full circle.
+"""
 
 import numpy as np
 
-def hinge_angles(X, H):
+
+def hinge_angles(X: np.ndarray, H: np.ndarray) -> np.ndarray:
+    """Signed hinge angle at each joint vertex ``B``.
+
+    Parameters
+    ----------
+    X : np.ndarray (n, 2)
+        Vertex positions.
+    H : np.ndarray (m, 3)
+        Hinge connectivity; each row is ``(A, B, C)`` with the angle at ``B``.
+
+    Returns
+    -------
+    theta : np.ndarray (m, 1)
+        Signed angle between edges ``B-A`` and ``C-B``, via ``atan2(s, c)``.
+    """
     # Get vertex positions for all hinges
-    A = X[H[:,0]]  # (m,2)
-    B = X[H[:,1]]  # (m,2) 
-    C = X[H[:,2]]  # (m,2)
+    A = X[H[:, 0]]  # (m, 2)
+    B = X[H[:, 1]]  # (m, 2)
+    C = X[H[:, 2]]  # (m, 2)
 
     # Compute vectors
-    v1 = B - A  # (m,2)
-    v2 = C - B  # (m,2)
+    v1 = B - A  # (m, 2)
+    v2 = C - B  # (m, 2)
 
     # Compute angle between vectors using cross product and dot product
-    c = v1[:,0]*v2[:,0] + v1[:,1]*v2[:,1]  # dot product
-    s = v1[:,0]*v2[:,1] - v1[:,1]*v2[:,0]  # cross product (z component)
+    c = v1[:, 0] * v2[:, 0] + v1[:, 1] * v2[:, 1]  # dot product
+    s = v1[:, 0] * v2[:, 1] - v1[:, 1] * v2[:, 0]  # cross product (z component)
     theta = np.arctan2(s, c)
-    return theta.reshape(-1,1)
+    return theta.reshape(-1, 1)
 
 
-def hinge_angle_velocities(X, V, H):
+def hinge_angle_velocities(X: np.ndarray, V: np.ndarray, H: np.ndarray) -> np.ndarray:
+    """Time derivative of each hinge angle given vertex velocities.
+
+    Uses the difference of edge angular velocities about the hinge vertex ``B``.
+
+    Parameters
+    ----------
+    X : np.ndarray (n, 2)
+        Vertex positions.
+    V : np.ndarray (n, 2)
+        Vertex velocities.
+    H : np.ndarray (m, 3)
+        Hinge connectivity; each row is ``(A, B, C)``.
+
+    Returns
+    -------
+    theta_dot : np.ndarray (m, 1)
+        Angular velocity of each hinge angle.
+    """
     # Positions
-    A = X[H[:,0]]
-    B = X[H[:,1]]
-    C = X[H[:,2]]
+    A = X[H[:, 0]]
+    B = X[H[:, 1]]
+    C = X[H[:, 2]]
 
     # Velocities
-    VA = V[H[:,0]]
-    VB = V[H[:,1]]
-    VC = V[H[:,2]]
+    VA = V[H[:, 0]]
+    VB = V[H[:, 1]]
+    VC = V[H[:, 2]]
 
     # Edges from hinge (at B)
     e1 = A - B          # B -> A
@@ -38,13 +77,13 @@ def hinge_angle_velocities(X, V, H):
     de2 = VC - VB
 
     # Squared lengths
-    L1 = np.sum(e1*e1, axis=1)
-    L2 = np.sum(e2*e2, axis=1)
+    L1 = np.sum(e1 * e1, axis=1)
+    L2 = np.sum(e2 * e2, axis=1)
 
     # Angular velocities of each edge about B:
     # omega = e_perp · de / ||e||^2, with e_perp = (-ey, ex)
-    w1 = (-e1[:,1] * de1[:,0] + e1[:,0] * de1[:,1]) / L1
-    w2 = (-e2[:,1] * de2[:,0] + e2[:,0] * de2[:,1]) / L2
+    w1 = (-e1[:, 1] * de1[:, 0] + e1[:, 0] * de1[:, 1]) / L1
+    w2 = (-e2[:, 1] * de2[:, 0] + e2[:, 0] * de2[:, 1]) / L2
 
     theta_dot = w2 - w1
     return theta_dot.reshape(-1, 1)
