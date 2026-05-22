@@ -44,7 +44,8 @@ def linear_modal_analysis(
     """
     n = X.shape[0]
     dim = X.shape[1]
-    H = arap_hessian(X=X, T=T)
+    mu = np.ones((T.shape[0], 1))
+    H = arap_hessian(X=X, T=T, mu=mu)
     M = massmatrix(X, T)
     M = sp.sparse.kron(M, sp.sparse.identity(dim))
 
