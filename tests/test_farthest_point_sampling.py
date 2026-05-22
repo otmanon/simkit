@@ -5,6 +5,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+pytest.importorskip("sklearn")
+pytestmark = pytest.mark.learn
+
 from simkit.farthest_point_sampling import farthest_point_sampling
 
 

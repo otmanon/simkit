@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
+
+pytest.importorskip("igl")
+pytestmark = pytest.mark.mesh
 
 from simkit.joint_lengths import joint_lengths
 
