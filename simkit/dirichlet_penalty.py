@@ -6,8 +6,60 @@ holds selected vertex indices fixed at target positions.
 
 from __future__ import annotations
 
+from typing import Literal, overload
+
 import numpy as np
 import scipy as sp
+
+
+@overload
+def dirichlet_penalty(
+    bI: np.ndarray,
+    y: np.ndarray,
+    nv: int,
+    gamma: float | np.ndarray,
+    only_b: Literal[False] = False,
+    SGamma: sp.sparse.csc_matrix | None = None,
+    return_SGamma: Literal[False] = False,
+) -> tuple[sp.sparse.csc_matrix, np.ndarray]: ...
+
+
+@overload
+def dirichlet_penalty(
+    bI: np.ndarray,
+    y: np.ndarray,
+    nv: int,
+    gamma: float | np.ndarray,
+    only_b: Literal[True],
+    SGamma: sp.sparse.csc_matrix | None = None,
+    return_SGamma: Literal[False] = False,
+) -> tuple[np.ndarray]: ...
+
+
+@overload
+def dirichlet_penalty(
+    bI: np.ndarray,
+    y: np.ndarray,
+    nv: int,
+    gamma: float | np.ndarray,
+    only_b: Literal[False] = False,
+    SGamma: sp.sparse.csc_matrix | None = None,
+    *,
+    return_SGamma: Literal[True],
+) -> tuple[sp.sparse.csc_matrix, np.ndarray, sp.sparse.csc_matrix]: ...
+
+
+@overload
+def dirichlet_penalty(
+    bI: np.ndarray,
+    y: np.ndarray,
+    nv: int,
+    gamma: float | np.ndarray,
+    only_b: Literal[True],
+    SGamma: sp.sparse.csc_matrix | None = None,
+    *,
+    return_SGamma: Literal[True],
+) -> tuple[np.ndarray, sp.sparse.csc_matrix]: ...
 
 
 def dirichlet_penalty(
