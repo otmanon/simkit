@@ -152,9 +152,7 @@ def rotation_strain_coordinates(
     u: np.ndarray,
     pinned: Optional[np.ndarray] = None,
     pre: Optional[RSPrecompute] = None,
-    return_pre: bool = True,
-    project_stretch_psd: bool = True,
-    projection_threshold: float = 1e-8,
+    return_pre: bool = True
 ) -> Union[np.ndarray, Tuple[np.ndarray, RSPrecompute]]:
     """Map a displacement field to rotation–strain coordinates.
 
@@ -166,7 +164,7 @@ def rotation_strain_coordinates(
     X : np.ndarray (n, dim)
         Rest vertex positions.
     T : np.ndarray (nt, simplex_size)
-        Mesh simplices.
+        Mesh simplices. Must be triangles for 2D, or tetrahedra for 3D.
     u : np.ndarray (n, dim) or (n*dim,)
         Input displacement field.
     pinned : np.ndarray, optional
@@ -176,11 +174,6 @@ def rotation_strain_coordinates(
         Reusable precompute. Built from ``(X, T, pinned)`` when ``None``.
     return_pre : bool, optional
         If ``True``, return ``(u_rs, pre)``; otherwise only ``u_rs``.
-    project_stretch_psd : bool, optional
-        For membrane mode, floor eigenvalues of ``F^T F`` before polar
-        decomposition.
-    projection_threshold : float, optional
-        Minimum eigenvalue when ``project_stretch_psd`` is ``True``.
 
     Returns
     -------
@@ -196,65 +189,25 @@ def rotation_strain_coordinates(
     if pre is None:
         pre = RSPrecompute(X, T, pinned)
 
-    # -------------------------------------------------
-    # MEMBRANE CASE (3D embedding, 2D triangle)
-    # -------------------------------------------------
-    if dim == 3 and T.shape[1] == 3:
+    grad_u = (pre.J @ u).reshape(-1, dim, dim)
+    I = np.identity(dim)[None, ...]
 
-        # F is 3x2 per triangle
-        F = (pre.J @ u).reshape(-1, 3, 2)
+    F = grad_u + I
 
-        # Add identity in tangent directions
-        I2 = np.eye(2)[None, :, :]
-        I2 = np.repeat(I2, F.shape[0], axis=0)
-        F = F + np.concatenate(
-            [I2, np.zeros((F.shape[0], 1, 2))], axis=1
-        )
+    symmetric = (F + F.transpose(0, 2, 1)) / 2.0
+    antisymmetric = (F - F.transpose(0, 2, 1)) / 2.0
 
-        # --- Polar decomposition for rectangular F ---
-        C = np.matmul(F.transpose(0, 2, 1), F)   # 2x2
-
-        if project_stretch_psd:
-            evals, evecs = np.linalg.eigh(C)
-            evals = np.maximum(evals, projection_threshold)
-            C = evecs @ (evals[..., None] * evecs.transpose(0, 2, 1))
-
-        C_inv_sqrt = np.linalg.inv(
-            np.array([sp.linalg.sqrtm(C[i]) for i in range(C.shape[0])])
-        )
-
-        R = np.matmul(F, C_inv_sqrt)  # 3x2 pure rotation
-
-        # Embedded identity (3x2)
-        I_emb = np.zeros_like(R)
-        I_emb[:, 0, 0] = 1.0
-        I_emb[:, 1, 1] = 1.0
-
-        Y = R - I_emb
-
-    # -------------------------------------------------
-    # ORIGINAL SOLID / 2D CASE (unchanged)
-    # -------------------------------------------------
+    if dim == 2:
+        w = -antisymmetric[:, 0, 1]
+        R = np.array([[np.cos(w), -np.sin(w)],
+                        [np.sin(w),  np.cos(w)]]
+                    ).transpose(2, 0, 1)
     else:
-        grad_u = (pre.J @ u).reshape(-1, dim, dim)
-        I = np.identity(dim)[None, ...]
+        # safer: use polar instead of axis-angle approx
+        U, _, Vt = np.linalg.svd(F)
+        R = U @ Vt
 
-        F = grad_u + I
-
-        symmetric = (F + F.transpose(0, 2, 1)) / 2.0
-        antisymmetric = (F - F.transpose(0, 2, 1)) / 2.0
-
-        if dim == 2:
-            w = -antisymmetric[:, 0, 1]
-            R = np.array([[np.cos(w), -np.sin(w)],
-                          [np.sin(w),  np.cos(w)]]
-                        ).transpose(2, 0, 1)
-        else:
-            # safer: use polar instead of axis-angle approx
-            U, _, Vt = np.linalg.svd(F)
-            R = U @ Vt
-
-        Y = R - I
+    Y = R - I
 
     # -------------------------------------------------
     # Fit back to displacement coordinates
