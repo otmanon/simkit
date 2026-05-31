@@ -326,6 +326,105 @@ def arap_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, vol: np
 
 
 # --------------------------------------------------------------------------- #
+# Global explicit tier: displacement (u) variable                             #
+# --------------------------------------------------------------------------- #
+def arap_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, vol: np.ndarray) -> float:
+    """Assembled ARAP energy at displacement ``u`` from a reference ``x_bar``.
+
+    Equivalent to :func:`arap_energy_x` evaluated at ``x_bar + u`` but avoids
+    recomputing ``J @ x_bar`` on every call. The reference ``x_bar`` is
+    arbitrary (not required to be the rest pose).
+
+    Parameters
+    ----------
+    u : np.ndarray (n, dim)
+        Displacement from the reference configuration.
+    J : scipy.sparse matrix (t*dim*dim, n*dim)
+        Deformation Jacobian.
+    Jx_bar : np.ndarray (t*dim*dim, 1)
+        Precomputed ``J @ x_bar.reshape(-1, 1)``.
+    mu : np.ndarray (t, 1)
+        Per-element shear modulus.
+    vol : np.ndarray (t, 1)
+        Per-element quadrature weights.
+
+    Returns
+    -------
+    E : float
+        Total ARAP energy.
+    """
+    dim = u.shape[1]
+    F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
+    psi = arap_energy_element_F(F, mu)
+    E = float((np.asarray(vol).reshape(-1, 1) * psi).sum())
+    return E
+
+
+def arap_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, vol: np.ndarray) -> np.ndarray:
+    """Assembled ARAP gradient w.r.t. displacement ``u``.
+
+    Parameters
+    ----------
+    u : np.ndarray (n, dim)
+        Displacement from the reference configuration.
+    J : scipy.sparse matrix (t*dim*dim, n*dim)
+        Deformation Jacobian.
+    Jx_bar : np.ndarray (t*dim*dim, 1)
+        Precomputed ``J @ x_bar.reshape(-1, 1)``.
+    mu : np.ndarray (t, 1)
+        Per-element shear modulus.
+    vol : np.ndarray (t, 1)
+        Per-element quadrature weights.
+
+    Returns
+    -------
+    g : np.ndarray (n*dim, 1)
+        Assembled energy gradient.
+    """
+    dim = u.shape[1]
+    F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
+    P = arap_gradient_element_F(F, mu)
+    P = P * np.asarray(vol).reshape(-1, 1, 1)
+    g = J.transpose() @ P.reshape(-1, 1)
+    return g
+
+
+def arap_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, vol: np.ndarray, psd: bool = True) -> sp.sparse.spmatrix:
+    """Assembled ARAP Hessian w.r.t. displacement ``u``.
+
+    Parameters
+    ----------
+    u : np.ndarray (n, dim)
+        Displacement from the reference configuration.
+    J : scipy.sparse matrix (t*dim*dim, n*dim)
+        Deformation Jacobian.
+    Jx_bar : np.ndarray (t*dim*dim, 1)
+        Precomputed ``J @ x_bar.reshape(-1, 1)``.
+    mu : np.ndarray (t, 1)
+        Per-element shear modulus.
+    vol : np.ndarray (t, 1)
+        Per-element quadrature weights.
+    psd : bool, optional
+        If ``True`` (default), project each per-element block to the nearest
+        positive semi-definite matrix before assembly.
+
+    Returns
+    -------
+    Q : scipy.sparse.csc_matrix (n*dim, n*dim)
+        Assembled energy Hessian.
+    """
+    dim = u.shape[1]
+    F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
+    He = arap_hessian_element_F(F, mu)
+    He = He * np.asarray(vol).reshape(-1, 1, 1)
+    if psd:
+        He = psd_project(He)
+    H = sp.sparse.block_diag(He)
+    Q = J.transpose() @ H @ J
+    return Q
+
+
+# --------------------------------------------------------------------------- #
 # Global explicit tier: stretch (S) variable                                  #
 # --------------------------------------------------------------------------- #
 def arap_energy_S(S: np.ndarray, mu: np.ndarray, vol: np.ndarray) -> float:

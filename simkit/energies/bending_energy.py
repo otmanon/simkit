@@ -617,3 +617,94 @@ def bending_hessian_x(x: np.ndarray, H: np.ndarray, theta0: np.ndarray, ymI: np.
 
     Q = term_1 + term_2
     return Q.tocsc()
+
+
+# --------------------------------------------------------------------------- #
+# Global explicit tier: displacement (u) variable                             #
+# --------------------------------------------------------------------------- #
+def bending_energy_u(u: np.ndarray, x_bar: np.ndarray, H: np.ndarray, theta0: np.ndarray, ymI: np.ndarray, l: np.ndarray) -> float:
+    """Assembled 2D bending energy at displacement ``u`` from a reference ``x_bar``.
+
+    Thin wrapper around :func:`bending_energy_x`: hinge angles are nonlinear in
+    vertex positions, so no offset precompute helps. The wrapper exists for a
+    uniform displacement entrypoint across the energy library. The reference
+    ``x_bar`` is arbitrary (not required to be the rest pose).
+
+    Parameters
+    ----------
+    u : np.ndarray (dim*n, 1)
+        Flattened displacement from the reference configuration (``dim == 2``).
+    x_bar : np.ndarray (dim*n, 1)
+        Flattened reference vertex positions.
+    H : np.ndarray (J, 3)
+        Hinge connectivity.
+    theta0 : np.ndarray (J, 1)
+        Rest hinge angles.
+    ymI : np.ndarray (J, 1)
+        Bending stiffness.
+    l : np.ndarray (J, 1)
+        Segment length.
+
+    Returns
+    -------
+    e : float
+        Total bending energy.
+    """
+    return bending_energy_x(x_bar + u, H, theta0, ymI, l)
+
+
+def bending_gradient_u(u: np.ndarray, x_bar: np.ndarray, H: np.ndarray, theta0: np.ndarray, ymI: np.ndarray, l: np.ndarray) -> np.ndarray:
+    """Assembled 2D bending gradient w.r.t. displacement ``u``.
+
+    Because ``du/du = I``, the gradient w.r.t. ``u`` equals the gradient w.r.t.
+    ``x`` evaluated at ``x_bar + u``.
+
+    Parameters
+    ----------
+    u : np.ndarray (dim*n, 1)
+        Flattened displacement from the reference configuration.
+    x_bar : np.ndarray (dim*n, 1)
+        Flattened reference vertex positions.
+    H : np.ndarray (J, 3)
+        Hinge connectivity.
+    theta0 : np.ndarray (J, 1)
+        Rest hinge angles.
+    ymI : np.ndarray (J, 1)
+        Bending stiffness.
+    l : np.ndarray (J, 1)
+        Segment length.
+
+    Returns
+    -------
+    g : np.ndarray (dim*n, 1)
+        Assembled gradient.
+    """
+    return bending_gradient_x(x_bar + u, H, theta0, ymI, l)
+
+
+def bending_hessian_u(u: np.ndarray, x_bar: np.ndarray, H: np.ndarray, theta0: np.ndarray, ymI: np.ndarray, l: np.ndarray, psd: bool = False) -> sp.sparse.spmatrix:
+    """Assembled 2D bending Hessian w.r.t. displacement ``u``.
+
+    Parameters
+    ----------
+    u : np.ndarray (dim*n, 1)
+        Flattened displacement from the reference configuration.
+    x_bar : np.ndarray (dim*n, 1)
+        Flattened reference vertex positions.
+    H : np.ndarray (J, 3)
+        Hinge connectivity.
+    theta0 : np.ndarray (J, 1)
+        Rest hinge angles.
+    ymI : np.ndarray (J, 1)
+        Bending stiffness.
+    l : np.ndarray (J, 1)
+        Segment length.
+    psd : bool, optional
+        If ``True``, project the per-hinge geometric blocks to PSD.
+
+    Returns
+    -------
+    Q : scipy.sparse.csc_matrix (dim*n, dim*n)
+        Assembled Hessian.
+    """
+    return bending_hessian_x(x_bar + u, H, theta0, ymI, l, psd=psd)

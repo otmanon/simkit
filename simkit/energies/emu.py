@@ -1,61 +1,3 @@
-# import numpy as np
-# import scipy as sp
-
-# def emu_energy_F(F, d, a, vol):
-#     """
-#     F - t x d x d
-#     d - t x d
-#     a - t x 1
-#     """
-#     FF = F.transpose(0, 2, 1) @ F
-#     de = d[:, :, None].copy()
-#     dFFd = de.transpose(0, 2, 1) @ FF @ de
-#     energy = np.sum(vol.reshape(-1, 1,1) * a.reshape(-1, 1, 1) * dFFd) * 0.5
-#     return energy
-
-# def emu_gradient_dF(F, d, a, vol):
-#     de = d[:, :, None].copy()
-#     ddT =  de @ de.transpose(0, 2, 1)
-#     P =  F @  ddT * (vol.reshape(-1, 1, 1) * a.reshape(-1, 1, 1))
-#     return P
-
-# def emu_gradient_dx(X, d, a, vol, J):
-#     F = (J @ X.reshape(-1, 1)).reshape(-1, 2, 2)
-#     P = emu_gradient_dF(F, d, a, vol)
-#     g = J.T @ P.reshape(-1, 1)
-#     return g
-
-
-# def emu_force_matrix(X, d, vol, J):
-#     F = (J @ X.reshape(-1, 1)).reshape(-1, 2, 2)
-#     a= np.ones((d.shape[0], 1))
-#     P = emu_gradient_dF(F, d, a, vol)
-#     P_mat = sp.sparse.diags(P.reshape(-1)) @ J
-#     N = sp.sparse.kron(sp.sparse.eye(d.shape[0]), np.ones((1, 4)))
-#     K = N @ P_mat
-#     return K
-
-# def emu_hessian_d2F(F, d, a, vol):
-
-#     dim = F.shape[-1]
-
-#     de = d[:, :, None].copy()
-#     ddT =  de @ de.transpose(0, 2, 1)
-#     Q = np.kron( np.identity(dim), ddT)
-
-#     Q2 = Q * vol.reshape(-1, 1, 1) * a.reshape(-1, 1, 1)
-#     return Q2
-
-# def emu_hessian_d2x(X, d, a, vol, J):
-#     dim = F.shape[-1]
-
-#     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
-#     Q = emu_hessian_d2F(F, d, a, vol)
-#     H = J.T @  sp.sparse.block_diag(Q) @ J
-#     return H
-
-
-
 """EMU directional-stiffness elastic energy.
 
 Follows the standardized layout (see :mod:`simkit.energies.arap`). EMU is a 2D
@@ -251,6 +193,106 @@ def emu_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, d: np.ndarray, a: np.nda
     """
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
+    He = emu_hessian_element_F(F, d, a)
+    He = He * np.asarray(vol).reshape(-1, 1, 1)
+    H = sp.sparse.block_diag(He)
+    return J.transpose() @ H @ J
+
+
+# --------------------------------------------------------------------------- #
+# Global explicit tier: displacement (u) variable                             #
+# --------------------------------------------------------------------------- #
+def emu_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, d: np.ndarray, a: np.ndarray, vol: np.ndarray) -> float:
+    """Assembled EMU energy at displacement ``u`` from a reference ``x_bar``.
+
+    Equivalent to :func:`emu_energy_x` evaluated at ``x_bar + u`` but avoids
+    recomputing ``J @ x_bar`` on every call. The reference ``x_bar`` is
+    arbitrary (not required to be the rest pose).
+
+    Parameters
+    ----------
+    u : np.ndarray (n, dim)
+        Displacement from the reference configuration.
+    J : scipy.sparse matrix (t*dim*dim, n*dim)
+        Deformation Jacobian.
+    Jx_bar : np.ndarray (t*dim*dim, 1)
+        Precomputed ``J @ x_bar.reshape(-1, 1)``.
+    d : np.ndarray (t, dim)
+        Per-element direction vectors.
+    a : np.ndarray (t, 1)
+        Per-element directional stiffness.
+    vol : np.ndarray (t, 1)
+        Per-element quadrature weights.
+
+    Returns
+    -------
+    E : float
+        Total EMU energy.
+    """
+    dim = u.shape[1]
+    F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
+    psi = emu_energy_element_F(F, d, a)
+    return float((np.asarray(vol).reshape(-1, 1) * psi).sum())
+
+
+def emu_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, d: np.ndarray, a: np.ndarray, vol: np.ndarray) -> np.ndarray:
+    """Assembled EMU gradient w.r.t. displacement ``u``.
+
+    Parameters
+    ----------
+    u : np.ndarray (n, dim)
+        Displacement from the reference configuration.
+    J : scipy.sparse matrix (t*dim*dim, n*dim)
+        Deformation Jacobian.
+    Jx_bar : np.ndarray (t*dim*dim, 1)
+        Precomputed ``J @ x_bar.reshape(-1, 1)``.
+    d : np.ndarray (t, dim)
+        Per-element direction vectors.
+    a : np.ndarray (t, 1)
+        Per-element directional stiffness.
+    vol : np.ndarray (t, 1)
+        Per-element quadrature weights.
+
+    Returns
+    -------
+    g : np.ndarray (n*dim, 1)
+        Assembled energy gradient.
+    """
+    dim = u.shape[1]
+    F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
+    P = emu_gradient_element_F(F, d, a)
+    P = P * np.asarray(vol).reshape(-1, 1, 1)
+    return J.transpose() @ P.reshape(-1, 1)
+
+
+def emu_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, d: np.ndarray, a: np.ndarray, vol: np.ndarray, psd: bool = True) -> sp.sparse.spmatrix:
+    """Assembled EMU Hessian w.r.t. displacement ``u``.
+
+    Parameters
+    ----------
+    u : np.ndarray (n, dim)
+        Displacement from the reference configuration. Only the shape is used;
+        the Hessian is constant in ``u``.
+    J : scipy.sparse matrix (t*dim*dim, n*dim)
+        Deformation Jacobian.
+    Jx_bar : np.ndarray (t*dim*dim, 1)
+        Precomputed ``J @ x_bar.reshape(-1, 1)``.
+    d : np.ndarray (t, dim)
+        Per-element direction vectors.
+    a : np.ndarray (t, 1)
+        Per-element directional stiffness.
+    vol : np.ndarray (t, 1)
+        Per-element quadrature weights.
+    psd : bool, optional
+        Accepted for interface consistency; has no effect (Hessian is PSD).
+
+    Returns
+    -------
+    Q : scipy.sparse.csc_matrix (n*dim, n*dim)
+        Assembled energy Hessian.
+    """
+    dim = u.shape[1]
+    F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     He = emu_hessian_element_F(F, d, a)
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     H = sp.sparse.block_diag(He)
