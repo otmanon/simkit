@@ -15,7 +15,7 @@ LBS subspace recipe (built at module scope so you can read it top-to-bottom):
   Jacobian. ``x = X + B z`` reconstructs deformed positions from a stack of
   per-bone affine-transform DOFs ``z`` (rest is ``z = 0``).
 * **Elastic cubature.** Sample ``k_e`` random tets and only evaluate the
-  neo-Hookean energy at those, weighted by their actual rest volumes scaled by
+  Macklin-Mueller Neo-Hookean energy at those, weighted by their actual rest volumes scaled by
   ``t / k_e`` (Monte-Carlo).  Plug straight into the displacement ``_u`` tier
   with the precomputed ``JB_cub = (sel J) B`` as the "Jacobian" and
   ``Jx0_cub = (sel J) x_rest`` as the offset. The ``_u`` API expects
@@ -49,13 +49,13 @@ from simkit.energies.kinetic import (
     kinetic_gradient_be,
     kinetic_hessian_be,
 )
-from simkit.energies.neo_hookean import (
-    neo_hookean_energy_u,
-    neo_hookean_gradient_u,
-    neo_hookean_hessian_u,
-    neo_hookean_energy_x,
-    neo_hookean_gradient_x,
-    neo_hookean_hessian_x,
+from simkit.energies.macklin_mueller_neo_hookean import (
+    macklin_mueller_neo_hookean_energy_u,
+    macklin_mueller_neo_hookean_gradient_u,
+    macklin_mueller_neo_hookean_hessian_u,
+    macklin_mueller_neo_hookean_energy_x,
+    macklin_mueller_neo_hookean_gradient_x,
+    macklin_mueller_neo_hookean_hessian_x,
 )
 from simkit.farthest_point_sampling import farthest_point_sampling
 from simkit.gravity_force import gravity_force
@@ -160,7 +160,7 @@ BTfg = B.T @ f_g                                                  # (r, 1)
 #
 # Both minimize the same potential
 #
-#     E_pot(x) = E_elastic(x)                       neo-Hookean
+#     E_pot(x) = E_elastic(x)                       Macklin-Mueller Neo-Hookean
 #              + E_floor(x)                         penalty springs vs. plane
 #              + 1/2 x^T Q_h x + b_h^T x            mouse handle (zeroed = none)
 #              - f_g^T x                            gravity
@@ -198,7 +198,7 @@ class ElasticSimBE:
     def energy(self, x):
         xn = x.reshape(-1, self.dim)
         xc = x.reshape(-1, 1)
-        E_el    = float(neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el    = float(macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_floor = float(contact_springs_plane_energy(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n))
         E_h     = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
@@ -211,7 +211,7 @@ class ElasticSimBE:
     def gradient(self, x):
         xn = x.reshape(-1, self.dim)
         xc = x.reshape(-1, 1)
-        g_el    = neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el    = macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_floor = contact_springs_plane_gradient(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
         g_h     = self.Q_h @ xc + self.b_h
@@ -222,7 +222,7 @@ class ElasticSimBE:
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el    = neo_hookean_hessian_x(
+        H_el    = macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_floor = contact_springs_plane_hessian(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
@@ -299,7 +299,7 @@ class ElasticSimBESubspace:
         zc = z.reshape(-1, 1)
         zn = z.reshape(-1, self.dim)                                 # (r/d, d)
 
-        E_el = float(neo_hookean_energy_u(
+        E_el = float(macklin_mueller_neo_hookean_energy_u(
             zn, self.JB_cub, self.Jx0_cub,
             self.mu_cub, self.lam_cub, self.vol_cub))
 
@@ -323,7 +323,7 @@ class ElasticSimBESubspace:
         zc = z.reshape(-1, 1)
         zn = z.reshape(-1, self.dim)
 
-        g_el = neo_hookean_gradient_u(
+        g_el = macklin_mueller_neo_hookean_gradient_u(
             zn, self.JB_cub, self.Jx0_cub,
             self.mu_cub, self.lam_cub, self.vol_cub)
 
@@ -347,7 +347,7 @@ class ElasticSimBESubspace:
         zc = z.reshape(-1, 1)
         zn = z.reshape(-1, self.dim)
 
-        H_el = neo_hookean_hessian_u(
+        H_el = macklin_mueller_neo_hookean_hessian_u(
             zn, self.JB_cub, self.Jx0_cub,
             self.mu_cub, self.lam_cub, self.vol_cub, psd=True)
 

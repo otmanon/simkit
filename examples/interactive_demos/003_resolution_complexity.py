@@ -39,7 +39,7 @@ HISTORY_LEN = 200
 
 
 class ElasticSimBDF2:
-    """Neo-Hookean beam stepped with BDF2; pin matrices supplied as inputs.
+    """Macklin-Mueller Neo-Hookean beam stepped with BDF2; pin matrices supplied as inputs.
 
     No handle, no contact -- this tutorial measures the cost of resolution
     against a fixed potential, not interactivity.
@@ -62,7 +62,7 @@ class ElasticSimBDF2:
     def energy(self, x):
         xn = x.reshape(-1, self.dim)
         xc = x.reshape(-1, 1)
-        E_el   = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el   = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_pin  = (0.5 * float((xc.T @ (self.Q_pin @ xc))[0, 0])
                   + float((self.b_pin.T @ xc)[0, 0]))
         E_grav = -float((self.f_g.T @ xc)[0, 0])
@@ -77,7 +77,7 @@ class ElasticSimBDF2:
     def gradient(self, x):
         xn = x.reshape(-1, self.dim)
         xc = x.reshape(-1, 1)
-        g_el   = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el   = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin  = self.Q_pin @ xc + self.b_pin
         g_grav = -self.f_g
         g_kin  = energies.kinetic_gradient_bdf2(
@@ -90,7 +90,7 @@ class ElasticSimBDF2:
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el  = energies.neo_hookean_hessian_x(
+        H_el  = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_kin = energies.kinetic_hessian_bdf2(self.M, self.h)
         return H_el + self.Q_pin + H_kin
@@ -125,7 +125,7 @@ def newton_step_timed(sim, dt):
     """One BDF2 step with per-iteration wall-clock timing.
 
     The pin and kinetic Hessian pieces don't depend on ``x``, so we hoist them
-    out of the inner loop. The remaining per-iter work -- ``neo_hookean_hessian``,
+    out of the inner loop. The remaining per-iter work -- ``macklin_mueller_neo_hookean_hessian``,
     sparse solve, line search -- is what the rolling plot measures.
     """
     x_curr  = sim.U.flatten().reshape(-1, 1)
@@ -139,7 +139,7 @@ def newton_step_timed(sim, dt):
     for _ in range(NEWTON_ITERS):
         t0 = time.perf_counter()
         g = sim.gradient(x.flatten())
-        H_el = energies.neo_hookean_hessian_x(
+        H_el = energies.macklin_mueller_neo_hookean_hessian_x(
             x.reshape(-1, sim.dim), sim.J, sim.mu, sim.lam, sim.vol, psd=True)
         H = H_el + H_const
         dx = sp.sparse.linalg.spsolve(H.tocsc(), -g).reshape(-1, 1)

@@ -1,8 +1,9 @@
 """Elastic material energy, gradient, and Hessian (combined).
 
 Material dispatch over the per-material modules (``arap``, ``fcr``,
-``linear_elasticity``, ``neo_hookean``), selected by the ``material`` string
-(one of ``'linear-elasticity'``, ``'arap'``, ``'fcr'``, ``'neo-hookean'``).
+``linear_elasticity``, ``macklin_mueller_neo_hookean``), selected by the
+``material`` string (one of ``'linear-elasticity'``, ``'arap'``, ``'fcr'``,
+``'macklin-mueller-neo-hookean'``).
 
 This file combines what were previously ``elastic_energy.py``,
 ``elastic_gradient.py`` and ``elastic_hessian.py`` into one module. The three
@@ -56,19 +57,19 @@ from .linear_elasticity import (
     linear_elasticity_hessian_element_F,
     linear_elasticity_hessian_u,
 )
-from .neo_hookean import (
-    neo_hookean_energy_element_F,
-    neo_hookean_energy_u,
-    neo_hookean_gradient_element_F,
-    neo_hookean_gradient_u,
-    neo_hookean_hessian_element_F,
-    neo_hookean_hessian_u,
+from .macklin_mueller_neo_hookean import (
+    macklin_mueller_neo_hookean_energy_element_F,
+    macklin_mueller_neo_hookean_energy_u,
+    macklin_mueller_neo_hookean_gradient_element_F,
+    macklin_mueller_neo_hookean_gradient_u,
+    macklin_mueller_neo_hookean_hessian_element_F,
+    macklin_mueller_neo_hookean_hessian_u,
 )
 from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
 from ..psd_project import psd_project
 
-_MATERIALS = ('linear-elasticity', 'arap', 'fcr', 'neo-hookean')
+_MATERIALS = ('linear-elasticity', 'arap', 'fcr', 'macklin-mueller-neo-hookean')
 
 
 
@@ -91,7 +92,7 @@ def elastic_energy_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray, mat
     lam : np.ndarray (t, 1)
         Per-element first Lame parameter (ignored for ``'arap'``).
     material : str
-        One of ``'linear-elasticity'``, ``'arap'``, ``'fcr'``, ``'neo-hookean'``.
+        One of ``'linear-elasticity'``, ``'arap'``, ``'fcr'``, ``'macklin-mueller-neo-hookean'``.
 
     Returns
     -------
@@ -104,8 +105,8 @@ def elastic_energy_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray, mat
         return arap_energy_element_F(F, mu)
     elif material == 'fcr':
         return fcr_energy_element_F(F, mu, lam)
-    elif material == 'neo-hookean':
-        return neo_hookean_energy_element_F(F, mu, lam)
+    elif material == 'macklin-mueller-neo-hookean':
+        return macklin_mueller_neo_hookean_energy_element_F(F, mu, lam)
     raise ValueError("Unknown material type: " + str(material))
 
 
@@ -179,8 +180,8 @@ def elastic_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, m
         return arap_energy_u(u, J, Jx_bar, mu, vol)
     elif material == 'fcr':
         return fcr_energy_u(u, J, Jx_bar, mu, lam, vol)
-    elif material == 'neo-hookean':
-        return neo_hookean_energy_u(u, J, Jx_bar, mu, lam, vol)
+    elif material == 'macklin-mueller-neo-hookean':
+        return macklin_mueller_neo_hookean_energy_u(u, J, Jx_bar, mu, lam, vol)
     raise ValueError("Unknown material type: " + str(material))
 
 
@@ -411,8 +412,8 @@ def elastic_gradient_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray, m
         return arap_gradient_element_F(F, mu)
     elif material == 'fcr':
         return fcr_gradient_element_F(F, mu, lam)
-    elif material == 'neo-hookean':
-        return neo_hookean_gradient_element_F(F, mu, lam)
+    elif material == 'macklin-mueller-neo-hookean':
+        return macklin_mueller_neo_hookean_gradient_element_F(F, mu, lam)
     raise ValueError("Unknown material type: " + str(material))
 
 
@@ -485,8 +486,8 @@ def elastic_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray,
         return arap_gradient_u(u, J, Jx_bar, mu, vol)
     elif material == 'fcr':
         return fcr_gradient_u(u, J, Jx_bar, mu, lam, vol)
-    elif material == 'neo-hookean':
-        return neo_hookean_gradient_u(u, J, Jx_bar, mu, lam, vol)
+    elif material == 'macklin-mueller-neo-hookean':
+        return macklin_mueller_neo_hookean_gradient_u(u, J, Jx_bar, mu, lam, vol)
     raise ValueError("Unknown material type: " + str(material))
 
 
@@ -646,8 +647,8 @@ def elastic_hessian_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray, ma
         Q = arap_hessian_element_F(F, mu)
     elif material == 'fcr':
         Q = fcr_hessian_element_F(F, mu, lam)
-    elif material == 'neo-hookean':
-        Q = neo_hookean_hessian_element_F(F, mu, lam)
+    elif material == 'macklin-mueller-neo-hookean':
+        Q = macklin_mueller_neo_hookean_hessian_element_F(F, mu, lam)
     else:
         raise ValueError("Unknown material type: " + str(material))
     if psd:
@@ -731,8 +732,8 @@ def elastic_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, 
         return arap_hessian_u(u, J, Jx_bar, mu, vol, psd=psd)
     elif material == 'fcr':
         return fcr_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=psd)
-    elif material == 'neo-hookean':
-        return neo_hookean_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=psd)
+    elif material == 'macklin-mueller-neo-hookean':
+        return macklin_mueller_neo_hookean_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=psd)
     raise ValueError("Unknown material type: " + str(material))
 
 

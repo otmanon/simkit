@@ -1,7 +1,7 @@
 """Tutorial 001 — Deformation gradient of a single triangle.
 
 Drag a vertex of the triangle and watch the 2x2 deformation gradient ``F`` and
-the neo-Hookean energy update live. Rigid motions keep ``F`` close to a
+the Macklin-Mueller Neo-Hookean energy update live. Rigid motions keep ``F`` close to a
 rotation and the energy near zero; stretches grow the energy.
 """
 import numpy as np
@@ -44,9 +44,9 @@ def callback():
         selected = None
 
     # core of this tutorial: F is the per-element deformation gradient and the
-    # neo-Hookean elastic energy is a scalar function of F.
+    # Macklin-Mueller Neo-Hookean elastic energy is a scalar function of F.
     F = deformation_gradient(X, T, U).reshape((2, 2))
-    E = energies.neo_hookean_energy_element_F(F, mu=1, lam=1).item()
+    E = energies.macklin_mueller_neo_hookean_energy_element_F(F, mu=1, lam=1).item()
     energy_plot.push(E)
 
     viewer.refresh(U)

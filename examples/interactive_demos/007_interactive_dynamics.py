@@ -68,7 +68,7 @@ class ElasticSimBE:
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        E_el  = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el  = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_pin = (0.5 * float((xc.T @ (self.Q_pin @ xc))[0, 0])
                  + float((self.b_pin.T @ xc)[0, 0]))
         E_h   = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
@@ -79,7 +79,7 @@ class ElasticSimBE:
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        g_el  = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el  = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin = self.Q_pin @ xc + self.b_pin
         g_h   = self.Q_h   @ xc + self.b_h
         g_kin = energies.kinetic_gradient_be(
@@ -88,7 +88,7 @@ class ElasticSimBE:
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el  = energies.neo_hookean_hessian_x(
+        H_el  = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_kin = energies.kinetic_hessian_be(self.M, self.h)
         return H_el + self.Q_pin + self.Q_h + H_kin
@@ -126,7 +126,7 @@ class ElasticSimBDF2:
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        E_el  = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el  = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_pin = (0.5 * float((xc.T @ (self.Q_pin @ xc))[0, 0])
                  + float((self.b_pin.T @ xc)[0, 0]))
         E_h   = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
@@ -141,7 +141,7 @@ class ElasticSimBDF2:
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        g_el  = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el  = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin = self.Q_pin @ xc + self.b_pin
         g_h   = self.Q_h   @ xc + self.b_h
         g_kin = energies.kinetic_gradient_bdf2(
@@ -154,7 +154,7 @@ class ElasticSimBDF2:
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el  = energies.neo_hookean_hessian_x(
+        H_el  = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_kin = energies.kinetic_hessian_bdf2(self.M, self.h)
         return H_el + self.Q_pin + self.Q_h + H_kin
@@ -199,7 +199,7 @@ def callback():
     handle.refresh_markers()
 
     # explicit per-component energies (sim.energy lumps them)
-    elastic_plot.push(float(energies.neo_hookean_energy_x(
+    elastic_plot.push(float(energies.macklin_mueller_neo_hookean_energy_x(
         ui.sim.U, J, ui.sim.mu, ui.sim.lam, vol)))
     v_flat = (ui.sim.V.flatten() if hasattr(ui.sim, "V")
               else (ui.sim.U - ui.sim.U_prev).flatten() / ui.sim.h)

@@ -1,7 +1,31 @@
-"""Neo-Hookean elastic energy.
+"""Classical Neo-Hookean elastic energy.
+
+Implements the classical Neo-Hookean hyperelastic energy density in the
+form taught in the FEM-deformables course notes by Sifakis and Barbic
+(http://barbic.usc.edu/femdefo/):
+
+    psi(F) = (mu / 2) * (I_C - dim)
+           - mu * log(J)
+           + (lam / 2) * log(J)**2
+
+    I_C    = ||F||_F**2 = sum_{i,j} F_{ij}**2
+    J      = det(F)
+
+The closed-form first Piola-Kirchhoff stress and Hessian are
+
+    P                = mu * F + (lam * log(J) - mu) * F^{-T}
+    d2 psi / dF dF   = mu * delta_ik * delta_jl
+                     + lam * F^{-T}_{ij} * F^{-T}_{kl}
+                     + (mu - lam * log(J)) * F^{-T}_{il} * F^{-T}_{kj}
+
+Note that the log term makes the energy diverge as ``J -> 0+`` and become
+undefined (NaN) for ``J <= 0``. This is the classical "inversion is
+unphysical" property -- and is exactly what the stable Neo-Hookean
+formulations in :mod:`simkit.energies.macklin_mueller_neo_hookean` and
+:mod:`simkit.energies.stable_neo_hookean` were designed to fix.
 
 Follows the standardized three-tier layout (see :mod:`simkit.energies.arap`
-for the reference). Neo-Hookean has only the deformation gradient (``F``)
+for the reference). This energy has only the deformation gradient (``F``)
 representation, so there is no ``_S`` tier:
 
 Element tier (``*_element_F``)
@@ -17,9 +41,11 @@ Self-contained tier (no suffix)
 
 Notes
 -----
-Closed-form gradient and Hessian transcribed from generated C++. The
-``mat2py`` ordering helpers reindex from the column-major (MATLAB/C++) flat
-layout to the row-major ``F`` layout used throughout the library.
+Closed-form gradient and Hessian derived from the energy structure and
+verified symbolically by ``scripts/derive_stvk_and_neo_hookean.py``. The
+element-tier Hessian blocks are returned in row-major ``F`` layout
+(``H[t, i*dim + j, k*dim + l]``), which matches the layout produced by
+``(J @ x).reshape(-1, dim, dim)``.
 """
 
 from typing import Optional
@@ -27,12 +53,6 @@ from typing import Optional
 import numpy as np
 import scipy as sp
 
-from ..mat2py import (
-    _4vector_2D_ordering_,
-    _9vector_3D_ordering_,
-    _4x4matrix_2D_ordering_,
-    _9x9matrix_3D_ordering_,
-)
 from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
 from ..psd_project import psd_project
@@ -42,12 +62,13 @@ from ..psd_project import psd_project
 # Element tier: deformation gradient (F) representation                       #
 # --------------------------------------------------------------------------- #
 def neo_hookean_energy_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray) -> np.ndarray:
-    """Per-element Neo-Hookean energy density.
+    """Per-element classical Neo-Hookean energy density.
 
     Parameters
     ----------
     F : np.ndarray (t, dim, dim)
-        Per-element deformation gradients.
+        Per-element deformation gradients. Must have ``det(F) > 0`` for the
+        energy to be defined.
     mu : np.ndarray (t, 1)
         Per-element shear modulus.
     lam : np.ndarray (t, 1)
@@ -57,56 +78,34 @@ def neo_hookean_energy_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray)
     -------
     psi : np.ndarray (t, 1)
         Per-element energy densities. No quadrature weighting applied.
+        Zero at the rest state ``F = I``; diverges as ``det(F) -> 0+``;
+        NaN where ``det(F) <= 0``.
     """
     dim = F.shape[-1]
     F = F.reshape(-1, dim, dim)
     mu = np.asarray(mu).reshape(-1, 1)
     lam = np.asarray(lam).reshape(-1, 1)
 
-    if dim == 2:
-        F_00 = F[:, 0, 0].reshape(-1, 1)
-        F_01 = F[:, 0, 1].reshape(-1, 1)
-        F_10 = F[:, 1, 0].reshape(-1, 1)
-        F_11 = F[:, 1, 1].reshape(-1, 1)
-        psi = (
-            mu * (-F_00 * F_11 + F_01 * F_10 + 1.0)
-            + (lam * (-(F_00 * F_11) + F_01 * F_10 + 1.0) ** 2) / 2.0
-            + (mu * (F_00 ** 2 + F_01 ** 2 + F_10 ** 2 + F_11 ** 2 - 2.0)) / 2.0
-        )
-    elif dim == 3:
-        F_00 = F[:, 0, 0].reshape(-1, 1)
-        F_01 = F[:, 0, 1].reshape(-1, 1)
-        F_02 = F[:, 0, 2].reshape(-1, 1)
-        F_10 = F[:, 1, 0].reshape(-1, 1)
-        F_11 = F[:, 1, 1].reshape(-1, 1)
-        F_12 = F[:, 1, 2].reshape(-1, 1)
-        F_20 = F[:, 2, 0].reshape(-1, 1)
-        F_21 = F[:, 2, 1].reshape(-1, 1)
-        F_22 = F[:, 2, 2].reshape(-1, 1)
-        det = (
-            -F_00 * F_11 * F_22 + F_00 * F_12 * F_21 + F_01 * F_10 * F_22
-            - F_01 * F_12 * F_20 - F_02 * F_10 * F_21 + F_02 * F_11 * F_20 + 1.0
-        )
-        psi = (
-            mu * det
-            + (lam * det ** 2) / 2.0
-            + (mu * (
-                F_00 ** 2 + F_01 ** 2 + F_02 ** 2
-                + F_10 ** 2 + F_11 ** 2 + F_12 ** 2
-                + F_20 ** 2 + F_21 ** 2 + F_22 ** 2 - 3.0)) / 2.0
-        )
-    else:
+    if dim not in (2, 3):
         raise ValueError("Neo-Hookean supports dim=2 or dim=3")
+
+    I_C = (F ** 2).sum(axis=(-1, -2)).reshape(-1, 1)
+    J = np.linalg.det(F).reshape(-1, 1)
+    log_J = np.log(J)
+
+    psi = (mu / 2.0) * (I_C - dim) - mu * log_J + (lam / 2.0) * log_J ** 2
     return psi
 
 
 def neo_hookean_gradient_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray) -> np.ndarray:
     """Per-element first Piola-Kirchhoff stress (gradient w.r.t. ``F``).
 
+    Uses the closed form ``P = mu * F + (lam * log(J) - mu) * F^{-T}``.
+
     Parameters
     ----------
     F : np.ndarray (t, dim, dim)
-        Per-element deformation gradients.
+        Per-element deformation gradients (must be invertible).
     mu : np.ndarray (t, 1)
         Per-element shear modulus.
     lam : np.ndarray (t, 1)
@@ -118,58 +117,33 @@ def neo_hookean_gradient_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarra
         Per-element PK1 stress blocks. No quadrature weighting applied.
     """
     dim = F.shape[-1]
-    mu = np.asarray(mu).reshape(-1, 1)
-    lam = np.asarray(lam).reshape(-1, 1)
-
-    if dim == 2:
-        F_00 = F[:, 0, 0].reshape(-1, 1)
-        F_01 = F[:, 0, 1].reshape(-1, 1)
-        F_10 = F[:, 1, 0].reshape(-1, 1)
-        F_11 = F[:, 1, 1].reshape(-1, 1)
-        det = -F_00 * F_11 + F_01 * F_10 + 1.0
-        P = np.hstack([
-            F_00 * mu - F_11 * mu - F_11 * lam * det,
-            F_01 * mu + F_10 * mu + F_01 * lam * det,
-            F_01 * mu + F_10 * mu + F_10 * lam * det,
-            -F_00 * mu + F_11 * mu - F_00 * lam * det,
-        ])[:, _4vector_2D_ordering_].reshape(-1, 2, 2)
-    elif dim == 3:
-        F_00 = F[:, 0, 0].reshape(-1, 1)
-        F_01 = F[:, 0, 1].reshape(-1, 1)
-        F_02 = F[:, 0, 2].reshape(-1, 1)
-        F_10 = F[:, 1, 0].reshape(-1, 1)
-        F_11 = F[:, 1, 1].reshape(-1, 1)
-        F_12 = F[:, 1, 2].reshape(-1, 1)
-        F_20 = F[:, 2, 0].reshape(-1, 1)
-        F_21 = F[:, 2, 1].reshape(-1, 1)
-        F_22 = F[:, 2, 2].reshape(-1, 1)
-        det = (
-            -F_00 * F_11 * F_22 + F_00 * F_12 * F_21 + F_01 * F_10 * F_22
-            - F_01 * F_12 * F_20 - F_02 * F_10 * F_21 + F_02 * F_11 * F_20 + 1.0
-        )
-        P = np.hstack([
-            -mu * (F_11 * F_22 - F_12 * F_21) + F_00 * mu - lam * (F_11 * F_22 - F_12 * F_21) * det,
-            mu * (F_01 * F_22 - F_02 * F_21) + F_10 * mu + lam * (F_01 * F_22 - F_02 * F_21) * det,
-            -mu * (F_01 * F_12 - F_02 * F_11) + F_20 * mu - lam * (F_01 * F_12 - F_02 * F_11) * det,
-            mu * (F_10 * F_22 - F_12 * F_20) + F_01 * mu + lam * (F_10 * F_22 - F_12 * F_20) * det,
-            -mu * (F_00 * F_22 - F_02 * F_20) + F_11 * mu - lam * (F_00 * F_22 - F_02 * F_20) * det,
-            mu * (F_00 * F_12 - F_02 * F_10) + F_21 * mu + lam * (F_00 * F_12 - F_02 * F_10) * det,
-            -mu * (F_10 * F_21 - F_11 * F_20) + F_02 * mu - lam * (F_10 * F_21 - F_11 * F_20) * det,
-            mu * (F_00 * F_21 - F_01 * F_20) + F_12 * mu + lam * (F_00 * F_21 - F_01 * F_20) * det,
-            -mu * (F_00 * F_11 - F_01 * F_10) + F_22 * mu - lam * (F_00 * F_11 - F_01 * F_10) * det,
-        ])[:, _9vector_3D_ordering_].reshape(-1, 3, 3)
-    else:
+    if dim not in (2, 3):
         raise ValueError("Neo-Hookean supports dim=2 or dim=3")
+
+    mu_b = np.asarray(mu).reshape(-1, 1, 1)
+    lam_b = np.asarray(lam).reshape(-1, 1, 1)
+
+    J = np.linalg.det(F).reshape(-1, 1, 1)
+    log_J = np.log(J)
+    F_invT = np.linalg.inv(F).swapaxes(-1, -2)
+
+    P = mu_b * F + (lam_b * log_J - mu_b) * F_invT
     return P
 
 
 def neo_hookean_hessian_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray) -> np.ndarray:
     """Per-element Hessian of the density w.r.t. ``F`` (vectorized blocks).
 
+    Implements the structural formula
+
+        H[ij, kl] = mu * delta_ik * delta_jl
+                  + lam * F^{-T}_{ij} * F^{-T}_{kl}
+                  + (mu - lam * log(J)) * F^{-T}_{il} * F^{-T}_{kj}
+
     Parameters
     ----------
     F : np.ndarray (t, dim, dim)
-        Per-element deformation gradients.
+        Per-element deformation gradients (must be invertible).
     mu : np.ndarray (t, 1)
         Per-element shear modulus.
     lam : np.ndarray (t, 1)
@@ -178,164 +152,29 @@ def neo_hookean_hessian_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray
     Returns
     -------
     H : np.ndarray (t, dim*dim, dim*dim)
-        Per-element Hessian blocks in vectorized ``F`` layout. No quadrature
-        weighting applied. Not PSD-projected; projection happens in the global
-        tier.
+        Per-element Hessian blocks in row-major ``F`` layout
+        (``H[t, i*dim + j, k*dim + l]``). No quadrature weighting applied.
+        Not PSD-projected; projection happens in the global tier.
     """
     dim = F.shape[-1]
-    mu = np.asarray(mu).reshape(-1, 1)
-    lam = np.asarray(lam).reshape(-1, 1)
-
-    if dim == 2:
-        F_00 = F[:, 0, 0].reshape(-1, 1)
-        F_01 = F[:, 0, 1].reshape(-1, 1)
-        F_10 = F[:, 1, 0].reshape(-1, 1)
-        F_11 = F[:, 1, 1].reshape(-1, 1)
-
-        t0 = np.zeros((F.shape[0], 4))
-        t0[:, [0]] = mu + (F_11 ** 2) * lam
-        t0[:, [1]] = -F_01 * F_11 * lam
-        t0[:, [2]] = -F_10 * F_11 * lam
-        t0[:, [3]] = -lam - mu + F_00 * F_11 * lam * 2.0 - F_01 * F_10 * lam
-
-        t1 = np.zeros((F.shape[0], 4))
-        t1[:, [0]] = -F_01 * F_11 * lam
-        t1[:, [1]] = mu + (F_01 ** 2) * lam
-        t1[:, [2]] = lam + mu - F_00 * F_11 * lam + F_01 * F_10 * lam * 2.0
-        t1[:, [3]] = -F_00 * F_01 * lam
-
-        t2 = np.zeros((F.shape[0], 4))
-        t2[:, [0]] = -F_10 * F_11 * lam
-        t2[:, [1]] = lam + mu - F_00 * F_11 * lam + F_01 * F_10 * lam * 2.0
-        t2[:, [2]] = mu + (F_10 ** 2) * lam
-        t2[:, [3]] = -F_00 * F_10 * lam
-
-        t3 = np.zeros((F.shape[0], 4))
-        t3[:, [0]] = -lam - mu + F_00 * F_11 * lam * 2.0 - F_01 * F_10 * lam
-        t3[:, [1]] = -F_00 * F_01 * lam
-        t3[:, [2]] = -F_00 * F_10 * lam
-        t3[:, [3]] = mu + (F_00 ** 2) * lam
-
-        H = np.hstack([t0, t1, t2, t3])[:, _4x4matrix_2D_ordering_].reshape(-1, 4, 4)
-    elif dim == 3:
-        la = lam
-        F1_1 = F[:, 0, 0].reshape(-1, 1)
-        F1_2 = F[:, 0, 1].reshape(-1, 1)
-        F1_3 = F[:, 0, 2].reshape(-1, 1)
-        F2_1 = F[:, 1, 0].reshape(-1, 1)
-        F2_2 = F[:, 1, 1].reshape(-1, 1)
-        F2_3 = F[:, 1, 2].reshape(-1, 1)
-        F3_1 = F[:, 2, 0].reshape(-1, 1)
-        F3_2 = F[:, 2, 1].reshape(-1, 1)
-        F3_3 = F[:, 2, 2].reshape(-1, 1)
-
-        det = (
-            -F1_1 * F2_2 * F3_3 + F1_1 * F2_3 * F3_2 + F1_2 * F2_1 * F3_3
-            - F1_2 * F2_3 * F3_1 - F1_3 * F2_1 * F3_2 + F1_3 * F2_2 * F3_1 + 1.0
-        )
-
-        t1 = np.zeros((F.shape[0], 9))
-        t1[:, [0]] = mu + la * (F2_2 * F3_3 - F2_3 * F3_2) ** 2.0
-        t1[:, [1]] = -la * (F1_2 * F3_3 - F1_3 * F3_2) * (F2_2 * F3_3 - F2_3 * F3_2)
-        t1[:, [2]] = la * (F1_2 * F2_3 - F1_3 * F2_2) * (F2_2 * F3_3 - F2_3 * F3_2)
-        t1[:, [3]] = -la * (F2_1 * F3_3 - F2_3 * F3_1) * (F2_2 * F3_3 - F2_3 * F3_2)
-        t1[:, [4]] = -F3_3 * mu + la * (F1_1 * F3_3 - F1_3 * F3_1) * (F2_2 * F3_3 - F2_3 * F3_2) - F3_3 * la * det
-        t1[:, [5]] = F2_3 * mu - la * (F1_1 * F2_3 - F1_3 * F2_1) * (F2_2 * F3_3 - F2_3 * F3_2) + F2_3 * la * det
-        t1[:, [6]] = la * (F2_1 * F3_2 - F2_2 * F3_1) * (F2_2 * F3_3 - F2_3 * F3_2)
-        t1[:, [7]] = F3_2 * mu - la * (F1_1 * F3_2 - F1_2 * F3_1) * (F2_2 * F3_3 - F2_3 * F3_2) + F3_2 * la * det
-        t1[:, [8]] = -F2_2 * mu + la * (F1_1 * F2_2 - F1_2 * F2_1) * (F2_2 * F3_3 - F2_3 * F3_2) - F2_2 * la * det
-
-        t2 = np.zeros((F.shape[0], 9))
-        t2[:, [0]] = -la * (F1_2 * F3_3 - F1_3 * F3_2) * (F2_2 * F3_3 - F2_3 * F3_2)
-        t2[:, [1]] = mu + la * (F1_2 * F3_3 - F1_3 * F3_2) ** 2.0
-        t2[:, [2]] = -la * (F1_2 * F2_3 - F1_3 * F2_2) * (F1_2 * F3_3 - F1_3 * F3_2)
-        t2[:, [3]] = F3_3 * mu + la * (F1_2 * F3_3 - F1_3 * F3_2) * (F2_1 * F3_3 - F2_3 * F3_1) + F3_3 * la * det
-        t2[:, [4]] = -la * (F1_1 * F3_3 - F1_3 * F3_1) * (F1_2 * F3_3 - F1_3 * F3_2)
-        t2[:, [5]] = -F1_3 * mu + la * (F1_1 * F2_3 - F1_3 * F2_1) * (F1_2 * F3_3 - F1_3 * F3_2) - F1_3 * la * det
-        t2[:, [6]] = -F3_2 * mu - la * (F1_2 * F3_3 - F1_3 * F3_2) * (F2_1 * F3_2 - F2_2 * F3_1) - F3_2 * la * det
-        t2[:, [7]] = la * (F1_1 * F3_2 - F1_2 * F3_1) * (F1_2 * F3_3 - F1_3 * F3_2)
-        t2[:, [8]] = F1_2 * mu - la * (F1_1 * F2_2 - F1_2 * F2_1) * (F1_2 * F3_3 - F1_3 * F3_2) + F1_2 * la * det
-
-        t3 = np.zeros((F.shape[0], 9))
-        t3[:, [0]] = la * (F1_2 * F2_3 - F1_3 * F2_2) * (F2_2 * F3_3 - F2_3 * F3_2)
-        t3[:, [1]] = -la * (F1_2 * F2_3 - F1_3 * F2_2) * (F1_2 * F3_3 - F1_3 * F3_2)
-        t3[:, [2]] = mu + la * (F1_2 * F2_3 - F1_3 * F2_2) ** 2.0
-        t3[:, [3]] = -F2_3 * mu - la * (F1_2 * F2_3 - F1_3 * F2_2) * (F2_1 * F3_3 - F2_3 * F3_1) - F2_3 * la * det
-        t3[:, [4]] = F1_3 * mu + la * (F1_2 * F2_3 - F1_3 * F2_2) * (F1_1 * F3_3 - F1_3 * F3_1) + F1_3 * la * det
-        t3[:, [5]] = -la * (F1_1 * F2_3 - F1_3 * F2_1) * (F1_2 * F2_3 - F1_3 * F2_2)
-        t3[:, [6]] = F2_2 * mu + la * (F1_2 * F2_3 - F1_3 * F2_2) * (F2_1 * F3_2 - F2_2 * F3_1) + F2_2 * la * det
-        t3[:, [7]] = -F1_2 * mu - la * (F1_2 * F2_3 - F1_3 * F2_2) * (F1_1 * F3_2 - F1_2 * F3_1) - F1_2 * la * det
-        t3[:, [8]] = la * (F1_1 * F2_2 - F1_2 * F2_1) * (F1_2 * F2_3 - F1_3 * F2_2)
-
-        t4 = np.zeros((F.shape[0], 9))
-        t4[:, [0]] = -la * (F2_1 * F3_3 - F2_3 * F3_1) * (F2_2 * F3_3 - F2_3 * F3_2)
-        t4[:, [1]] = F3_3 * mu + la * (F1_2 * F3_3 - F1_3 * F3_2) * (F2_1 * F3_3 - F2_3 * F3_1) + F3_3 * la * det
-        t4[:, [2]] = -F2_3 * mu - la * (F1_2 * F2_3 - F1_3 * F2_2) * (F2_1 * F3_3 - F2_3 * F3_1) - F2_3 * la * det
-        t4[:, [3]] = mu + la * (F2_1 * F3_3 - F2_3 * F3_1) ** 2.0
-        t4[:, [4]] = -la * (F1_1 * F3_3 - F1_3 * F3_1) * (F2_1 * F3_3 - F2_3 * F3_1)
-        t4[:, [5]] = la * (F1_1 * F2_3 - F1_3 * F2_1) * (F2_1 * F3_3 - F2_3 * F3_1)
-        t4[:, [6]] = -la * (F2_1 * F3_2 - F2_2 * F3_1) * (F2_1 * F3_3 - F2_3 * F3_1)
-        t4[:, [7]] = -F3_1 * mu + la * (F1_1 * F3_2 - F1_2 * F3_1) * (F2_1 * F3_3 - F2_3 * F3_1) - F3_1 * la * det
-        t4[:, [8]] = F2_1 * mu - la * (F1_1 * F2_2 - F1_2 * F2_1) * (F2_1 * F3_3 - F2_3 * F3_1) + F2_1 * la * det
-
-        t5 = np.zeros((F.shape[0], 9))
-        t5[:, [0]] = -F3_3 * mu + la * (F1_1 * F3_3 - F1_3 * F3_1) * (F2_2 * F3_3 - F2_3 * F3_2) - F3_3 * la * det
-        t5[:, [1]] = -la * (F1_1 * F3_3 - F1_3 * F3_1) * (F1_2 * F3_3 - F1_3 * F3_2)
-        t5[:, [2]] = F1_3 * mu + la * (F1_2 * F2_3 - F1_3 * F2_2) * (F1_1 * F3_3 - F1_3 * F3_1) + F1_3 * la * det
-        t5[:, [3]] = -la * (F1_1 * F3_3 - F1_3 * F3_1) * (F2_1 * F3_3 - F2_3 * F3_1)
-        t5[:, [4]] = mu + la * (F1_1 * F3_3 - F1_3 * F3_1) ** 2.0
-        t5[:, [5]] = -la * (F1_1 * F2_3 - F1_3 * F2_1) * (F1_1 * F3_3 - F1_3 * F3_1)
-        t5[:, [6]] = F3_1 * mu + la * (F1_1 * F3_3 - F1_3 * F3_1) * (F2_1 * F3_2 - F2_2 * F3_1) + F3_1 * la * det
-        t5[:, [7]] = -la * (F1_1 * F3_2 - F1_2 * F3_1) * (F1_1 * F3_3 - F1_3 * F3_1)
-        t5[:, [8]] = -F1_1 * mu + la * (F1_1 * F2_2 - F1_2 * F2_1) * (F1_1 * F3_3 - F1_3 * F3_1) - F1_1 * la * det
-
-        t6 = np.zeros((F.shape[0], 9))
-        t6[:, [0]] = F2_3 * mu - la * (F1_1 * F2_3 - F1_3 * F2_1) * (F2_2 * F3_3 - F2_3 * F3_2) + F2_3 * la * det
-        t6[:, [1]] = -F1_3 * mu + la * (F1_1 * F2_3 - F1_3 * F2_1) * (F1_2 * F3_3 - F1_3 * F3_2) - F1_3 * la * det
-        t6[:, [2]] = -la * (F1_1 * F2_3 - F1_3 * F2_1) * (F1_2 * F2_3 - F1_3 * F2_2)
-        t6[:, [3]] = la * (F1_1 * F2_3 - F1_3 * F2_1) * (F2_1 * F3_3 - F2_3 * F3_1)
-        t6[:, [4]] = -la * (F1_1 * F2_3 - F1_3 * F2_1) * (F1_1 * F3_3 - F1_3 * F3_1)
-        t6[:, [5]] = mu + la * (F1_1 * F2_3 - F1_3 * F2_1) ** 2.0
-        t6[:, [6]] = -F2_1 * mu - la * (F1_1 * F2_3 - F1_3 * F2_1) * (F2_1 * F3_2 - F2_2 * F3_1) - F2_1 * la * det
-        t6[:, [7]] = F1_1 * mu + la * (F1_1 * F2_3 - F1_3 * F2_1) * (F1_1 * F3_2 - F1_2 * F3_1) + F1_1 * la * det
-        t6[:, [8]] = -la * (F1_1 * F2_2 - F1_2 * F2_1) * (F1_1 * F2_3 - F1_3 * F2_1)
-
-        t7 = np.zeros((F.shape[0], 9))
-        t7[:, [0]] = la * (F2_1 * F3_2 - F2_2 * F3_1) * (F2_2 * F3_3 - F2_3 * F3_2)
-        t7[:, [1]] = -F3_2 * mu - la * (F1_2 * F3_3 - F1_3 * F3_2) * (F2_1 * F3_2 - F2_2 * F3_1) - F3_2 * la * det
-        t7[:, [2]] = F2_2 * mu + la * (F1_2 * F2_3 - F1_3 * F2_2) * (F2_1 * F3_2 - F2_2 * F3_1) + F2_2 * la * det
-        t7[:, [3]] = -la * (F2_1 * F3_2 - F2_2 * F3_1) * (F2_1 * F3_3 - F2_3 * F3_1)
-        t7[:, [4]] = F3_1 * mu + la * (F1_1 * F3_3 - F1_3 * F3_1) * (F2_1 * F3_2 - F2_2 * F3_1) + F3_1 * la * det
-        t7[:, [5]] = -F2_1 * mu - la * (F1_1 * F2_3 - F1_3 * F2_1) * (F2_1 * F3_2 - F2_2 * F3_1) - F2_1 * la * det
-        t7[:, [6]] = mu + la * (F2_1 * F3_2 - F2_2 * F3_1) ** 2.0
-        t7[:, [7]] = -la * (F1_1 * F3_2 - F1_2 * F3_1) * (F2_1 * F3_2 - F2_2 * F3_1)
-        t7[:, [8]] = la * (F1_1 * F2_2 - F1_2 * F2_1) * (F2_1 * F3_2 - F2_2 * F3_1)
-
-        t8 = np.zeros((F.shape[0], 9))
-        t8[:, [0]] = F3_2 * mu - la * (F1_1 * F3_2 - F1_2 * F3_1) * (F2_2 * F3_3 - F2_3 * F3_2) + F3_2 * la * det
-        t8[:, [1]] = la * (F1_1 * F3_2 - F1_2 * F3_1) * (F1_2 * F3_3 - F1_3 * F3_2)
-        t8[:, [2]] = -F1_2 * mu - la * (F1_2 * F2_3 - F1_3 * F2_2) * (F1_1 * F3_2 - F1_2 * F3_1) - F1_2 * la * det
-        t8[:, [3]] = -F3_1 * mu + la * (F1_1 * F3_2 - F1_2 * F3_1) * (F2_1 * F3_3 - F2_3 * F3_1) - F3_1 * la * det
-        t8[:, [4]] = -la * (F1_1 * F3_2 - F1_2 * F3_1) * (F1_1 * F3_3 - F1_3 * F3_1)
-        t8[:, [5]] = F1_1 * mu + la * (F1_1 * F2_3 - F1_3 * F2_1) * (F1_1 * F3_2 - F1_2 * F3_1) + F1_1 * la * det
-        t8[:, [6]] = -la * (F1_1 * F3_2 - F1_2 * F3_1) * (F2_1 * F3_2 - F2_2 * F3_1)
-        t8[:, [7]] = mu + la * (F1_1 * F3_2 - F1_2 * F3_1) ** 2.0
-        t8[:, [8]] = -la * (F1_1 * F2_2 - F1_2 * F2_1) * (F1_1 * F3_2 - F1_2 * F3_1)
-
-        t9 = np.zeros((F.shape[0], 9))
-        t9[:, [0]] = -F2_2 * mu + la * (F1_1 * F2_2 - F1_2 * F2_1) * (F2_2 * F3_3 - F2_3 * F3_2) - F2_2 * la * det
-        t9[:, [1]] = F1_2 * mu - la * (F1_1 * F2_2 - F1_2 * F2_1) * (F1_2 * F3_3 - F1_3 * F3_2) + F1_2 * la * det
-        t9[:, [2]] = la * (F1_1 * F2_2 - F1_2 * F2_1) * (F1_2 * F2_3 - F1_3 * F2_2)
-        t9[:, [3]] = F2_1 * mu - la * (F1_1 * F2_2 - F1_2 * F2_1) * (F2_1 * F3_3 - F2_3 * F3_1) + F2_1 * la * det
-        t9[:, [4]] = -F1_1 * mu + la * (F1_1 * F2_2 - F1_2 * F2_1) * (F1_1 * F3_3 - F1_3 * F3_1) - F1_1 * la * det
-        t9[:, [5]] = -la * (F1_1 * F2_2 - F1_2 * F2_1) * (F1_1 * F2_3 - F1_3 * F2_1)
-        t9[:, [6]] = la * (F1_1 * F2_2 - F1_2 * F2_1) * (F2_1 * F3_2 - F2_2 * F3_1)
-        t9[:, [7]] = -la * (F1_1 * F2_2 - F1_2 * F2_1) * (F1_1 * F3_2 - F1_2 * F3_1)
-        t9[:, [8]] = mu + la * (F1_1 * F2_2 - F1_2 * F2_1) ** 2.0
-
-        H = np.hstack([t1, t2, t3, t4, t5, t6, t7, t8, t9])[:, _9x9matrix_3D_ordering_].reshape(-1, 9, 9)
-    else:
+    if dim not in (2, 3):
         raise ValueError("Neo-Hookean supports dim=2 or dim=3")
+
+    t = F.shape[0]
+    mu_b = np.asarray(mu).reshape(-1, 1, 1, 1, 1)
+    lam_b = np.asarray(lam).reshape(-1, 1, 1, 1, 1)
+
+    J = np.linalg.det(F).reshape(-1, 1, 1, 1, 1)
+    log_J = np.log(J)
+    F_invT = np.linalg.inv(F).swapaxes(-1, -2)
+    Id = np.eye(dim)
+
+    H5 = (
+        mu_b * np.einsum("ik,jl->ijkl", Id, Id)[None]
+        + lam_b * np.einsum("tij,tkl->tijkl", F_invT, F_invT)
+        + (mu_b - lam_b * log_J) * np.einsum("til,tkj->tijkl", F_invT, F_invT)
+    )
+    H = H5.reshape(t, dim * dim, dim * dim)
     return H
 
 
@@ -343,7 +182,7 @@ def neo_hookean_hessian_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray
 # Global explicit tier: position (x) variable                                 #
 # --------------------------------------------------------------------------- #
 def neo_hookean_energy_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray) -> float:
-    """Assembled Neo-Hookean energy at positions ``X``.
+    """Assembled classical Neo-Hookean energy at positions ``X``.
 
     Parameters
     ----------
@@ -371,26 +210,7 @@ def neo_hookean_energy_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, l
 
 
 def neo_hookean_gradient_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray) -> np.ndarray:
-    """Assembled Neo-Hookean gradient w.r.t. positions ``X``.
-
-    Parameters
-    ----------
-    X : np.ndarray (n, dim)
-        Current vertex positions.
-    J : scipy.sparse matrix (t*dim*dim, n*dim)
-        Deformation Jacobian.
-    mu : np.ndarray (t, 1)
-        Per-element shear modulus.
-    lam : np.ndarray (t, 1)
-        Per-element first Lame parameter.
-    vol : np.ndarray (t, 1)
-        Per-element quadrature weights.
-
-    Returns
-    -------
-    g : np.ndarray (n*dim, 1)
-        Assembled energy gradient.
-    """
+    """Assembled classical Neo-Hookean gradient w.r.t. positions ``X``."""
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     P = neo_hookean_gradient_element_F(F, mu, lam)
@@ -400,29 +220,7 @@ def neo_hookean_gradient_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray,
 
 
 def neo_hookean_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray, psd: bool = True) -> sp.sparse.spmatrix:
-    """Assembled Neo-Hookean Hessian w.r.t. positions ``X``.
-
-    Parameters
-    ----------
-    X : np.ndarray (n, dim)
-        Current vertex positions.
-    J : scipy.sparse matrix (t*dim*dim, n*dim)
-        Deformation Jacobian.
-    mu : np.ndarray (t, 1)
-        Per-element shear modulus.
-    lam : np.ndarray (t, 1)
-        Per-element first Lame parameter.
-    vol : np.ndarray (t, 1)
-        Per-element quadrature weights.
-    psd : bool, optional
-        If ``True`` (default), project each per-element block to the nearest
-        positive semi-definite matrix before assembly.
-
-    Returns
-    -------
-    Q : scipy.sparse.csc_matrix (n*dim, n*dim)
-        Assembled energy Hessian.
-    """
+    """Assembled classical Neo-Hookean Hessian w.r.t. positions ``X``."""
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     He = neo_hookean_hessian_element_F(F, mu, lam)
@@ -438,33 +236,7 @@ def neo_hookean_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, 
 # Global explicit tier: displacement (u) variable                             #
 # --------------------------------------------------------------------------- #
 def neo_hookean_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray) -> float:
-    """Assembled Neo-Hookean energy at displacement ``u`` from a reference ``x_bar``.
-
-    Equivalent to :func:`neo_hookean_energy_x` evaluated at ``x_bar + u`` but
-    avoids recomputing ``J @ x_bar`` on every call. The reference ``x_bar`` is
-    arbitrary (not required to be the rest pose).
-
-    Parameters
-    ----------
-    u : np.ndarray (n, dim)
-        Displacement from the reference configuration.
-    J : scipy.sparse matrix (t*dim*dim, n*dim)
-        Deformation Jacobian.
-    Jx_bar : np.ndarray (t*dim*dim, 1)
-        Precomputed ``J @ x_bar.reshape(-1, 1)`` — the flattened deformation
-        gradient at the reference configuration.
-    mu : np.ndarray (t, 1)
-        Per-element shear modulus.
-    lam : np.ndarray (t, 1)
-        Per-element first Lame parameter.
-    vol : np.ndarray (t, 1)
-        Per-element quadrature weights.
-
-    Returns
-    -------
-    E : float
-        Total Neo-Hookean energy.
-    """
+    """Assembled classical Neo-Hookean energy at displacement ``u`` from a reference ``x_bar``."""
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     psi = neo_hookean_energy_element_F(F, mu, lam)
@@ -473,31 +245,7 @@ def neo_hookean_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarra
 
 
 def neo_hookean_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray) -> np.ndarray:
-    """Assembled Neo-Hookean gradient w.r.t. displacement ``u``.
-
-    Because ``dF/du = J`` (the same as ``dF/dX``), this returns the same
-    assembled vector as :func:`neo_hookean_gradient_x` at ``x_bar + u``.
-
-    Parameters
-    ----------
-    u : np.ndarray (n, dim)
-        Displacement from the reference configuration.
-    J : scipy.sparse matrix (t*dim*dim, n*dim)
-        Deformation Jacobian.
-    Jx_bar : np.ndarray (t*dim*dim, 1)
-        Precomputed ``J @ x_bar.reshape(-1, 1)``.
-    mu : np.ndarray (t, 1)
-        Per-element shear modulus.
-    lam : np.ndarray (t, 1)
-        Per-element first Lame parameter.
-    vol : np.ndarray (t, 1)
-        Per-element quadrature weights.
-
-    Returns
-    -------
-    g : np.ndarray (n*dim, 1)
-        Assembled energy gradient.
-    """
+    """Assembled classical Neo-Hookean gradient w.r.t. displacement ``u``."""
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     P = neo_hookean_gradient_element_F(F, mu, lam)
@@ -507,31 +255,7 @@ def neo_hookean_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndar
 
 
 def neo_hookean_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray, psd: bool = True) -> sp.sparse.spmatrix:
-    """Assembled Neo-Hookean Hessian w.r.t. displacement ``u``.
-
-    Parameters
-    ----------
-    u : np.ndarray (n, dim)
-        Displacement from the reference configuration.
-    J : scipy.sparse matrix (t*dim*dim, n*dim)
-        Deformation Jacobian.
-    Jx_bar : np.ndarray (t*dim*dim, 1)
-        Precomputed ``J @ x_bar.reshape(-1, 1)``.
-    mu : np.ndarray (t, 1)
-        Per-element shear modulus.
-    lam : np.ndarray (t, 1)
-        Per-element first Lame parameter.
-    vol : np.ndarray (t, 1)
-        Per-element quadrature weights.
-    psd : bool, optional
-        If ``True`` (default), project each per-element block to the nearest
-        positive semi-definite matrix before assembly.
-
-    Returns
-    -------
-    Q : scipy.sparse.csc_matrix (n*dim, n*dim)
-        Assembled energy Hessian.
-    """
+    """Assembled classical Neo-Hookean Hessian w.r.t. displacement ``u``."""
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     He = neo_hookean_hessian_element_F(F, mu, lam)
@@ -547,26 +271,7 @@ def neo_hookean_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarr
 # Self-contained tier: builds J and vol from rest geometry                    #
 # --------------------------------------------------------------------------- #
 def neo_hookean_energy(X: np.ndarray, T: np.ndarray, mu: np.ndarray, lam: np.ndarray, U: Optional[np.ndarray] = None) -> float:
-    """Neo-Hookean energy, building the operator and weights from rest geometry.
-
-    Parameters
-    ----------
-    X : np.ndarray (n, dim)
-        Rest vertex positions. Used to build ``J`` and ``vol``.
-    T : np.ndarray (t, dim+1)
-        Element connectivity.
-    mu : np.ndarray (t, 1)
-        Per-element shear modulus.
-    lam : np.ndarray (t, 1)
-        Per-element first Lame parameter.
-    U : np.ndarray (n, dim), optional
-        Current vertex positions. Defaults to ``X``.
-
-    Returns
-    -------
-    E : float
-        Total Neo-Hookean energy.
-    """
+    """Classical Neo-Hookean energy, building the operator and weights from rest geometry."""
     if U is None:
         U = X
     J = deformation_jacobian(X, T)
@@ -575,26 +280,7 @@ def neo_hookean_energy(X: np.ndarray, T: np.ndarray, mu: np.ndarray, lam: np.nda
 
 
 def neo_hookean_gradient(X: np.ndarray, T: np.ndarray, mu: np.ndarray, lam: np.ndarray, U: Optional[np.ndarray] = None) -> np.ndarray:
-    """Neo-Hookean gradient, building the operator and weights from rest geometry.
-
-    Parameters
-    ----------
-    X : np.ndarray (n, dim)
-        Rest vertex positions.
-    T : np.ndarray (t, dim+1)
-        Element connectivity.
-    mu : np.ndarray (t, 1)
-        Per-element shear modulus.
-    lam : np.ndarray (t, 1)
-        Per-element first Lame parameter.
-    U : np.ndarray (n, dim), optional
-        Current vertex positions. Defaults to ``X``.
-
-    Returns
-    -------
-    g : np.ndarray (n*dim, 1)
-        Assembled energy gradient.
-    """
+    """Classical Neo-Hookean gradient, building the operator and weights from rest geometry."""
     if U is None:
         U = X
     J = deformation_jacobian(X, T)
@@ -603,28 +289,7 @@ def neo_hookean_gradient(X: np.ndarray, T: np.ndarray, mu: np.ndarray, lam: np.n
 
 
 def neo_hookean_hessian(X: np.ndarray, T: np.ndarray, mu: np.ndarray, lam: np.ndarray, U: Optional[np.ndarray] = None, psd: bool = True) -> sp.sparse.spmatrix:
-    """Neo-Hookean Hessian, building the operator and weights from rest geometry.
-
-    Parameters
-    ----------
-    X : np.ndarray (n, dim)
-        Rest vertex positions.
-    T : np.ndarray (t, dim+1)
-        Element connectivity.
-    mu : np.ndarray (t, 1)
-        Per-element shear modulus.
-    lam : np.ndarray (t, 1)
-        Per-element first Lame parameter.
-    U : np.ndarray (n, dim), optional
-        Current vertex positions. Defaults to ``X``.
-    psd : bool, optional
-        Project per-element blocks to PSD before assembly. Default ``True``.
-
-    Returns
-    -------
-    Q : scipy.sparse.csc_matrix (n*dim, n*dim)
-        Assembled energy Hessian.
-    """
+    """Classical Neo-Hookean Hessian, building the operator and weights from rest geometry."""
     if U is None:
         U = X
     J = deformation_jacobian(X, T)

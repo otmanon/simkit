@@ -40,7 +40,7 @@ class ElasticFEMSimParams():
         pr : float | ( num_simplex, 1) np.ndarray
             Poisson's ratio of the material 
         material : str
-            Material type ('fcr' or 'arap' or 'neo-hookean' or 'linear-elasticity')
+            Material type ('fcr' or 'arap' or 'macklin-mueller-neo-hookean' or 'linear-elasticity')
         solver_p : NewtonSolverParams
             Parameters of the Newton solver
         Q0 : (num_vertices*dim, num_vertices*dim) sp.sparse.csc_matrix

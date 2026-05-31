@@ -3,7 +3,7 @@ import numpy as np
 from .fcr import fcr_energy_element_F
 from .linear_elasticity import linear_elasticity_energy_element_F
 from .arap import arap_energy_element_F, arap_energy_S
-from .neo_hookean import neo_hookean_energy_element_F
+from ..macklin_mueller_neo_hookean import macklin_mueller_neo_hookean_energy_element_F
 
 
 def elastic_energy(F: np.ndarray,  mu: np.ndarray, lam: np.ndarray, material):
@@ -14,8 +14,8 @@ def elastic_energy(F: np.ndarray,  mu: np.ndarray, lam: np.ndarray, material):
         e = arap_energy_element_F(F, mu)
     elif material == 'fcr':
         e = fcr_energy_element_F(F, mu, lam)
-    elif material == 'neo-hookean':
-        e = neo_hookean_energy_element_F(F, mu, lam)
+    elif material == 'macklin-mueller-neo-hookean':
+        e = macklin_mueller_neo_hookean_energy_element_F(F, mu, lam)
     else:
         raise ValueError("Unknown material type: " + material)
     return e
@@ -87,8 +87,8 @@ def elastic_energy_S(S : np.ndarray, mu: np.ndarray, lam : np.ndarray, vol : np.
         e = arap_energy_S(S, mu, vol)
     # elif material == 'fcr':
     #     e = fcr_energy_S(S, mu, lam, vol)
-    # elif material == 'neo-hookean':
-    #     e = neo_hookean_energy_S(S, mu, lam, vol)
+    # elif material == 'macklin-mueller-neo-hookean':
+    #     e = macklin_mueller_neo_hookean_energy_S(S, mu, lam, vol)
     else:
         raise ValueError("Unknown material type: " + material)
     return e

@@ -74,7 +74,7 @@ class ElasticSimBE:
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        E_el    = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el    = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_floor = float(energies.contact_springs_plane_energy(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n))
         E_h     = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
@@ -86,7 +86,7 @@ class ElasticSimBE:
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        g_el    = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el    = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_floor = energies.contact_springs_plane_gradient(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
         g_h     = self.Q_h @ xc + self.b_h
@@ -97,7 +97,7 @@ class ElasticSimBE:
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el    = energies.neo_hookean_hessian_x(
+        H_el    = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_floor = energies.contact_springs_plane_hessian(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
@@ -139,7 +139,7 @@ class ElasticSimBDF2:
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        E_el    = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el    = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_floor = float(energies.contact_springs_plane_energy(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n))
         E_h     = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
@@ -155,7 +155,7 @@ class ElasticSimBDF2:
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        g_el    = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el    = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_floor = energies.contact_springs_plane_gradient(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
         g_h     = self.Q_h @ xc + self.b_h
@@ -170,7 +170,7 @@ class ElasticSimBDF2:
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el    = energies.neo_hookean_hessian_x(
+        H_el    = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_floor = energies.contact_springs_plane_hessian(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
