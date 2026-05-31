@@ -3,8 +3,6 @@ import sys
 
 import igl
 import numpy as np
-import polyscope as ps
-import polyscope.imgui as psim
 import scipy as sp
 
 import simkit as sk
@@ -19,6 +17,7 @@ from config import *  # noqa: E402,F401,F403
 
 def interactive_click_demo(sim, bI):
     import polyscope as ps
+    import polyscope.imgui as psim
 
     if isinstance(bI, str):
         bI = np.load(bI).reshape((-1))
@@ -30,6 +29,8 @@ def interactive_click_demo(sim, bI):
     elif isinstance(sim, sk.sims.elastic.ElasticFEMSim):
         z, z_dot = sim.rest_state()
 
+    z_curr = z.copy()
+    z_prev = z.copy()
     ps.set_ground_plane_mode("none")
     
     y = (sim.X - sim.q.reshape(-1, sim.dim))[bI, :]
@@ -56,7 +57,7 @@ def interactive_click_demo(sim, bI):
         mesh = ps.register_surface_mesh("mesh", sim.X, F)
         
     def callback():
-        nonlocal z, s, l, z_dot, BQB_ext, Bb_ext, d, pc, BSGamma, Y, clickedInd
+        nonlocal z, s, l, z_curr, z_prev, BQB_ext, Bb_ext, d, pc, BSGamma, Y, clickedInd
     
         # get window pos
         win_pos = psim.GetMousePos()    
@@ -94,12 +95,15 @@ def interactive_click_demo(sim, bI):
                     
 
         if isinstance(sim, sk.sims.elastic.ElasticMFEMSim):
-            z_next, s, l = sim.step(z, s, l, z_dot, Q_ext=BQB_ext, b_ext=Bb_ext)
+            z_next, s, l = sim.step(z_curr, z_prev, s, l,  Q_ext=BQB_ext, b_ext=Bb_ext)
+        
         elif isinstance(sim, sk.sims.elastic.ElasticFEMSim):
-            z_next = sim.step(z, z_dot,
+            z_next = sim.step(z_curr, z_prev,
                                 Q_ext=BQB_ext, b_ext=Bb_ext)
             
         z_dot = (z_next - z) / sim.sim_params.h
+        z_prev = z_curr.copy()
+        z_curr = z_next.copy()
         z = z_next.copy()
 
         Y = sim.X + (sim.B @ z).reshape(-1, sim.dim)
@@ -115,14 +119,14 @@ if __name__ == "__main__":
     dirname =  os.path.dirname(__file__)
 
 
-    configs = [crabConfig()]
+    configs = [TConfig()]
     for c in configs:
         print(c.name)
         [X, T] = load_mesh(c.geometry_path)
         dim = X.shape[1]
         X = normalize_mesh(X)
         
-        c.max_iter = 1
+        c.max_iter = 1000
         W, E, B, cI, cW, labels = compute_subspace(X, T, c.m, c.k, 
                                                    mu=c.ym, bI=c.bI)
 
@@ -131,5 +135,13 @@ if __name__ == "__main__":
                                 c.h, c.max_iter, 
                                 c.do_line_search,
                                 B=B, cI=cI, cW=cW)
+        
+        
+        # fem_sim = create_fem_sim(X, T,
+        #                          c.ym, c.rho, c.h, 
+        #                          c.max_iter, c.do_line_search
+        #                          )
+        
+        
         
         interactive_click_demo(mfem_sim, c.bI)

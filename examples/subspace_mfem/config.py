@@ -31,7 +31,7 @@ class TConfig():
         
 class cthuluConfig():
     def __init__(self):
-        self.ym = 1e12
+        self.ym = 1e4
         
         self.h = 1e-2
         self.rho = 1e3

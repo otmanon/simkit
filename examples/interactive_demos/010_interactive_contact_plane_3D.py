@@ -1,0 +1,286 @@
+"""Tutorial 010 - Contact in 3D.
+
+A tetrahedral block drops onto a soft floor. Click-and-drag picks the nearest
+vertex and constrains it on a camera-facing plane through the pick point.
+Uncheck the box to give the mouse back to polyscope's orbit camera.
+
+All three integrators (Backward Euler / BDF2 / Forward Euler) are written out
+as separate classes below. Each one has only five methods --
+``__init__``, ``energy``, ``gradient``, ``hessian``, ``step`` -- so you can
+read the math of a single integrator top-to-bottom without chasing dispatch.
+The kinetic-energy term lives directly inside ``energy``.
+"""
+import numpy as np
+import scipy as sp
+
+from simkit.deformation_jacobian import deformation_jacobian
+from simkit.gravity_force import gravity_force
+from simkit.massmatrix import massmatrix
+from simkit.volume import volume
+from simkit.solvers.NewtonSolver import NewtonSolver, NewtonSolverParams
+import simkit.energies as energies
+
+from utils import (
+    MouseHandle3D, TutorialUI, Viewer3D,
+    lame_from_E_nu, tetrahedralized_grid,
+)
+
+
+# ============================================================================
+# Mesh + precomputed operators (the sim classes consume these as inputs)
+# ============================================================================
+X, T = tetrahedralized_grid(nx=5, ny=6, nz=4, width=0.8, height=0.4, depth=0.4)
+X[:, 1] += 1.0
+
+RHO = 1e3
+J     = deformation_jacobian(X, T)                          # per-tet sparse
+vol   = volume(X, T)                                        # per-tet (Tx1)
+M_n   = massmatrix(X, T, rho=RHO)                           # (n,n) per-vertex
+M     = sp.sparse.kron(M_n, sp.sparse.eye(X.shape[1])).tocsc()   # (n*d, n*d)
+f_g   = gravity_force(X, T, a=-9.8, rho=RHO).reshape(-1, 1)
+
+floor_p = np.array([0.0,  -0.6, 0.0])
+floor_n = np.array([0.0,   1.0, 0.0])
+mu0, lam0 = lame_from_E_nu(E=1e5, nu=0.4)
+
+
+# ============================================================================
+# Three sim classes, one per integrator. Each minimizes (or for FE: evaluates)
+# the same potential
+#
+#     E_pot(x) = E_elastic(x)                       neo-Hookean
+#              + E_floor(x)                         penalty springs vs. plane
+#              + 1/2 x^T Q_h x + b_h^T x            mouse handle (zeroed = none)
+#              - f_g^T x                            gravity
+#
+# and differs only in the kinetic term layered on top.
+# ============================================================================
+
+class ElasticSimBE:
+    """Backward Euler: minimize E_pot(x) + E_kin_BE(x; U, U_prev, M, h)."""
+
+    def __init__(self, X, T, J, vol, M, M_n, f_g,
+                 mu, lam, K_contact, p_floor, n_floor, h, newton_iters=5):
+        self.X, self.T = X, T
+        self.n, self.dim = X.shape
+        self.J, self.vol, self.M, self.M_n, self.f_g = J, vol, M, M_n, f_g
+        self.mu  = np.full((T.shape[0], 1), float(mu))
+        self.lam = np.full((T.shape[0], 1), float(lam))
+        self.K_contact = float(K_contact)
+        self.p_floor, self.n_floor = p_floor, n_floor
+        self.h = float(h)
+
+        D = self.n * self.dim
+        self.U      = X.copy()
+        self.U_prev = X.copy()
+        self.Q_h    = sp.sparse.csc_matrix((D, D))
+        self.b_h    = np.zeros((D, 1))
+
+        self._solver = NewtonSolver(
+            self.energy, self.gradient, self.hessian,
+            NewtonSolverParams(max_iter=newton_iters, do_line_search=True),
+        )
+
+    def energy(self, x):
+        xn = x.reshape(-1, self.dim)
+        xc = x.reshape(-1, 1)
+        E_el    = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_floor = float(energies.contact_springs_plane_energy(
+            xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n))
+        E_h     = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
+                   + float((self.b_h.T @ xc)[0, 0]))
+        E_grav  = -float((self.f_g.T @ xc)[0, 0])
+        E_kin   = float(energies.kinetic_energy_be(
+            xc, self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1), self.M, self.h))
+        return E_el + E_floor + E_h + E_grav + E_kin
+
+    def gradient(self, x):
+        xn = x.reshape(-1, self.dim)
+        xc = x.reshape(-1, 1)
+        g_el    = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_floor = energies.contact_springs_plane_gradient(
+            xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
+        g_h     = self.Q_h @ xc + self.b_h
+        g_grav  = -self.f_g
+        g_kin   = energies.kinetic_gradient_be(
+            xc, self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1), self.M, self.h)
+        return g_el + g_floor + g_h + g_grav + g_kin
+
+    def hessian(self, x):
+        xn = x.reshape(-1, self.dim)
+        H_el    = energies.neo_hookean_hessian_x(
+            xn, self.J, self.mu, self.lam, self.vol, psd=True)
+        H_floor = energies.contact_springs_plane_hessian(
+            xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
+        H_kin   = energies.kinetic_hessian_be(self.M, self.h)
+        return H_el + H_floor + self.Q_h + H_kin
+
+    def step(self):
+        x_next = self._solver.solve(self.U.flatten().reshape(-1, 1))
+        self.U_prev[:] = self.U
+        self.U[:] = x_next.reshape(self.n, self.dim)
+
+
+class ElasticSimBDF2:
+    """BDF2: same potential, kinetic uses 3 history slots (U, U_prev, U_prev2, U_prev3)."""
+
+    def __init__(self, X, T, J, vol, M, M_n, f_g,
+                 mu, lam, K_contact, p_floor, n_floor, h, newton_iters=5):
+        self.X, self.T = X, T
+        self.n, self.dim = X.shape
+        self.J, self.vol, self.M, self.M_n, self.f_g = J, vol, M, M_n, f_g
+        self.mu  = np.full((T.shape[0], 1), float(mu))
+        self.lam = np.full((T.shape[0], 1), float(lam))
+        self.K_contact = float(K_contact)
+        self.p_floor, self.n_floor = p_floor, n_floor
+        self.h = float(h)
+
+        D = self.n * self.dim
+        self.U       = X.copy()
+        self.U_prev  = X.copy()
+        self.U_prev2 = X.copy()
+        self.U_prev3 = X.copy()
+        self.Q_h     = sp.sparse.csc_matrix((D, D))
+        self.b_h     = np.zeros((D, 1))
+
+        self._solver = NewtonSolver(
+            self.energy, self.gradient, self.hessian,
+            NewtonSolverParams(max_iter=newton_iters, do_line_search=True),
+        )
+
+    def energy(self, x):
+        xn = x.reshape(-1, self.dim)
+        xc = x.reshape(-1, 1)
+        E_el    = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_floor = float(energies.contact_springs_plane_energy(
+            xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n))
+        E_h     = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
+                   + float((self.b_h.T @ xc)[0, 0]))
+        E_grav  = -float((self.f_g.T @ xc)[0, 0])
+        E_kin   = float(energies.kinetic_energy_bdf2(
+            xc,
+            self.U.reshape(-1, 1),
+            self.U_prev.reshape(-1, 1),
+            self.U_prev2.reshape(-1, 1),
+            self.U_prev3.reshape(-1, 1),
+            self.M, self.h,
+        ))
+        return E_el + E_floor + E_h + E_grav + E_kin
+
+    def gradient(self, x):
+        xn = x.reshape(-1, self.dim)
+        xc = x.reshape(-1, 1)
+        g_el    = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_floor = energies.contact_springs_plane_gradient(
+            xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
+        g_h     = self.Q_h @ xc + self.b_h
+        g_grav  = -self.f_g
+        g_kin   = energies.kinetic_gradient_bdf2(
+            xc,
+            self.U.reshape(-1, 1),
+            self.U_prev.reshape(-1, 1),
+            self.U_prev2.reshape(-1, 1),
+            self.U_prev3.reshape(-1, 1),
+            self.M, self.h,
+        )
+        return g_el + g_floor + g_h + g_grav + g_kin
+
+    def hessian(self, x):
+        xn = x.reshape(-1, self.dim)
+        H_el    = energies.neo_hookean_hessian_x(
+            xn, self.J, self.mu, self.lam, self.vol, psd=True)
+        H_floor = energies.contact_springs_plane_hessian(
+            xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
+        H_kin   = energies.kinetic_hessian_bdf2(self.M, self.h)
+        return H_el + H_floor + self.Q_h + H_kin
+
+    def step(self):
+        x_next = self._solver.solve(self.U.flatten().reshape(-1, 1))
+        self.U_prev3[:] = self.U_prev2
+        self.U_prev2[:] = self.U_prev
+        self.U_prev[:]  = self.U
+        self.U[:] = x_next.reshape(self.n, self.dim)
+
+
+class ElasticSimFE:
+    """Forward Euler: explicit. energy/gradient/hessian return the potential only;
+    step does ``M a = -grad E_pot``, then a one-step Euler integration of U, V.
+    """
+
+    def __init__(self, X, T, J, vol, M, M_n, f_g,
+                 mu, lam, K_contact, p_floor, n_floor, h):
+        self.X, self.T = X, T
+        self.n, self.dim = X.shape
+        self.J, self.vol, self.M, self.M_n, self.f_g = J, vol, M, M_n, f_g
+        self.mu  = np.full((T.shape[0], 1), float(mu))
+        self.lam = np.full((T.shape[0], 1), float(lam))
+        self.K_contact = float(K_contact)
+        self.p_floor, self.n_floor = p_floor, n_floor
+        self.h = float(h)
+
+        D = self.n * self.dim
+        self.U      = X.copy()
+        self.V      = np.zeros_like(X)
+        self.M_diag = M.diagonal()
+        self.Q_h    = sp.sparse.csc_matrix((D, D))
+        self.b_h    = np.zeros((D, 1))
+
+    def energy(self, x):
+        xn = x.reshape(-1, self.dim)
+        xc = x.reshape(-1, 1)
+        E_el    = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_floor = float(energies.contact_springs_plane_energy(
+            xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n))
+        E_h     = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
+                   + float((self.b_h.T @ xc)[0, 0]))
+        E_grav  = -float((self.f_g.T @ xc)[0, 0])
+        return E_el + E_floor + E_h + E_grav
+
+    def gradient(self, x):
+        xn = x.reshape(-1, self.dim)
+        xc = x.reshape(-1, 1)
+        g_el    = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_floor = energies.contact_springs_plane_gradient(
+            xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
+        g_h     = self.Q_h @ xc + self.b_h
+        g_grav  = -self.f_g
+        return g_el + g_floor + g_h + g_grav
+
+
+    def step(self):
+        f = -np.asarray(self.gradient(self.U.flatten())).flatten()
+        a = (f / self.M_diag).reshape(self.n, self.dim)
+        self.U[:] = self.U + self.h * self.V
+        self.V[:] = self.V + self.h * a
+
+
+# ============================================================================
+# Build all three sims, wire viewer + handle + UI
+# ============================================================================
+sim_kwargs = dict(
+    X=X, T=T, J=J, vol=vol, M=M, M_n=M_n, f_g=f_g,
+    mu=mu0, lam=lam0,
+    K_contact=1e5, p_floor=floor_p, n_floor=floor_n, h=0.02,
+)
+sims = {
+    "Backward Euler": ElasticSimBE  (**sim_kwargs),
+    "BDF2":           ElasticSimBDF2(**sim_kwargs),
+    "Forward Euler":  ElasticSimFE  (**sim_kwargs),
+}
+
+viewer = Viewer3D(X, T, floor_y=float(floor_p[1]))
+sel_pc, target_pc = viewer.add_handle_markers()
+handle = MouseHandle3D(sims, sel_pc, target_pc, K_handle=5e9)
+ui     = TutorialUI(sims, handle, show_contact_K=True, show_handle_mode=True)
+
+
+def callback():
+    ui.draw()
+    if ui.handle_enabled:
+        handle.update()
+    ui.sim.step()
+    viewer.refresh(ui.sim.U)
+    handle.refresh_markers()
+
+
+viewer.show(callback)

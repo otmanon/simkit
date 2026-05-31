@@ -1,12 +1,11 @@
 import os
 import sys
 
-import igl
 import numpy as np
-import polyscope as ps
 import scipy as sp
 
 import simkit as sk
+import polyscope as ps
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _SCRIPT_DIR not in sys.path:
@@ -56,7 +55,9 @@ def simulate_slingshot_mfem(
     Zs = np.zeros((z.shape[0], pull_timesteps + free_timesteps + 1))
     As = np.zeros((s.shape[0], pull_timesteps + free_timesteps + 1))
     las = np.zeros((la.shape[0], pull_timesteps + free_timesteps + 1))
-        
+    
+    z_curr = z.copy()
+    z_prev = z.copy()
     num_timesteps = pull_timesteps + free_timesteps
     if return_info:
         info_history = np.empty(num_timesteps, dtype=object)
@@ -73,14 +74,16 @@ def simulate_slingshot_mfem(
             Bb_ext = Bb_ext_pin + Bb_gravity
             
         if return_info:
-            z_next, s_next, la_next, info = sim.step(z, s, la, z_dot, Q_ext=BQB_ext,
+            z_next, s_next, la_next, info = sim.step(z_curr, z_prev, s, la, Q_ext=BQB_ext,
                                             b_ext=Bb_ext, return_info=return_info)
             info_history[i] = info
 
         else:
-            z_next, s_next , la_next= sim.step(z, s, la,  z_dot, Q_ext=BQB_ext,
+            z_next, s_next , la_next= sim.step(z_curr, z_prev, s, la,   Q_ext=BQB_ext,
                                         b_ext=Bb_ext)
         z_dot = (z_next - z) / sim.sim_params.h
+        z_prev = z_curr.copy()
+        z_curr = z_next.copy()
         z = z_next.copy()
         s = s_next.copy()
         la = la_next.copy()
