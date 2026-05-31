@@ -43,10 +43,11 @@ def simulate_drop_mfem(sim : sk.sims.elastic.ElasticMFEMSim, bI,
         
     for i in range(num_timesteps):
         if return_info:
-            z_next, s_next, la, info = sim.step(z, s, la, z_dot, Q_ext=BQB_ext, b_ext=Bb_ext, return_info=return_info)
+            z_next, s_next, la, info = sim.step(z_curr, z_prev, s, la,  Q_ext=BQB_ext, b_ext=Bb_ext, return_info=return_info)
         else:
-            z_next, s_next, la = sim.step(z, s, la, z_dot, Q_ext=BQB_ext, b_ext=Bb_ext)
-        z_dot = (z_next - z) / sim.sim_params.h    
+            z_next, s_next, la = sim.step(z_curr, z_prev, s, la, Q_ext=BQB_ext, b_ext=Bb_ext)
+        z_prev = z_curr.copy()
+        z_curr = z_next.copy()
         z = z_next.copy()
         s = s_next.copy()
         
@@ -80,6 +81,8 @@ def simulate_drop_fem(sim : sk.sims.elastic.ElasticFEMSim, bI,
     Bb_ext = sim.B.T @ (b_ext + bg)
 
     z, z_dot = sim.rest_state()
+    z_curr = z.copy()
+    z_prev = z_curr.copy()
     Zs = np.zeros((z.shape[0], num_timesteps + 1))
 
     if return_info:
@@ -87,10 +90,12 @@ def simulate_drop_fem(sim : sk.sims.elastic.ElasticFEMSim, bI,
     for i in range(num_timesteps):
         
         if return_info:
-            z_next, info = sim.step(z, z_dot, Q_ext=BQB_ext, b_ext=Bb_ext, return_info=return_info)
+            z_next, info = sim.step(z_curr, z_prev, z_dot, Q_ext=BQB_ext, b_ext=Bb_ext, return_info=return_info)
         else:
-            z_next = sim.step(z, z_dot, Q_ext=BQB_ext, b_ext=Bb_ext)
+            z_next = sim.step(z_curr, z_prev, z_dot, Q_ext=BQB_ext, b_ext=Bb_ext)
         z_dot = (z_next - z) / sim.sim_params.h
+        z_prev = z_curr.copy()
+        z_curr = z_next.copy()
         z = z_next.copy()
         
         Zs[:, i+1] = z.flatten()
@@ -140,6 +145,7 @@ if __name__ == "__main__":
                                 c.max_iter,
                                 c.do_line_search,
                                 B=B, cI=cI, cW=cW)
+        
         
         Zs = simulate_drop_fem(fem_sim, c.bI, num_timesteps,
                             return_info=False)
