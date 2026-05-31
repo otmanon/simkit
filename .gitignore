@@ -111,3 +111,16 @@ Thumbs.db
 *.mp4
 *.png
 *.gif
+
+# ---------------------------------------------------------------------------
+# Example runtime artifacts: cached subspaces, simulation results, blender
+# scenes, etc. Anything under examples/<demo>/results/ is regeneratable and
+# should not be committed.
+# ---------------------------------------------------------------------------
+examples/cache/
+examples/**/cache/
+examples/**/results/
+examples/**/*.npy
+examples/**/*.npz
+examples/**/*.blend
+examples/**/*.blend1

@@ -56,11 +56,21 @@ pip install -e ".[all,dev,docs]"    # everything, including dev tooling
 
 ## Running Examples
 
-The repository includes several example scripts demonstrating different simulation capabilities:
+The repository includes several end-to-end demos under `examples/`, each
+reproducing a slice of a published paper:
+
+- [`fast_complementary_dynamics/`](examples/fast_complementary_dynamics) -- Fast Complementary Dynamics via Skinning Eigenmodes (SIGGRAPH 2023).
+- [`modal_muscles/`](examples/modal_muscles) -- CMA-ES-optimised modal-actuator locomotion.
+- [`subspace_mfem/`](examples/subspace_mfem) -- Subspace Mixed FEM elastodynamics (SIGGRAPH Asia 2023), including an interactive demo.
+- [`force_dual_modes/`](examples/force_dual_modes) -- force-dual / linear modal-analysis subspaces.
+
+Each demo has its own README with the exact extras to install and the command
+to run. See [`examples/README.md`](examples/README.md) for the index. As a
+quick start:
 
 ```bash
-cd examples
-python run_elastics_reduced.py
+pip install -e ".[mesh,viz,learn,video]"
+python examples/subspace_mfem/drop_fem_vs_mfem.py
 ```
 
 ## Running tests

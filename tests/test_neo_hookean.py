@@ -1,16 +1,21 @@
 """Tests for ``simkit.energies.neo_hookean``.
 
-Stable Neo-Hookean (Sifakis course-notes formulation). The element-tier
-functions take per-element ``F``, material parameters and per-element rest
-volumes, and return volume-weighted energy / PK1 stress / block-diagonal
-Hessian blocks. The tests below check:
+Classical Neo-Hookean energy from the FEM-deformables course notes
+(Sifakis & Barbic, http://barbic.usc.edu/femdefo/):
 
-1. The energy is zero at the rest state and strictly increases under a small
-   random perturbation of ``F``.
-2. The analytic gradient ``neo_hookean_gradient_dF`` matches a central
-   finite-difference of the energy.
-3. The analytic per-element Hessian ``neo_hookean_hessian_d2F`` matches a
-   central finite-difference of the gradient when assembled block-diagonally.
+    psi(F) = (mu/2)(I_C - dim) - mu * log(J) + (lam/2) * log(J)**2
+
+Tests:
+
+1. Energy is zero at rest (``F = I``) and strictly increases under a small
+   random perturbation.
+2. Analytic gradient matches a central finite-difference of the energy.
+3. Analytic per-element Hessian matches a central finite-difference of the
+   gradient when assembled block-diagonally.
+4. Energy diverges to ``+infty`` as the element collapses to zero volume
+   (the ``-mu log(J)`` term is the singular term that makes this Neo-Hookean
+   variant inversion-fragile -- and is exactly the term replaced by
+   quadratic-in-J penalties in the "stable" variants).
 """
 
 from __future__ import annotations
@@ -20,6 +25,7 @@ import pytest
 import scipy.sparse as sps
 
 from simkit.energies.neo_hookean import (
+    neo_hookean_energy,
     neo_hookean_energy_element_F,
     neo_hookean_gradient_element_F,
     neo_hookean_hessian_element_F,
@@ -44,7 +50,7 @@ def _rest_and_perturbed(rng: np.random.Generator, t: int, dim: int):
 @pytest.mark.parametrize("dim", [2, 3])
 def test_neo_hookean_energy_increases_with_deformation(dim: int) -> None:
     rng = np.random.default_rng(0)
-    F_rest, F_def, mu, lam, vol = _rest_and_perturbed(rng, t=4, dim=dim)
+    F_rest, F_def, mu, lam, _ = _rest_and_perturbed(rng, t=4, dim=dim)
 
     e_rest = float(neo_hookean_energy_element_F(F_rest, mu, lam).sum().item())
     e_def = float(neo_hookean_energy_element_F(F_def, mu, lam).sum().item())
@@ -52,11 +58,15 @@ def test_neo_hookean_energy_increases_with_deformation(dim: int) -> None:
     assert e_rest == pytest.approx(0.0, abs=1e-10)
     assert e_def > e_rest
 
+    # gradient also vanishes at rest
+    g_rest = neo_hookean_gradient_element_F(F_rest, mu, lam)
+    assert np.max(np.abs(g_rest)) < 1e-12
+
 
 @pytest.mark.parametrize("dim", [2, 3])
 def test_neo_hookean_gradient_matches_fd(dim: int) -> None:
     rng = np.random.default_rng(1)
-    _, F, mu, lam, vol = _rest_and_perturbed(rng, t=3, dim=dim)
+    _, F, mu, lam, _ = _rest_and_perturbed(rng, t=3, dim=dim)
     t = F.shape[0]
 
     def energy_flat(F_flat: np.ndarray) -> np.ndarray:
@@ -79,7 +89,7 @@ def test_neo_hookean_gradient_matches_fd(dim: int) -> None:
 @pytest.mark.parametrize("dim", [2, 3])
 def test_neo_hookean_hessian_matches_fd(dim: int) -> None:
     rng = np.random.default_rng(2)
-    _, F, mu, lam, vol = _rest_and_perturbed(rng, t=2, dim=dim)
+    _, F, mu, lam, _ = _rest_and_perturbed(rng, t=2, dim=dim)
     t = F.shape[0]
 
     def grad_flat(F_flat: np.ndarray) -> np.ndarray:
@@ -92,3 +102,56 @@ def test_neo_hookean_hessian_matches_fd(dim: int) -> None:
     H = sps.block_diag(H_blocks).toarray()
 
     assert np.allclose(H, H_fd, atol=HESS_TOL)
+
+
+def _unit_triangle():
+    X = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
+    T = np.array([[0, 1, 2]])
+    mu = np.array([[1.0]])
+    lam = np.array([[1.0]])
+    return X, T, mu, lam
+
+
+def _unit_tet():
+    X = np.array([
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+    ])
+    T = np.array([[0, 1, 2, 3]])
+    mu = np.array([[1.0]])
+    lam = np.array([[1.0]])
+    return X, T, mu, lam
+
+
+@pytest.mark.parametrize(
+    "geom_factory", [_unit_triangle, _unit_tet], ids=["triangle", "tet"]
+)
+def test_neo_hookean_collapse_explodes(geom_factory) -> None:
+    """As the element collapses to zero volume the energy diverges to +inf.
+
+    The ``-mu log(J)`` term sends ``psi -> +inf`` as ``J -> 0+``. This is the
+    canonical "inversion is unphysical" property of the classical Neo-Hookean
+    energy.
+    """
+    X, T, mu, lam = geom_factory()
+
+    # uniform shrink toward F = 0 (J -> 0+ for s > 0; undefined exactly at s=0).
+    # Energy grows as (lam/2)*log(J)^2, which is log^2(1/s) -- unbounded but slow.
+    scales = [1.0, 0.5, 0.1, 1e-3, 1e-6, 1e-9, 1e-12]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        energies = np.array(
+            [neo_hookean_energy(X, T, mu, lam, s * X) for s in scales]
+        )
+    # rest energy is zero, energy grows monotonically as s -> 0+
+    assert energies[0] == pytest.approx(0.0, abs=1e-10)
+    assert np.all(np.diff(energies) > 0), f"not monotonic under shrink: {energies}"
+
+    # at exactly J = 0, the -mu*log(J) and (lam/2)*log(J)^2 terms diverge,
+    # so the energy is +infinity (numerically: +inf or nan).
+    with np.errstate(divide="ignore", invalid="ignore"):
+        e_zero = neo_hookean_energy(X, T, mu, lam, 0.0 * X)
+    assert not np.isfinite(e_zero), (
+        f"expected energy to diverge at zero volume, got finite {e_zero}"
+    )

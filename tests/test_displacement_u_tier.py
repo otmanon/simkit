@@ -75,9 +75,11 @@ from simkit.energies.membrane_neo_hookean import (
     membrane_neo_hookean_energy_x, membrane_neo_hookean_gradient_x,
     membrane_neo_hookean_hessian_x,
 )
-from simkit.energies.neo_hookean import (
-    neo_hookean_energy_u, neo_hookean_gradient_u, neo_hookean_hessian_u,
-    neo_hookean_energy_x, neo_hookean_gradient_x, neo_hookean_hessian_x,
+from simkit.energies.macklin_mueller_neo_hookean import (
+    macklin_mueller_neo_hookean_energy_u, macklin_mueller_neo_hookean_gradient_u,
+    macklin_mueller_neo_hookean_hessian_u,
+    macklin_mueller_neo_hookean_energy_x, macklin_mueller_neo_hookean_gradient_x,
+    macklin_mueller_neo_hookean_hessian_x,
 )
 
 
@@ -180,65 +182,65 @@ def _hessian_to_dense(H):
 
 
 # --------------------------------------------------------------------------- #
-# Flavor A: Neo-Hookean                                                       #
+# Flavor A: Macklin-Mueller Neo-Hookean                                       #
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("dim", [2, 3])
-def test_neo_hookean_u_zero_offset_matches_x(dim: int) -> None:
+def test_macklin_mueller_neo_hookean_u_zero_offset_matches_x(dim: int) -> None:
     rng = np.random.default_rng(0)
     X_rest, T, J, vol, mu, lam, X_def = _setup_volumetric(dim, rng)
     Jx_bar = np.zeros((J.shape[0], 1))
 
-    e_x = neo_hookean_energy_x(X_def, J, mu, lam, vol)
-    e_u = neo_hookean_energy_u(X_def, J, Jx_bar, mu, lam, vol)
+    e_x = macklin_mueller_neo_hookean_energy_x(X_def, J, mu, lam, vol)
+    e_u = macklin_mueller_neo_hookean_energy_u(X_def, J, Jx_bar, mu, lam, vol)
     assert e_u == pytest.approx(e_x, abs=TOL, rel=TOL)
 
-    g_x = neo_hookean_gradient_x(X_def, J, mu, lam, vol)
-    g_u = neo_hookean_gradient_u(X_def, J, Jx_bar, mu, lam, vol)
+    g_x = macklin_mueller_neo_hookean_gradient_x(X_def, J, mu, lam, vol)
+    g_u = macklin_mueller_neo_hookean_gradient_u(X_def, J, Jx_bar, mu, lam, vol)
     assert np.allclose(g_u, g_x, atol=TOL)
 
-    H_x = _hessian_to_dense(neo_hookean_hessian_x(X_def, J, mu, lam, vol, psd=False))
-    H_u = _hessian_to_dense(neo_hookean_hessian_u(X_def, J, Jx_bar, mu, lam, vol, psd=False))
+    H_x = _hessian_to_dense(macklin_mueller_neo_hookean_hessian_x(X_def, J, mu, lam, vol, psd=False))
+    H_u = _hessian_to_dense(macklin_mueller_neo_hookean_hessian_u(X_def, J, Jx_bar, mu, lam, vol, psd=False))
     assert np.allclose(H_u, H_x, atol=TOL)
 
 
 @pytest.mark.parametrize("dim", [2, 3])
-def test_neo_hookean_u_rest_offset_matches_x(dim: int) -> None:
+def test_macklin_mueller_neo_hookean_u_rest_offset_matches_x(dim: int) -> None:
     rng = np.random.default_rng(1)
     X_rest, T, J, vol, mu, lam, X_def = _setup_volumetric(dim, rng)
     u = X_def - X_rest
     Jx_bar = (J @ X_rest.reshape(-1, 1))
 
-    e_x = neo_hookean_energy_x(X_def, J, mu, lam, vol)
-    e_u = neo_hookean_energy_u(u, J, Jx_bar, mu, lam, vol)
+    e_x = macklin_mueller_neo_hookean_energy_x(X_def, J, mu, lam, vol)
+    e_u = macklin_mueller_neo_hookean_energy_u(u, J, Jx_bar, mu, lam, vol)
     assert e_u == pytest.approx(e_x, abs=TOL, rel=TOL)
 
-    g_x = neo_hookean_gradient_x(X_def, J, mu, lam, vol)
-    g_u = neo_hookean_gradient_u(u, J, Jx_bar, mu, lam, vol)
+    g_x = macklin_mueller_neo_hookean_gradient_x(X_def, J, mu, lam, vol)
+    g_u = macklin_mueller_neo_hookean_gradient_u(u, J, Jx_bar, mu, lam, vol)
     assert np.allclose(g_u, g_x, atol=TOL)
 
-    H_x = _hessian_to_dense(neo_hookean_hessian_x(X_def, J, mu, lam, vol, psd=False))
-    H_u = _hessian_to_dense(neo_hookean_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=False))
+    H_x = _hessian_to_dense(macklin_mueller_neo_hookean_hessian_x(X_def, J, mu, lam, vol, psd=False))
+    H_u = _hessian_to_dense(macklin_mueller_neo_hookean_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=False))
     assert np.allclose(H_u, H_x, atol=TOL)
 
 
 @pytest.mark.parametrize("dim", [2, 3])
-def test_neo_hookean_u_arbitrary_offset_matches_x(dim: int) -> None:
+def test_macklin_mueller_neo_hookean_u_arbitrary_offset_matches_x(dim: int) -> None:
     rng = np.random.default_rng(2)
     X_rest, T, J, vol, mu, lam, X_def = _setup_volumetric(dim, rng)
     x_bar = _arbitrary_x_bar(rng, X_rest)
     u = X_def - x_bar
     Jx_bar = (J @ x_bar.reshape(-1, 1))
 
-    e_x = neo_hookean_energy_x(X_def, J, mu, lam, vol)
-    e_u = neo_hookean_energy_u(u, J, Jx_bar, mu, lam, vol)
+    e_x = macklin_mueller_neo_hookean_energy_x(X_def, J, mu, lam, vol)
+    e_u = macklin_mueller_neo_hookean_energy_u(u, J, Jx_bar, mu, lam, vol)
     assert e_u == pytest.approx(e_x, abs=TOL, rel=TOL)
 
-    g_x = neo_hookean_gradient_x(X_def, J, mu, lam, vol)
-    g_u = neo_hookean_gradient_u(u, J, Jx_bar, mu, lam, vol)
+    g_x = macklin_mueller_neo_hookean_gradient_x(X_def, J, mu, lam, vol)
+    g_u = macklin_mueller_neo_hookean_gradient_u(u, J, Jx_bar, mu, lam, vol)
     assert np.allclose(g_u, g_x, atol=TOL)
 
-    H_x = _hessian_to_dense(neo_hookean_hessian_x(X_def, J, mu, lam, vol, psd=False))
-    H_u = _hessian_to_dense(neo_hookean_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=False))
+    H_x = _hessian_to_dense(macklin_mueller_neo_hookean_hessian_x(X_def, J, mu, lam, vol, psd=False))
+    H_u = _hessian_to_dense(macklin_mueller_neo_hookean_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=False))
     assert np.allclose(H_u, H_x, atol=TOL)
 
 
@@ -396,7 +398,7 @@ def test_membrane_neo_hookean_u_arbitrary_offset_matches_x() -> None:
 # --------------------------------------------------------------------------- #
 # Elastic dispatcher                                                          #
 # --------------------------------------------------------------------------- #
-MATERIALS = ["linear-elasticity", "arap", "fcr", "neo-hookean"]
+MATERIALS = ["linear-elasticity", "arap", "fcr", "macklin-mueller-neo-hookean"]
 
 
 @pytest.mark.parametrize("material", MATERIALS)
@@ -560,9 +562,9 @@ def test_kinetic_bdf2_u_arbitrary_offset_matches_x() -> None:
 
 if __name__ == "__main__":
     for d in (2, 3):
-        test_neo_hookean_u_zero_offset_matches_x(d)
-        test_neo_hookean_u_rest_offset_matches_x(d)
-        test_neo_hookean_u_arbitrary_offset_matches_x(d)
+        test_macklin_mueller_neo_hookean_u_zero_offset_matches_x(d)
+        test_macklin_mueller_neo_hookean_u_rest_offset_matches_x(d)
+        test_macklin_mueller_neo_hookean_u_arbitrary_offset_matches_x(d)
         test_arap_u_zero_offset_matches_x(d)
         test_arap_u_arbitrary_offset_matches_x(d)
         test_linear_elasticity_u_arbitrary_offset_matches_x(d)

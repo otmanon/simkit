@@ -3,7 +3,7 @@ import scipy as sp
 
 from .fcr import fcr_hessian_element_F
 from .linear_elasticity import linear_elasticity_hessian_element_F
-from .neo_hookean import neo_hookean_hessian_element_F
+from ..macklin_mueller_neo_hookean import macklin_mueller_neo_hookean_hessian_element_F, macklin_mueller_neo_hookean_hessian_x
 from .arap import arap_hessian_element_F, arap_hessian_element_S
 from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
@@ -22,8 +22,8 @@ def elastic_hessian_d2F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol : np
         Q =  arap_hessian_element_F(F, mu)
     elif material == 'fcr':
         Q =  fcr_hessian_element_F(F, mu, lam)
-    elif material == 'neo-hookean':
-        Q =  neo_hookean_hessian_element_F(F, mu, lam)
+    elif material == 'macklin-mueller-neo-hookean':
+        Q =  macklin_mueller_neo_hookean_hessian_element_F(F, mu, lam)
     else:
         raise ValueError("Unknown material type: " + material)
     
@@ -131,8 +131,8 @@ def elastic_hessian(**kwargs):
             Q = arap_hessian_d2x(U, mu, vol, J)
         # elif material == 'fcr':
             # Q = fcr_hessian_d2x(U, mu, lam, vol, J)
-        elif material == 'neo-hookean':
-            Q = neo_hookean_hessian_x(U, mu, lam, vol, J)
+        elif material == 'macklin-mueller-neo-hookean':
+            Q = macklin_mueller_neo_hookean_hessian_x(U, mu, lam, vol, J)
         return Q
     else:
         raise ValueError("X and T are required")

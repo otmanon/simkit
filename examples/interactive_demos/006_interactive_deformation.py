@@ -33,7 +33,7 @@ Q_pin, b_pin = dirichlet_penalty(pin_idx, X[pin_idx], n, 1e4)
 
 
 class ElasticSimStatic:
-    """Static neo-Hookean with fixed pin + soft mouse handle.
+    """Static Macklin-Mueller Neo-Hookean with fixed pin + soft mouse handle.
 
     No kinetic, no time. Each frame: minimize
         E(x) = E_elastic + 1/2 x^T Q_pin x + b_pin^T x
@@ -60,7 +60,7 @@ class ElasticSimStatic:
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        E_el  = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el  = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_pin = (0.5 * float((xc.T @ (self.Q_pin @ xc))[0, 0])
                  + float((self.b_pin.T @ xc)[0, 0]))
         E_h   = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
@@ -69,14 +69,14 @@ class ElasticSimStatic:
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        g_el  = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el  = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin = self.Q_pin @ xc + self.b_pin
         g_h   = self.Q_h   @ xc + self.b_h
         return g_el + g_pin + g_h
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el = energies.neo_hookean_hessian_x(
+        H_el = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         return H_el + self.Q_pin + self.Q_h
 
@@ -106,7 +106,7 @@ def callback():
     viewer.refresh(sim.U)
     handle.refresh_markers()
 
-    e_el = float(energies.neo_hookean_energy_x(sim.U, J, sim.mu, sim.lam, vol))
+    e_el = float(energies.macklin_mueller_neo_hookean_energy_x(sim.U, J, sim.mu, sim.lam, vol))
     energy_plot.push(e_el)
 
     psim.Text(f"vertices: {sim.n}    triangles: {sim.T.shape[0]}    pinned: {len(pin_idx)}")

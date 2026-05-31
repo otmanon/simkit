@@ -70,7 +70,7 @@ class ElasticSimBE:
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        E_el   = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el   = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_pin  = (0.5 * float((xc.T @ (self.Q_pin @ xc))[0, 0])
                   + float((self.b_pin.T @ xc)[0, 0]))
         E_grav = -float((self.f_g.T @ xc)[0, 0])
@@ -80,7 +80,7 @@ class ElasticSimBE:
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        g_el   = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el   = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin  = self.Q_pin @ xc + self.b_pin
         g_grav = -self.f_g
         g_kin  = energies.kinetic_gradient_be(
@@ -89,7 +89,7 @@ class ElasticSimBE:
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el  = energies.neo_hookean_hessian_x(
+        H_el  = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_kin = energies.kinetic_hessian_be(self.M, self.h)
         return H_el + self.Q_pin + H_kin
@@ -124,7 +124,7 @@ class ElasticSimBDF2:
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        E_el   = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el   = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_pin  = (0.5 * float((xc.T @ (self.Q_pin @ xc))[0, 0])
                   + float((self.b_pin.T @ xc)[0, 0]))
         E_grav = -float((self.f_g.T @ xc)[0, 0])
@@ -138,7 +138,7 @@ class ElasticSimBDF2:
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        g_el   = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el   = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin  = self.Q_pin @ xc + self.b_pin
         g_grav = -self.f_g
         g_kin  = energies.kinetic_gradient_bdf2(
@@ -151,7 +151,7 @@ class ElasticSimBDF2:
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el  = energies.neo_hookean_hessian_x(
+        H_el  = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_kin = energies.kinetic_hessian_bdf2(self.M, self.h)
         return H_el + self.Q_pin + H_kin
@@ -185,7 +185,7 @@ class ElasticSimFE:
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        E_el   = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el   = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_pin  = (0.5 * float((xc.T @ (self.Q_pin @ xc))[0, 0])
                   + float((self.b_pin.T @ xc)[0, 0]))
         E_grav = -float((self.f_g.T @ xc)[0, 0])
@@ -193,14 +193,14 @@ class ElasticSimFE:
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        g_el   = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el   = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin  = self.Q_pin @ xc + self.b_pin
         g_grav = -self.f_g
         return g_el + g_pin + g_grav
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el = energies.neo_hookean_hessian_x(
+        H_el = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         return H_el + self.Q_pin
 
@@ -298,7 +298,7 @@ def callback():
     # Pull the per-component energies out explicitly for plotting; sim.energy
     # would lump them together.
     x_flat = sim.U.flatten()
-    e_el   = float(energies.neo_hookean_energy_x(sim.U, J, sim.mu, sim.lam, vol))
+    e_el   = float(energies.macklin_mueller_neo_hookean_energy_x(sim.U, J, sim.mu, sim.lam, vol))
     v_flat = sim.V.flatten() if hasattr(sim, "V") else (sim.U - sim.U_prev).flatten() / sim.h
     e_kin  = 0.5 * float(v_flat @ (M @ v_flat))
     e_grav = -float((f_g.T @ x_flat.reshape(-1, 1))[0, 0])

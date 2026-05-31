@@ -75,7 +75,7 @@ class ElasticSimStatic:
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        E_el      = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el      = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_pin     = (0.5 * float((xc.T @ (self.Q_pin @ xc))[0, 0])
                      + float((self.b_pin.T @ xc)[0, 0]))
         E_grav    = -float((self.f_g.T @ xc)[0, 0])
@@ -85,7 +85,7 @@ class ElasticSimStatic:
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        g_el      = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el      = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin     = self.Q_pin @ xc + self.b_pin
         g_grav    = -self.f_g
         g_contact = energies.contact_springs_sphere_gradient(
@@ -94,7 +94,7 @@ class ElasticSimStatic:
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el      = energies.neo_hookean_hessian_x(
+        H_el      = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_contact = energies.contact_springs_sphere_hessian(
             xn, self.K_contact, self.ball_center, self.ball_radius, M=self.M_n)
@@ -131,7 +131,7 @@ class ElasticSimBE:
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        E_el      = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el      = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_pin     = (0.5 * float((xc.T @ (self.Q_pin @ xc))[0, 0])
                      + float((self.b_pin.T @ xc)[0, 0]))
         E_grav    = -float((self.f_g.T @ xc)[0, 0])
@@ -143,7 +143,7 @@ class ElasticSimBE:
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        g_el      = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el      = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin     = self.Q_pin @ xc + self.b_pin
         g_grav    = -self.f_g
         g_contact = energies.contact_springs_sphere_gradient(
@@ -154,7 +154,7 @@ class ElasticSimBE:
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el      = energies.neo_hookean_hessian_x(
+        H_el      = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_contact = energies.contact_springs_sphere_hessian(
             xn, self.K_contact, self.ball_center, self.ball_radius, M=self.M_n)
@@ -195,7 +195,7 @@ class ElasticSimBDF2:
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        E_el      = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el      = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_pin     = (0.5 * float((xc.T @ (self.Q_pin @ xc))[0, 0])
                      + float((self.b_pin.T @ xc)[0, 0]))
         E_grav    = -float((self.f_g.T @ xc)[0, 0])
@@ -211,7 +211,7 @@ class ElasticSimBDF2:
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
-        g_el      = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el      = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin     = self.Q_pin @ xc + self.b_pin
         g_grav    = -self.f_g
         g_contact = energies.contact_springs_sphere_gradient(
@@ -226,7 +226,7 @@ class ElasticSimBDF2:
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el      = energies.neo_hookean_hessian_x(
+        H_el      = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_contact = energies.contact_springs_sphere_hessian(
             xn, self.K_contact, self.ball_center, self.ball_radius, M=self.M_n)
@@ -359,7 +359,7 @@ def callback():
         ball_mesh.update_vertex_positions(ball_X + ball_p[None, :])
 
     # explicit per-component energies for plotting
-    elastic_plot.push(float(energies.neo_hookean_energy_x(
+    elastic_plot.push(float(energies.macklin_mueller_neo_hookean_energy_x(
         sim.U, J, sim.mu, sim.lam, vol)))
     if hasattr(sim, "V"):
         v_flat = sim.V.flatten()

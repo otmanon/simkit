@@ -19,7 +19,7 @@ You need `simkit`, `numpy`, `scipy`, and `polyscope` installed (see the top-leve
 The tutorials share a single helper module so each demo can focus on the one idea it's teaching. Three layers:
 
 1. **Mesh / picking primitives** — `triangulated_grid`, `tetrahedralized_grid`, `ball_mesh_2d`, `screen_to_world_2d`, `lame_from_E_nu`.
-2. **[`ElasticSim`](utils.py)** — a composable deformable-body simulator. One object owns: state (`U`, `V`, BDF2 history), neo-Hookean material, plus optional pin / handle (mouse-grab) / gravity / contact (plane or sphere). `sim.step(integrator, h)` advances one substep using one of `"Static"`, `"Backward Euler"`, `"BDF2"`, `"Forward Euler"`. Read the class definition once; the tutorials are easier to follow when you know what each demo is *not* doing.
+2. **[`ElasticSim`](utils.py)** — a composable deformable-body simulator. One object owns: state (`U`, `V`, BDF2 history), Macklin-Mueller Neo-Hookean material, plus optional pin / handle (mouse-grab) / gravity / contact (plane or sphere). `sim.step(integrator, h)` advances one substep using one of `"Static"`, `"Backward Euler"`, `"BDF2"`, `"Forward Euler"`. Read the class definition once; the tutorials are easier to follow when you know what each demo is *not* doing.
 3. **`Viewer2D` / `Viewer3D` / `MouseHandle2D` / `MouseHandle3D`** — polyscope wrappers that handle the boilerplate (registering the mesh, pin/handle markers, click-and-drag picking) so tutorial files stay short.
 
 ## Recurring concepts
@@ -30,7 +30,7 @@ A few ideas appear in almost every tutorial. Glance at these now and refer back 
 - **Mesh `T`.** A list of triangles (2D) or tetrahedra (3D). Each row holds the vertex indices for one element.
 - **Deformation gradient `F`.** Per-element 2×2 (or 3×3) matrix that describes how a single triangle/tet has been stretched/rotated from rest. `F = I` means no deformation.
 - **Energy `E(U)`.** A single scalar measuring how unhappy the material is in its current pose. Forces are `−∇E`. Simulating = repeatedly nudging `U` to reduce `E`.
-- **Neo-Hookean energy.** The specific elastic energy used throughout (in [simkit/energies/](../../simkit/energies/)). It penalizes both stretching and volume change and blows up if a triangle inverts.
+- **Macklin-Mueller Neo-Hookean energy.** The specific elastic energy used throughout (in [simkit/energies/](../../simkit/energies/)). It penalizes both stretching and volume change and blows up if a triangle inverts. From Macklin and Mueller, "A Constraint-based Formulation of Stable Neo-Hookean Materials" (MIG 2021): https://dl.acm.org/doi/10.1145/3487983.3488289.
 - **Soft pins (Dirichlet penalty).** Instead of hard-fixing a vertex to a target position, we add a stiff quadratic spring `½ K ‖x − target‖²` to the energy. The pin contributes a constant matrix `Q_pin` and vector `b_pin` to the system — see [simkit/dirichlet_penalty.py](../../simkit/dirichlet_penalty.py).
 - **Newton's method.** To minimize `E`, we repeatedly solve `H Δx = −g` (where `g = ∇E`, `H = ∇²E`) and step `x ← x + α Δx`. See [simkit/solvers/NewtonSolver.py](../../simkit/solvers/NewtonSolver.py).
 
@@ -40,7 +40,7 @@ A few ideas appear in almost every tutorial. Glance at these now and refer back 
 
 [001_deformation_gradient_demo.py](001_deformation_gradient_demo.py)
 
-A single equilateral triangle. Left-click any vertex and drag it. The triangle's deformation gradient `F` (a 2×2 matrix) prints live, and a rolling plot shows the neo-Hookean elastic energy of the triangle as you deform it.
+A single equilateral triangle. Left-click any vertex and drag it. The triangle's deformation gradient `F` (a 2×2 matrix) prints live, and a rolling plot shows the Macklin-Mueller Neo-Hookean elastic energy ([paper](https://dl.acm.org/doi/10.1145/3487983.3488289)) of the triangle as you deform it.
 
 **What to try:**
 - Drag a vertex slightly off rest — `F` is close to the identity, energy is near zero.
@@ -51,8 +51,8 @@ A single equilateral triangle. Left-click any vertex and drag it. The triangle's
 
 **Focus code:**
 - `F = deformation_gradient(X, T, U).reshape((2, 2))` is the core mapping from rest+current vertex positions to a per-element matrix.
-- `energies.neo_hookean_energy_element_F(F, mu=1, lam=1)` evaluates the strain energy density given that `F`.
-- Underlying math lives in [simkit/deformation_gradient.py](../../simkit/deformation_gradient.py) and [simkit/energies/neo_hookean.py](../../simkit/energies/neo_hookean.py).
+- `energies.macklin_mueller_neo_hookean_energy_element_F(F, mu=1, lam=1)` evaluates the strain energy density given that `F`.
+- Underlying math lives in [simkit/deformation_gradient.py](../../simkit/deformation_gradient.py) and [simkit/energies/macklin_mueller_neo_hookean.py](../../simkit/energies/macklin_mueller_neo_hookean.py).
 
 ---
 
@@ -185,7 +185,7 @@ A patch sits above a horizontal floor. Gravity pulls it down; the floor pushes i
 
 [010_interactive_contact_plane_3D.py](010_interactive_contact_plane_3D.py)
 
-The 2D scene from 009 lifted into 3D: a tetrahedral block dropped onto a floor. Same neo-Hookean elasticity, same plane-penalty contact, same integrators. The mesh is built from a hex grid that splits each cell into five tets (see `tetrahedralized_grid` in [utils.py](utils.py)).
+The 2D scene from 009 lifted into 3D: a tetrahedral block dropped onto a floor. Same Macklin-Mueller Neo-Hookean elasticity, same plane-penalty contact, same integrators. The mesh is built from a hex grid that splits each cell into five tets (see `tetrahedralized_grid` in [utils.py](utils.py)).
 
 **What to try / how to interact:**
 - The mouse owns two modes. By default, the "Click-to-drag handle" checkbox is **on** — left-click a vertex and drag to deform the block in 3D. To orbit/zoom the camera, **uncheck** the box (polyscope takes the mouse back).
@@ -201,6 +201,6 @@ The 2D scene from 009 lifted into 3D: a tetrahedral block dropped onto a floor. 
 
 The tutorials cover the spine of an FEM simulator: deformation gradient → energy → static solve → dynamic solve → contact → 3D. Once these feel comfortable, look at:
 
-- [simkit/energies/](../../simkit/energies/) — the actual neo-Hookean / kinetic / contact energy implementations, including their analytic gradients and PSD-projected Hessians.
+- [simkit/energies/](../../simkit/energies/) — the actual Macklin-Mueller Neo-Hookean / kinetic / contact energy implementations, including their analytic gradients and PSD-projected Hessians.
 - [simkit/solvers/](../../simkit/solvers/) — `NewtonSolver`, `GradientDescentSolver`, and the line-search and backtracking utilities.
 - [examples/](..) — larger end-to-end scenes that compose these same primitives.

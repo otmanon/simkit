@@ -97,3 +97,9 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-ra"
+markers = [
+    "solvers: needs cvxopt (pip install simkit[solvers])",
+    "learn: needs scikit-learn (pip install simkit[learn])",
+    "mesh: needs libigl (pip install simkit[mesh])",
+    "viz: needs polyscope/matplotlib (pip install simkit[viz])",
+]

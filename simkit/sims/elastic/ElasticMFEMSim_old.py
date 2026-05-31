@@ -133,7 +133,7 @@ class ElasticMFEMSimParams():
         pr : float | (num_simplex, 1) np.ndarray
             Poisson's ratio
         material : str
-            Material type ('fcr' or 'arap' or 'neo-hookean' or 'linear-elasticity')
+            Material type ('fcr' or 'arap' or 'macklin-mueller-neo-hookean' or 'linear-elasticity')
         solver_p : NewtonSolverParams
             Parameters for the Newton solver
         f_ext : (num_vertices*dim, 1) np.ndarray | None

@@ -3,6 +3,9 @@ from .quadratic import *
 from .arap import *
 from .fcr import *
 from .linear_elasticity import *
+from .macklin_mueller_neo_hookean import *
+from .stable_neo_hookean import *
+from .stvk import *
 from .neo_hookean import *
 from .kinetic import *
 from .contact_springs_plane import *

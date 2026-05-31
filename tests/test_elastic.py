@@ -23,7 +23,7 @@ from simkit.energies.elastic import (
     elastic_hessian_element_F,
 )
 from simkit.energies.arap import arap_energy_element_F
-from simkit.energies.neo_hookean import neo_hookean_energy_element_F
+from simkit.energies.macklin_mueller_neo_hookean import macklin_mueller_neo_hookean_energy_element_F
 from simkit.gradient_cfd import gradient_cfd
 
 
@@ -31,7 +31,7 @@ FD_STEP = 1e-6
 GRAD_TOL = 1e-5
 HESS_TOL = 1e-4
 
-MATERIALS = ["linear-elasticity", "arap", "fcr", "neo-hookean"]
+MATERIALS = ["linear-elasticity", "arap", "fcr", "macklin-mueller-neo-hookean"]
 
 
 def _perturbed(rng: np.random.Generator, t: int, dim: int):
@@ -52,8 +52,8 @@ def test_dispatch_matches_underlying_material() -> None:
         arap_energy_element_F(F, mu),
     )
     assert np.allclose(
-        elastic_energy_element_F(F, mu, lam, "neo-hookean"),
-        neo_hookean_energy_element_F(F, mu, lam),
+        elastic_energy_element_F(F, mu, lam, "macklin-mueller-neo-hookean"),
+        macklin_mueller_neo_hookean_energy_element_F(F, mu, lam),
     )
 
 

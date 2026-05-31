@@ -48,7 +48,7 @@ mu0, lam0 = lame_from_E_nu(E=1e5, nu=0.4)
 # Three sim classes, one per integrator. Each minimizes (or for FE: evaluates)
 # the same potential
 #
-#     E_pot(x) = E_elastic(x)                       neo-Hookean
+#     E_pot(x) = E_elastic(x)                       Macklin-Mueller Neo-Hookean
 #              + E_floor(x)                         penalty springs vs. plane
 #              + 1/2 x^T Q_h x + b_h^T x            mouse handle (zeroed = none)
 #              - f_g^T x                            gravity
@@ -84,7 +84,7 @@ class ElasticSimBE:
     def energy(self, x):
         xn = x.reshape(-1, self.dim)
         xc = x.reshape(-1, 1)
-        E_el    = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el    = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_floor = float(energies.contact_springs_plane_energy(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n))
         E_h     = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
@@ -97,7 +97,7 @@ class ElasticSimBE:
     def gradient(self, x):
         xn = x.reshape(-1, self.dim)
         xc = x.reshape(-1, 1)
-        g_el    = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el    = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_floor = energies.contact_springs_plane_gradient(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
         g_h     = self.Q_h @ xc + self.b_h
@@ -108,7 +108,7 @@ class ElasticSimBE:
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el    = energies.neo_hookean_hessian_x(
+        H_el    = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_floor = energies.contact_springs_plane_hessian(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
@@ -151,7 +151,7 @@ class ElasticSimBDF2:
     def energy(self, x):
         xn = x.reshape(-1, self.dim)
         xc = x.reshape(-1, 1)
-        E_el    = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el    = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_floor = float(energies.contact_springs_plane_energy(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n))
         E_h     = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
@@ -170,7 +170,7 @@ class ElasticSimBDF2:
     def gradient(self, x):
         xn = x.reshape(-1, self.dim)
         xc = x.reshape(-1, 1)
-        g_el    = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el    = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_floor = energies.contact_springs_plane_gradient(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
         g_h     = self.Q_h @ xc + self.b_h
@@ -187,7 +187,7 @@ class ElasticSimBDF2:
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
-        H_el    = energies.neo_hookean_hessian_x(
+        H_el    = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_floor = energies.contact_springs_plane_hessian(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
@@ -228,7 +228,7 @@ class ElasticSimFE:
     def energy(self, x):
         xn = x.reshape(-1, self.dim)
         xc = x.reshape(-1, 1)
-        E_el    = float(energies.neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
+        E_el    = float(energies.macklin_mueller_neo_hookean_energy_x(xn, self.J, self.mu, self.lam, self.vol))
         E_floor = float(energies.contact_springs_plane_energy(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n))
         E_h     = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
@@ -239,7 +239,7 @@ class ElasticSimFE:
     def gradient(self, x):
         xn = x.reshape(-1, self.dim)
         xc = x.reshape(-1, 1)
-        g_el    = energies.neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
+        g_el    = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_floor = energies.contact_springs_plane_gradient(
             xn, self.K_contact, self.p_floor, self.n_floor, M=self.M_n)
         g_h     = self.Q_h @ xc + self.b_h
