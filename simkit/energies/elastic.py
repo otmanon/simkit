@@ -32,25 +32,37 @@ import scipy as sp
 from .arap import (
     arap_energy_element_F,
     arap_energy_element_S,
+    arap_energy_u,
     arap_gradient_element_F,
     arap_gradient_element_S,
+    arap_gradient_u,
     arap_hessian_element_F,
     arap_hessian_element_S,
+    arap_hessian_u,
 )
 from .fcr import (
     fcr_energy_element_F,
+    fcr_energy_u,
     fcr_gradient_element_F,
+    fcr_gradient_u,
     fcr_hessian_element_F,
+    fcr_hessian_u,
 )
 from .linear_elasticity import (
     linear_elasticity_energy_element_F,
+    linear_elasticity_energy_u,
     linear_elasticity_gradient_element_F,
+    linear_elasticity_gradient_u,
     linear_elasticity_hessian_element_F,
+    linear_elasticity_hessian_u,
 )
 from .neo_hookean import (
     neo_hookean_energy_element_F,
+    neo_hookean_energy_u,
     neo_hookean_gradient_element_F,
+    neo_hookean_gradient_u,
     neo_hookean_hessian_element_F,
+    neo_hookean_hessian_u,
 )
 from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
@@ -127,6 +139,49 @@ def elastic_energy_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: 
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     psi = elastic_energy_element_F(F, mu, lam, material)
     return float((np.asarray(vol).reshape(-1, 1) * psi).sum())
+
+
+# --------------------------------------------------------------------------- #
+# Global explicit tier: displacement (u) variable                             #
+# --------------------------------------------------------------------------- #
+def elastic_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray, material: str) -> float:
+    """Assembled elastic energy at displacement ``u`` from a reference ``x_bar``.
+
+    Dispatches to the per-material ``*_energy_u`` function. ``Jx_bar`` is the
+    precomputed flattened deformation gradient at the (arbitrary) reference
+    configuration, ``J @ x_bar.reshape(-1, 1)``.
+
+    Parameters
+    ----------
+    u : np.ndarray (n, dim)
+        Displacement from the reference configuration.
+    J : scipy.sparse matrix (t*dim*dim, n*dim)
+        Deformation Jacobian.
+    Jx_bar : np.ndarray (t*dim*dim, 1)
+        Precomputed ``J @ x_bar.reshape(-1, 1)``.
+    mu : np.ndarray (t, 1)
+        Per-element shear modulus.
+    lam : np.ndarray (t, 1)
+        Per-element first Lame parameter (ignored for ``'arap'``).
+    vol : np.ndarray (t, 1)
+        Per-element quadrature weights.
+    material : str
+        Material identifier.
+
+    Returns
+    -------
+    e : float
+        Total elastic energy.
+    """
+    if material == 'linear-elasticity':
+        return linear_elasticity_energy_u(u, J, Jx_bar, mu, lam, vol)
+    elif material == 'arap':
+        return arap_energy_u(u, J, Jx_bar, mu, vol)
+    elif material == 'fcr':
+        return fcr_energy_u(u, J, Jx_bar, mu, lam, vol)
+    elif material == 'neo-hookean':
+        return neo_hookean_energy_u(u, J, Jx_bar, mu, lam, vol)
+    raise ValueError("Unknown material type: " + str(material))
 
 
 class ElasticEnergyZPrecomp:
@@ -394,6 +449,47 @@ def elastic_gradient_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam
     return J.transpose() @ P.reshape(-1, 1)
 
 
+# --------------------------------------------------------------------------- #
+# Global explicit tier: displacement (u) variable                             #
+# --------------------------------------------------------------------------- #
+def elastic_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray, material: str) -> np.ndarray:
+    """Assembled elastic gradient at displacement ``u`` from a reference ``x_bar``.
+
+    Dispatches to the per-material ``*_gradient_u`` function.
+
+    Parameters
+    ----------
+    u : np.ndarray (n, dim)
+        Displacement from the reference configuration.
+    J : scipy.sparse matrix (t*dim*dim, n*dim)
+        Deformation Jacobian.
+    Jx_bar : np.ndarray (t*dim*dim, 1)
+        Precomputed ``J @ x_bar.reshape(-1, 1)``.
+    mu : np.ndarray (t, 1)
+        Per-element shear modulus.
+    lam : np.ndarray (t, 1)
+        Per-element first Lame parameter (ignored for ``'arap'``).
+    vol : np.ndarray (t, 1)
+        Per-element quadrature weights.
+    material : str
+        Material identifier.
+
+    Returns
+    -------
+    g : np.ndarray (n*dim, 1)
+        Assembled gradient.
+    """
+    if material == 'linear-elasticity':
+        return linear_elasticity_gradient_u(u, J, Jx_bar, mu, lam, vol)
+    elif material == 'arap':
+        return arap_gradient_u(u, J, Jx_bar, mu, vol)
+    elif material == 'fcr':
+        return fcr_gradient_u(u, J, Jx_bar, mu, lam, vol)
+    elif material == 'neo-hookean':
+        return neo_hookean_gradient_u(u, J, Jx_bar, mu, lam, vol)
+    raise ValueError("Unknown material type: " + str(material))
+
+
 def elastic_gradient_z(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray, material: str, precomp: ElasticEnergyZPrecomp, F: Optional[np.ndarray] = None) -> np.ndarray:
     """Assembled reduced elastic gradient.
 
@@ -594,6 +690,50 @@ def elastic_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam:
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     H = sp.sparse.block_diag(He)
     return J.transpose() @ H @ J
+
+
+# --------------------------------------------------------------------------- #
+# Global explicit tier: displacement (u) variable                             #
+# --------------------------------------------------------------------------- #
+def elastic_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray, material: str, psd: bool = True) -> sp.sparse.spmatrix:
+    """Assembled elastic Hessian at displacement ``u`` from a reference ``x_bar``.
+
+    Dispatches to the per-material ``*_hessian_u`` function.
+
+    Parameters
+    ----------
+    u : np.ndarray (n, dim)
+        Displacement from the reference configuration.
+    J : scipy.sparse matrix (t*dim*dim, n*dim)
+        Deformation Jacobian.
+    Jx_bar : np.ndarray (t*dim*dim, 1)
+        Precomputed ``J @ x_bar.reshape(-1, 1)``.
+    mu : np.ndarray (t, 1)
+        Per-element shear modulus.
+    lam : np.ndarray (t, 1)
+        Per-element first Lame parameter (ignored for ``'arap'``).
+    vol : np.ndarray (t, 1)
+        Per-element quadrature weights.
+    material : str
+        Material identifier.
+    psd : bool, optional
+        If ``True`` (default), project each per-element block to PSD before
+        assembly.
+
+    Returns
+    -------
+    Q : scipy.sparse.csc_matrix (n*dim, n*dim)
+        Assembled Hessian.
+    """
+    if material == 'linear-elasticity':
+        return linear_elasticity_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=psd)
+    elif material == 'arap':
+        return arap_hessian_u(u, J, Jx_bar, mu, vol, psd=psd)
+    elif material == 'fcr':
+        return fcr_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=psd)
+    elif material == 'neo-hookean':
+        return neo_hookean_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=psd)
+    raise ValueError("Unknown material type: " + str(material))
 
 
 def elastic_hessian_z(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray, material: str, precomp: ElasticEnergyZPrecomp, F: Optional[np.ndarray] = None, psd: bool = True) -> sp.sparse.spmatrix:
