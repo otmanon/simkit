@@ -19,6 +19,7 @@ We do several deformations of the triangle
 4. Shear
 
 And show the resulting deformation gradient as text pasted into the picture. 
+
 In particular I want them to note that deformation gradient ignores translations.
 
 
@@ -29,14 +30,22 @@ Similar to the previous, but the triangle is deforming in various ways, the same
 I want to be generic to the elastic energy at first.
 
 I want to show that elastic energy should be invariant to rotation and translations, and becomes larger with additional shearing and scaling. 
+Make a plot for translation. 
 
-Specifically I want to show that Neo hookean energy increases with rotation, but that ARAP, neo hookean, fcr don't. 
-
+Specifically I want to show that linear elastic energy increases with rotation, but that ARAP, neo hookean don't. 
+Make a plot for rotation angle and energy for all. Also output an mp4 animation of the triangle.
 
 Next I want to show how each of these energies vary with scales/shears.
+Finally I want to show scaling. 
+I want to scale the triangle, show how each of the energies change with scale.
+Same with scale. 
+Make a plot for both (scaling parameter and energy), as well as an animation. 
 
-Then I want to show what happens when a vertex moves towards its opposite edge and creates a degenerate 0 volume tetrahedron. I want to show the elastic energies for all my materials, with hopefull appreciating that neo hookean increases to infinite.
+Then I want to show what happens when a vertex moves towards its opposite edge and creates a degenerate 0 volume tetrahedron. I want to show the elastic energies for all my materials, with hopefull appreciating that neo hookean increases to infinite, and arap just increases.
+Make a plot for both (collapsing parameter and energy)
 
+
+For all the matplotlib plots here, also make an animation of the plot being drawn as the scene is occurring. 
 
 ## 3. Elastostatics as a Minimization Problem
 
@@ -83,26 +92,29 @@ Show an animation without line search, then one with line search.
 
 Forward euler/Backward Euler/BDF2
 
-Time order convergence. 
+Time order convergence. Make plot showing the order convergence of forward euler/backward euler/bdf2.
 
 Show video of how timestep affects perceived stiffness.
 
 ## 7. Contact Ball
 
-Show Distance function
+An animation of a ball moving upwards, colliding with a block of static elastic material that is pinned at its top. 
+
+Show the signed distance function to the ball. 
 
 Show energy increasing with distance
 
+
 ## 8. Contact Plane
 
-Show distance function
+An elastodynamic block being dropped on a 2D plane. 
 
-Show energy increasing with distance. 
-
+Plot all energies (elastic, kinetic, contact increasing )
 
 ## 9.  Time Complexity. 
 
-Refine mesh and show time complexity increasing.
+Refine mesh and show time cost increasing.
 
 Show how accuracy converges with increasing mesh resolution by comparing to an extremely fine mesh. 
 
+Show that a super refined mesh isa ctually terrible to work with and iterate on. 
