@@ -907,11 +907,33 @@ def save_anim(anim, path, fps=20):
     return path
 
 
-def show_anim(anim):
-    """Inline HTML5/JS video for a notebook cell. Pair with ``plt.close(fig)``
-    so the static frame isn't also shown."""
+def show_anim(anim, fps=15, width=600):
+    """Inline display as a small **palette-optimized GIF** (base64 ``<img>``).
+
+    Far lighter than ``to_jshtml`` (which embeds one PNG per frame) and, being a
+    plain image, it renders *everywhere* -- including GitHub's notebook viewer.
+    The full-quality ``.mp4`` is written separately by :func:`save_anim`; this
+    only affects the inline preview. Pair with ``plt.close(fig)``.
+    """
+    import base64, os, shutil, subprocess, tempfile
     from IPython.display import HTML
-    return HTML(anim.to_jshtml(default_mode="loop"))
+
+    tmp = tempfile.mkdtemp()
+    mp4, gif = os.path.join(tmp, "a.mp4"), os.path.join(tmp, "a.gif")
+    try:
+        anim.save(mp4, writer=FFMpegWriter(fps=fps))            # render frames once
+        ffmpeg = (shutil.which("ffmpeg")
+                  or plt.rcParams.get("animation.ffmpeg_path") or "ffmpeg")
+        # downscale + single-pass palette for a compact, clean GIF
+        vf = (f"fps={fps},scale={width}:-1:flags=lanczos,"
+              "split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse")
+        subprocess.run([ffmpeg, "-y", "-i", mp4, "-vf", vf, gif],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        data = open(gif, "rb").read()
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    b64 = base64.b64encode(data).decode("ascii")
+    return HTML(f'<img src="data:image/gif;base64,{b64}" style="max-width:100%;"/>')
 
 
 # ---- high-level one-call animations -----------------------------------------
