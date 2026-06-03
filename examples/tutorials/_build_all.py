@@ -1103,12 +1103,12 @@ utils.show_anim(anim)'''))
 """## Numerical damping: the timestep changes perceived stiffness
 
 Release the beam under gravity and step **Backward Euler** at three (smooth,
-stable) timesteps &mdash; 0.004, 0.008, 0.016. Larger dt &rarr; **more artificial
+stable) timesteps &mdash; 0.001, 0.010, 0.1. Larger dt &rarr; **more artificial
 damping** &rarr; the swing dies out faster, so the material *looks* stiffer even
 though the physics is identical."""))
     c.append(code(
-'''T_total = 2.0
-dts = [0.004, 0.008, 0.016]
+'''T_total = 3
+dts = [0.001, 0.01, 0.1]
 be_runs = [{"states": simulate_be(h, T_total, 60), "T": T, "title": f"Backward Euler  dt={h}"}
            for h in dts]
 fig, anim = utils.animate_meshes_grid(be_runs, lims=((-1.2, 1.2), (-1.9, 0.5)), fps=30,
@@ -1165,10 +1165,10 @@ def bdf2_energy_trace(h, T_total):
 fig, ax = plt.subplots(figsize=(7.5, 4.8))
 shades = ["#9ecae1", "#4292c6", "#08519c"]
 for h, col in zip(dts, shades):
-    ts, Es = be_energy_trace(h, 1.5)
+    ts, Es = be_energy_trace(h, T_total)
     ax.plot(ts, Es, color=col, lw=2, label=f"Backward Euler dt={h}")
-ts, Es = bdf2_energy_trace(0.016, 1.5)
-ax.plot(ts, Es, color="#2ca02c", lw=2, ls="--", label="BDF2 dt=0.016")
+ts, Es = bdf2_energy_trace(0.1, T_total)
+ax.plot(ts, Es, color="#2ca02c", lw=2, ls="--", label="BDF2 dt=0.1")
 ax.set_xlabel("time (s)"); ax.set_ylabel("total mechanical energy")
 ax.set_title("Numerical damping drains energy faster at larger dt")
 ax.grid(True, color="0.9"); ax.legend(fontsize=9); plt.show()'''))
