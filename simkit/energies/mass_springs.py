@@ -404,7 +404,7 @@ def mass_springs_hessian_z(z: np.ndarray, J: sp.sparse.spmatrix, ym: np.ndarray,
 # --------------------------------------------------------------------------- #
 # Length-space helpers (l)                                                    #
 # --------------------------------------------------------------------------- #
-def mass_springs_energy_l(length: np.ndarray, ym: np.ndarray, vol: np.ndarray, length0: np.ndarray) -> np.ndarray:
+def mass_springs_energy_l(length: np.ndarray, ym: np.ndarray, vol: np.ndarray, length0: np.ndarray) -> float:
     """Mass-spring energy as a function of edge lengths.
 
     Parameters
@@ -420,12 +420,12 @@ def mass_springs_energy_l(length: np.ndarray, ym: np.ndarray, vol: np.ndarray, l
 
     Returns
     -------
-    e : np.ndarray (1, 1)
-        Total energy (kept as an array for downstream sensitivity code).
+    e : float
+        Total mass-spring energy.
     """
     coeff = vol * ym / (length0 ** 2)
     e = 0.5 * np.sum(coeff * (length - length0) ** 2)
-    return e.reshape(-1, 1)
+    return float(e)
 
 
 def mass_springs_gradient_l(length: np.ndarray, ym: np.ndarray, vol: np.ndarray, length0: np.ndarray) -> np.ndarray:
