@@ -3,6 +3,8 @@
 import numpy as np
 import scipy as sp
 
+from .wedge_map import wedge_map
+
 
 def dihedral_wedge_map(D: np.ndarray, nv: int) -> "sp.sparse.csc_matrix":
     """Sparse selector mapping stacked hinge vertices to global vertices.
@@ -27,8 +29,5 @@ def dihedral_wedge_map(D: np.ndarray, nv: int) -> "sp.sparse.csc_matrix":
     M : scipy.sparse.csc_matrix (4*nd, nv)
         Gather matrix from global vertices to stacked hinge vertices.
     """
-    J = D.flatten()                 # global vertex index for each stacked row
-    I = np.arange(J.shape[0])       # one row per stacked hinge vertex
-    V = np.ones(I.shape[0])         # a single unit entry per row
-    M = sp.sparse.csc_matrix((V, (I, J)), (4 * D.shape[0], nv))
-    return M
+    # Thin wrapper around the dimension-agnostic gather (D has arity 4 here).
+    return wedge_map(D, nv)

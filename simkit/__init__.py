@@ -86,9 +86,23 @@ with _core:
     from .edge_displacement_jacobian import edge_displacement_jacobian
     from .edge_length_jacobian import edge_length_jacobian
     from .random_edges import *  # noqa: F401,F403
-    from .hinge_angles import *  # noqa: F401,F403
-    from .hinge_hessian import *  # noqa: F401,F403
-    from .hinge_jacobian import *  # noqa: F401,F403
+    from .wedge_map import wedge_map
+    from .dihedral_angles_2d import (
+        dihedral_angles_2d,
+        dihedral_angles_2d_velocities,
+        dihedral_angles_2d_gradient_element,
+        dihedral_angles_2d_hessian_element,
+    )
+    from .dihedral_angles_3d import (
+        dihedral_angles_3d,
+        dihedral_angles_3d_gradient_element,
+        dihedral_angles_3d_hessian_element,
+    )
+    from .dihedral_angles import (
+        dihedral_angles,
+        dihedral_angles_gradient_element,
+        dihedral_angles_hessian_element,
+    )
     from .simplex_vertex_map import simplex_vertex_map
     from .common_selections import *  # noqa: F401,F403
     from .lbs_jacobian import lbs_jacobian

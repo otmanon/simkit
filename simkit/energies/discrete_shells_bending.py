@@ -40,13 +40,16 @@ definite matrix is required.
 import numpy as np
 import scipy as sp
 
-from ..dihedral_angles import (
-    dihedral_angles,
-    dihedral_angles_gradient_element,
-    dihedral_angles_hessian_element,
-)
-from ..dihedral_wedge_map import dihedral_wedge_map
-from ..psd_project import psd_project
+from .bending_energy import bending_energy_x, bending_gradient_x, bending_hessian_x
+
+
+def _kappa(ym_bending: np.ndarray, he: np.ndarray, le: np.ndarray) -> np.ndarray:
+    """Effective per-edge bending stiffness for the unified energy.
+
+    The unified density is ``0.5 * kappa * dtheta^2`` while the discrete-shells
+    density is ``ym_bending * w * dtheta^2`` (no 0.5), so ``kappa = 2*ym_bending*w``.
+    """
+    return 2.0 * np.asarray(ym_bending).reshape(-1, 1) * _edge_weight(he, le)
 
 
 def _edge_weight(he: np.ndarray, le: np.ndarray) -> np.ndarray:
@@ -174,9 +177,7 @@ def discrete_shells_bending_energy_x(X: np.ndarray, D: np.ndarray, theta0: np.nd
     energy : float
         Total bending energy.
     """
-    theta = dihedral_angles(X, D)
-    psi = discrete_shells_bending_energy_element_theta(theta, theta0, ym_bending, he, le)
-    return float(np.sum(psi))
+    return bending_energy_x(X, D, theta0, _kappa(ym_bending, he, le))
 
 
 def discrete_shells_bending_gradient_x(X: np.ndarray, D: np.ndarray, theta0: np.ndarray, ym_bending: np.ndarray, he: np.ndarray, le: np.ndarray, W : sp.sparse.spmatrix = None) -> np.ndarray:
@@ -204,18 +205,7 @@ def discrete_shells_bending_gradient_x(X: np.ndarray, D: np.ndarray, theta0: np.
     de_dx : np.ndarray (n*3, 1)
         Assembled gradient.
     """
-    theta = dihedral_angles(X, D)
-    de_dtheta = discrete_shells_bending_gradient_element_theta(theta, theta0, ym_bending, he, le)
-
-    x0, x1, x2, x3 = X[D[:, 0]], X[D[:, 1]], X[D[:, 2]], X[D[:, 3]]
-    dtheta_dx = dihedral_angles_gradient_element(x0, x1, x2, x3)
-
-    
-    if W is None:
-        W = dihedral_wedge_map(D, X.shape[0])
-        W = sp.sparse.kron(W, sp.sparse.identity(3))
-    
-    return W.T @ (dtheta_dx * de_dtheta).reshape(-1, 1)
+    return bending_gradient_x(X, D, theta0, _kappa(ym_bending, he, le), W=W)
 
 
 def discrete_shells_bending_hessian_x(X: np.ndarray, D: np.ndarray,
@@ -253,29 +243,7 @@ def discrete_shells_bending_hessian_x(X: np.ndarray, D: np.ndarray,
     H : scipy.sparse matrix (n*3, n*3)
         Assembled Hessian.
     """
-    theta = dihedral_angles(X.reshape(-1, 3), D)
-    x0, x1, x2, x3 = X[D[:, 0]], X[D[:, 1]], X[D[:, 2]], X[D[:, 3]]
-
-    dtheta_dx = dihedral_angles_gradient_element(x0, x1, x2, x3)
-    d2theta_dx2 = dihedral_angles_hessian_element(x0, x1, x2, x3)
-
-    de_dtheta = discrete_shells_bending_gradient_element_theta(theta, theta0, ym_bending, he, le)
-    d2e_dtheta2 = discrete_shells_bending_hessian_element_theta(theta, theta0, ym_bending, he, le)
-
-    term_1 = de_dtheta[:, :, None] * d2theta_dx2
-    term_2 = d2e_dtheta2[:, :, None] * (dtheta_dx[:, :, None] @ dtheta_dx[:, None, :])
-    Q = term_1 + term_2
-
-    if psd:
-        Q = psd_project(Q)
-
-    Q2 = sp.sparse.block_diag(Q)
-    
-    
-    if W is None:
-        W = dihedral_wedge_map(D, X.shape[0])
-        W = sp.sparse.kron(W, sp.sparse.identity(3))
-    return W.T @ Q2 @ W
+    return bending_hessian_x(X, D, theta0, _kappa(ym_bending, he, le), psd=psd, W=W)
 
 
 # --------------------------------------------------------------------------- #

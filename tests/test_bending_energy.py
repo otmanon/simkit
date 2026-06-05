@@ -47,14 +47,14 @@ def _straight_beam(n_nodes: int = 5):
 def test_bending_energy_zero_at_rest_and_increases_on_bend() -> None:
     X, H, theta0, ymI, l = _straight_beam(n_nodes=5)
     x_rest = X.flatten().reshape(-1, 1)
-    e_rest = float(bending_energy_x(x_rest, H, theta0, ymI, l))
+    e_rest = float(bending_energy_x(x_rest, H, theta0, ymI / l))
     assert e_rest == pytest.approx(0.0, abs=1e-12)
 
     # Bend the beam: push the middle node up.
     X_bent = X.copy()
     X_bent[2, 1] += 0.5
     x_bent = X_bent.flatten().reshape(-1, 1)
-    e_bent = float(bending_energy_x(x_bent, H, theta0, ymI, l))
+    e_bent = float(bending_energy_x(x_bent, H, theta0, ymI / l))
     assert e_bent > e_rest
 
 
@@ -67,9 +67,9 @@ def test_bending_gradient_matches_fd() -> None:
     x = X_def.flatten().reshape(-1, 1)
 
     def energy_flat(x_flat: np.ndarray) -> np.ndarray:
-        return np.array([float(bending_energy_x(x_flat, H, theta0, ymI, l))])
+        return np.array([float(bending_energy_x(x_flat, H, theta0, ymI / l))])
 
-    g = np.asarray(bending_gradient_x(x, H, theta0, ymI, l)).flatten()
+    g = np.asarray(bending_gradient_x(x, H, theta0, ymI / l)).flatten()
     g_fd = gradient_cfd(energy_flat, x.flatten(), FD_STEP).flatten()
     assert np.allclose(g, g_fd, atol=TOL)
 
@@ -85,10 +85,10 @@ def test_bending_hessian_matches_fd() -> None:
 
     def grad_flat(x_flat: np.ndarray) -> np.ndarray:
         return np.asarray(
-            bending_gradient_x(x_flat, H, theta0, ymI, l)
+            bending_gradient_x(x_flat, H, theta0, ymI / l)
         ).flatten()
 
-    H_ana = np.asarray(bending_hessian_x(x, H, theta0, ymI, l).todense())
+    H_ana = np.asarray(bending_hessian_x(x, H, theta0, ymI / l).todense())
     H_fd = gradient_cfd(grad_flat, x.flatten(), FD_STEP)
     assert np.allclose(H_ana, H_fd, atol=1e-4)
 

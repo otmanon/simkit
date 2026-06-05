@@ -457,16 +457,16 @@ def test_bending_u_arbitrary_offset_matches_x() -> None:
     x_bar = x_bar_2d.flatten().reshape(-1, 1)
     u = x_def - x_bar
 
-    e_x = bending_energy_x(x_def, H, theta0, ymI, l)
-    e_u = bending_energy_u(u, x_bar, H, theta0, ymI, l)
+    e_x = bending_energy_x(x_def, H, theta0, ymI / l)
+    e_u = bending_energy_u(u, x_bar, H, theta0, ymI / l)
     assert e_u == pytest.approx(e_x, abs=TOL, rel=TOL)
 
-    g_x = bending_gradient_x(x_def, H, theta0, ymI, l)
-    g_u = bending_gradient_u(u, x_bar, H, theta0, ymI, l)
+    g_x = bending_gradient_x(x_def, H, theta0, ymI / l)
+    g_u = bending_gradient_u(u, x_bar, H, theta0, ymI / l)
     assert np.allclose(g_u, g_x, atol=TOL)
 
-    H_x = _hessian_to_dense(bending_hessian_x(x_def, H, theta0, ymI, l))
-    H_u = _hessian_to_dense(bending_hessian_u(u, x_bar, H, theta0, ymI, l))
+    H_x = _hessian_to_dense(bending_hessian_x(x_def, H, theta0, ymI / l))
+    H_u = _hessian_to_dense(bending_hessian_u(u, x_bar, H, theta0, ymI / l))
     assert np.allclose(H_u, H_x, atol=TOL)
 
 
