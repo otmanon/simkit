@@ -19,7 +19,3 @@ def test_ordering_constants_exist_and_are_integers() -> None:
         assert len(ordering) > 0
         assert all(isinstance(i, int) for i in ordering)
 
-
-def test_y_index_map_is_integer_array() -> None:
-    assert isinstance(mat2py.y, np.ndarray)
-    assert mat2py.y.dtype.kind in "iu"

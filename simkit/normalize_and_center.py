@@ -30,7 +30,6 @@ def normalize_and_center(
         Multiplicative scale applied after centering (only if
         ``return_params`` is True).
     """
-    # U = X.copy()
 
     t = -X.mean(axis=0)
     X += t

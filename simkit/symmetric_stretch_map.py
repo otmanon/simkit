@@ -33,24 +33,6 @@ def symmetric_stretch_map(t: int, dim: int) -> Tuple[sp.sparse.csc_matrix, sp.sp
         Extracts symmetric components from stacked entries, averaging
         off-diagonals with weight ``1/2``.
     """
-    # if dim == 2:
-    #     I = np.array([0, 3, 1, 2])
-    #     J = np.array([0, 1, 2, 2])
-    #     v = np.ones((4))
-    #     S = sp.sparse.csc_matrix((v, (I, J)), shape=(dim*dim, 3))
-    #     # Ii = np.array([0, 1, 2, 2])
-    #     # Ji = np.array([0, 3, 1, 2])
-    #     vi = np.array([1, 1/2, 1/2, 1])
-    #     Si = sp.sparse.csc_matrix((vi, (J, I)), shape=(3, dim*dim))
-    # elif dim == 3:
-    #     I = [0, 4, 8, 1, 2, 3, 5, 6, 7]
-    #     J = [0, 1, 2, 3, 4, 3, 5, 4, 5]
-    #     v = np.ones((9, ))
-    #     S = sp.sparse.csc_matrix((v, (I, J)), shape=(dim*dim, 6))
-    #     vi = [1, 1, 1, 1/2, 1/2, 1/2,  1/2, 1/2, 1/2]
-    #     Si = sp.sparse.csc_matrix((vi, (J, I)), shape=(6, dim*dim))
-    # else:
-    #     raise ValueError("dim must be 2 or 3")
 
     SI = np.arange(dim * dim, dtype=int).reshape(dim, dim)
     SJ = -np.ones((dim, dim), dtype=int)
@@ -76,8 +58,7 @@ def symmetric_stretch_map(t: int, dim: int) -> Tuple[sp.sparse.csc_matrix, sp.sp
                 SV[i, j] = 1
                 SVi[i, j] = 1 / 2
 
-    # dim * dim - (dim-1)
-    # dim  + (dim-1) + (dim - 2))
+
     S = sp.sparse.csc_matrix((SV.flatten(), (SI.flatten(), SJ.flatten())), shape=(dim * dim, SJ.max() + 1))
     Si = sp.sparse.csc_matrix((SVi.flatten(), (SJ.flatten(), SI.flatten())), shape=(SJ.max() + 1, dim * dim))
 

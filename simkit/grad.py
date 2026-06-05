@@ -84,21 +84,4 @@ def grad(
     grad = np.squeeze(grad)
     return grad, HXHi
 
-# def grad(V, T):
-#     '''
-#     Computes the gradient of the energy function with respect to the vertex positions V
-#
-#     Parameters
-#     ----------
-#     V : (n, d) numpy array
-#         Vertex positions
-#     T : (t, 3|4) numpy array
-#         Simplex indices
-#
-#     Returns
-#     -------
-#     g : (n*d, 1) numpy array
-#         Gradient vector
-#     '''
-#
-#     dim = V.shape[1]
+
