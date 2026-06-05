@@ -124,3 +124,6 @@ examples/**/*.npy
 examples/**/*.npz
 examples/**/*.blend
 examples/**/*.blend1
+imgui.ini
+.polyscope.ini
+imgui.ini

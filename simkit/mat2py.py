@@ -30,15 +30,3 @@ _9x9matrix_3D_ordering_ = [0, 3, 6, 1, 4, 7, 2, 5, 8, 27, 30, 33, 28, 31, 34, 29
        65, 68, 71, 18, 21, 24, 19, 22, 25, 20, 23, 26, 45, 48, 51, 46, 49,
        52, 47, 50, 53, 72, 75, 78, 73, 76, 79, 74, 77, 80]
 
-
-import numpy as np
-
-
-dim = 3
-I = np.repeat(np.arange(9)[:, None], dim * dim, axis=1)
-J = np.repeat(np.arange(9)[None, :], dim * dim, axis=0)
-
-mI = np.array(_9vector_3D_ordering_)[I]
-mJ = np.array(_9vector_3D_ordering_)[J]
-
-y = (mI + dim * dim * mJ).flatten()

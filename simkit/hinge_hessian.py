@@ -5,78 +5,6 @@ Provides closed-form per-hinge ``(6, 6)`` blocks (coordinate order
 ``(2*n, 2*n)`` Hessian, mirroring :mod:`hinge_jacobian`.
 """
 
-# import numpy as np
-# import scipy as sp
-# def hinge_hessian_compact(X, H):
-#     Ax, Ay = X[H[:,0], 0], X[H[:,0], 1]
-#     Bx, By = X[H[:,1], 0], X[H[:,1], 1]
-#     Cx, Cy = X[H[:,2], 0], X[H[:,2], 1]
-#
-#     # Numerical regularization parameter
-#     epsilon = 0
-#
-#
-#     # Precompute common denominators with regularization
-#     dist_AB_sq = np.maximum(Ax**2 - 2*Ax*Bx + Ay**2 - 2*Ay*By + Bx**2 + By**2, epsilon)
-#     dist_BC_sq = np.maximum(Bx**2 - 2*Bx*Cx + By**2 - 2*By*Cy + Cx**2 + Cy**2, epsilon)
-#
-#     dot_prod_AB_BC = (Ax - Bx)*(Bx - Cx) + (Ay - By)*(By - Cy)
-#     cross_prod_AB_BC = (Ax - Bx)*(By - Cy) - (Ay - By)*(Bx - Cx)
-#     complex_denom = np.maximum(dot_prod_AB_BC**2 + cross_prod_AB_BC**2, epsilon)
-#
-#     if np.any(dist_AB_sq == 0):
-#         print("WARNING: dist_AB_sq is 0, leading to a divide by zero in the hinge hessian")
-#     if np.any(dist_BC_sq == 0):
-#         print("WARNING: dist_BC_sq is 0, leading to a divide by zero in the hinge hessian")
-#     if np.any(complex_denom == 0):
-#         print("WARNING: complex_denom is 0, leading to a divide by zero in the hinge hessian")
-#
-#     # Fourth-order denominators
-#     denom_AB_4th = np.maximum(dist_AB_sq**2, epsilon)
-#     denom_BC_4th = np.maximum(dist_BC_sq**2, epsilon)
-#
-#     Z = np.zeros((Ax.shape[0]))
-#     H = np.array([
-#         [-2*(Ax - Bx)*(Ay - By)/dist_AB_sq**2,
-#          (-Ax**2 + 2*Ax*Bx - Ay**2 + 2*Ay*By - Bx**2 - By**2 + 2*(Ax - Bx)**2)/dist_AB_sq**2,
-#          2*(Ax*Ay - Ax*By - Ay*Bx + Bx*By)/denom_AB_4th,
-#          (-Ax**2 + 2*Ax*Bx + Ay**2 - 2*Ay*By - Bx**2 + By**2)/denom_AB_4th,
-#          Z,
-#          Z],
-#         [(Ax**2 - 2*Ax*Bx + Ay**2 - 2*Ay*By + Bx**2 + By**2 - 2*(Ay - By)**2)/dist_AB_sq**2,
-#          2*(Ax - Bx)*(Ay - By)/dist_AB_sq**2,
-#          (-Ax**2 + 2*Ax*Bx + Ay**2 - 2*Ay*By - Bx**2 + By**2)/denom_AB_4th,
-#          2*(-Ax*Ay + Ax*By + Ay*Bx - Bx*By)/denom_AB_4th,
-#          Z,
-#          Z],
-#         [2*(Ax - Bx)*(Ay - By)/dist_AB_sq**2,
-#          (Ax**2 - 2*Ax*Bx + Ay**2 - 2*Ay*By + Bx**2 + By**2 - 2*(Ax - Bx)**2)/dist_AB_sq**2,
-#          2*(((Ax - Bx)*(By - Cy) - (Ay - By)*(Bx - Cx))*complex_denom - ((Ay - Cy)*dot_prod_AB_BC + cross_prod_AB_BC*(Ax - 2*Bx + Cx))*((Ay - Cy)*cross_prod_AB_BC - dot_prod_AB_BC*(Ax - 2*Bx + Cx)))/complex_denom**2,
-#          (2*((Ax - Cx)*dot_prod_AB_BC - cross_prod_AB_BC*(Ay - 2*By + Cy))*((Ay - Cy)*cross_prod_AB_BC - dot_prod_AB_BC*(Ax - 2*Bx + Cx)) + ((Ax - Cx)*(Ax - 2*Bx + Cx) + (Ay - Cy)*(Ay - 2*By + Cy))*complex_denom)/complex_denom**2,
-#          -2*(Bx - Cx)*(By - Cy)/dist_BC_sq**2,
-#          (-Bx**2 + 2*Bx*Cx - By**2 + 2*By*Cy - Cx**2 - Cy**2 + 2*(Bx - Cx)**2)/dist_BC_sq**2],
-#         [(-Ax**2 + 2*Ax*Bx - Ay**2 + 2*Ay*By - Bx**2 - By**2 + 2*(Ay - By)**2)/dist_AB_sq**2,
-#          -2*(Ax - Bx)*(Ay - By)/dist_AB_sq**2,
-#          (2*((Ax - Cx)*cross_prod_AB_BC + dot_prod_AB_BC*(Ay - 2*By + Cy))*((Ay - Cy)*dot_prod_AB_BC + cross_prod_AB_BC*(Ax - 2*Bx + Cx)) - ((Ax - Cx)*(Ax - 2*Bx + Cx) + (Ay - Cy)*(Ay - 2*By + Cy))*complex_denom)/complex_denom**2,
-#          2*(cross_prod_AB_BC*complex_denom - ((Ax - Cx)*dot_prod_AB_BC - cross_prod_AB_BC*(Ay - 2*By + Cy))*((Ax - Cx)*cross_prod_AB_BC + dot_prod_AB_BC*(Ay - 2*By + Cy)))/complex_denom**2,
-#          (Bx**2 - 2*Bx*Cx + By**2 - 2*By*Cy + Cx**2 + Cy**2 - 2*(By - Cy)**2)/dist_BC_sq**2,
-#          2*(Bx - Cx)*(By - Cy)/dist_BC_sq**2],
-#         [Z,
-#          Z,
-#          2*(-Bx*By + Bx*Cy + By*Cx - Cx*Cy)/denom_BC_4th,
-#          (Bx**2 - 2*Bx*Cx - By**2 + 2*By*Cy + Cx**2 - Cy**2)/denom_BC_4th,
-#          2*(Bx - Cx)*(By - Cy)/dist_BC_sq**2,
-#          (Bx**2 - 2*Bx*Cx + By**2 - 2*By*Cy + Cx**2 + Cy**2 - 2*(Bx - Cx)**2)/dist_BC_sq**2],
-#         [Z,
-#          Z,
-#          (Bx**2 - 2*Bx*Cx - By**2 + 2*By*Cy + Cx**2 - Cy**2)/denom_BC_4th,
-#          2*(Bx*By - Bx*Cy - By*Cx + Cx*Cy)/denom_BC_4th,
-#          (-Bx**2 + 2*Bx*Cx - By**2 + 2*By*Cy - Cx**2 - Cy**2 + 2*(By - Cy)**2)/dist_BC_sq**2,
-#          -2*(Bx - Cx)*(By - Cy)/dist_BC_sq**2]
-#     ])
-#
-#     return H.transpose(2, 0, 1)
-
 
 import numpy as np
 import scipy as sp
@@ -94,6 +22,7 @@ def hinge_hessian_compact(X: np.ndarray, H: np.ndarray) -> np.ndarray:
         Vertex positions.
     H : np.ndarray (J, 3)
         Hinge connectivity; each row is ``(A, B, C)``.
+        
 
     Returns
     -------

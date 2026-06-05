@@ -13,30 +13,6 @@ import simkit as sk
 from .interweaving_matrix import interweaving_matrix
 
 
-def interweaving_matrix(t: int, d: int) -> sp.sparse.csc_matrix:
-    """Permutation matrix mapping C-order vectorization to Fortran order.
-
-    Parameters
-    ----------
-    t : int
-        Number of blocks (e.g. simplex vertices).
-    d : int
-        Dimension of each block (e.g. spatial or in-plane axes).
-
-    Returns
-    -------
-    M : scipy.sparse.csc_matrix (t*d, t*d)
-        Sparse interweaving / reordering matrix.
-    """
-    ii = np.arange(t * d)
-
-    i = ii.reshape(t, d)
-    j = ii.reshape(t, d, order='F')
-    v = np.ones(ii.shape)
-    M = sp.sparse.csc_matrix((v, (i.flatten(), j.flatten())), shape=(t * d, t * d))
-    return M
-
-
 def membrane_deformation_gradient(
     Y: np.ndarray, X: np.ndarray, T: np.ndarray
 ) -> np.ndarray:
@@ -140,15 +116,6 @@ def membrane_deformation_jacobian(
     Q = sp.sparse.block_diag(G)
     S = sk.simplex_vertex_map(T)
 
-    # nt = T.shape[0]
-    # De = np.zeros((nt, (dim+1)*dim,  dt*dim))
-
-    # for i in range(dim):
-    #     Di = np.zeros((nt, dim, dt*dim))
-    #     Ii = np.arange(dt)*dim + i
-    #     Di[:, :, Ii] = D
-
-    #     De[:, dim*i:dim*(i + 1), :] = Di
 
     Se = sp.sparse.kron(S, sp.sparse.identity(dim + 1))
     J = Q @ Se
