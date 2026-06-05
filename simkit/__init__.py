@@ -103,9 +103,24 @@ with _core:
     from .subspace_com import subspace_com
     from .subspace_rotation import subspace_rotation
     from .gravity_force import gravity_force
+    from .outline_areas import (
+        outline_areas,
+        outline_areas_gradient,
+        outline_areas_hessian,
+        outline_selection_matrices,
+    )
     from .limit_actuation_dirichlet_energy import limit_actuation_dirichlet_energy
     from .rotation_strain_coordinates import rotation_strain_coordinates, RSPrecompute
     from .joint_lengths import joint_lengths
+    
+    from .gauss_legendre_quadrature import gauss_legendre_quadrature
+    from .linear_to_quadratic_elements import linear_to_quadratic_elements
+    from .deformation_jacobian_p2 import deformation_jacobian_p2
+    from .deformation_gradient_p2 import deformation_gradient_p2
+    from .p2_shape_functions import p2_shape_functions
+    from .p2_massmatrix import p2_massmatrix
+    from .p2_gravity_force import p2_gravity_force
+
 
 # ---------------------------------------------------------------------------
 # libigl-dependent (pip install 'simkit[mesh]').
