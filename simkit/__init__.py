@@ -9,7 +9,6 @@ is enabled by installing extras::
     pip install 'simkit[solvers]'  # cvxopt       -> sparse eigensolvers
     pip install 'simkit[video]'    # opencv-python
     pip install 'simkit[cmaes]'    # cma          -> CMA-ES solver
-    pip install 'simkit[blender]'  # bpy, blendertoolbox
     pip install 'simkit[all]'      # everything
 
 Importing ``simkit`` is always safe: if an optional dependency is missing, the
@@ -94,27 +93,25 @@ with _core:
     from .common_selections import *  # noqa: F401,F403
     from .lbs_jacobian import lbs_jacobian
     from .deformation_gradient import deformation_gradient
-# ---------------------------------------------------------------------------
-# libigl-dependent (pip install 'simkit[mesh]').
-# ---------------------------------------------------------------------------
-with _mesh:
     from .deformation_jacobian import deformation_jacobian
+    from .deformation_jacobian import membrane_deformation_jacobian
     from .massmatrix import massmatrix
     from .volume import volume
-    from .skinning_eigenmodes import skinning_eigenmodes
-    from .cluster_grouping_matrices import cluster_grouping_matrices
-    from .joint_lengths import joint_lengths
     from .dirichlet_laplacian import dirichlet_laplacian
-    from .linear_modal_analysis import linear_modal_analysis
-    from .shape_outlines import *  # noqa: F401,F403
+    from .joint_lengths import joint_lengths
     from .stretch import stretch
     from .subspace_com import subspace_com
     from .subspace_rotation import subspace_rotation
     from .gravity_force import gravity_force
     from .limit_actuation_dirichlet_energy import limit_actuation_dirichlet_energy
-    from .spectral_cubature import spectral_cubature
     from .rotation_strain_coordinates import rotation_strain_coordinates, RSPrecompute
     from .joint_lengths import joint_lengths
+
+# ---------------------------------------------------------------------------
+# libigl-dependent (pip install 'simkit[mesh]').
+# ---------------------------------------------------------------------------
+with _mesh:
+    from .shape_outlines import *  # noqa: F401,F403
 
 # ---------------------------------------------------------------------------
 # scikit-learn-dependent (pip install 'simkit[learn]').
@@ -130,6 +127,10 @@ with _learn:
 with _solvers:
     from .eigs import eigs
     from .spectral_basis_localization import spectral_basis_localization
+    from .linear_modal_analysis import linear_modal_analysis
+    from .skinning_eigenmodes import skinning_eigenmodes
+    from .cluster_grouping_matrices import cluster_grouping_matrices
+
 # ---------------------------------------------------------------------------
 # Submodules.
 # ---------------------------------------------------------------------------
