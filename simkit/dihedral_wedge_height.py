@@ -15,7 +15,10 @@ def dihedral_wedge_heights(
     X : np.ndarray (n, 3)
         Vertex positions.
     D : np.ndarray (nd, 4)
-        Hinge vertex indices ``(x0, x1, x2, x3)``.
+        Hinge vertex indices ``(x0, x1, x2, x3)``. 
+            - ``x0`` is the apex of triangle 1, opposite the shared edge.
+            - ``x1, x2`` are the shared edge vertices.
+            - ``x3`` is the apex of triangle 2, opposite the shared edge.
 
     Returns
     -------
