@@ -13,7 +13,6 @@ import scipy as sp
 from .deformation_jacobian import deformation_jacobian
 from .dirichlet_penalty import dirichlet_penalty
 from .volume import volume
-from .membrane_deformation_jacobian import membrane_deformation_jacobian
 
 
 class RSPrecompute:
@@ -55,12 +54,9 @@ class RSPrecompute:
         self.T = T
         dim = X.shape[1]
 
-        if X.shape[1] == 3 and T.shape[1] == 3:
-            self.J = membrane_deformation_jacobian(X, T)
-            dd = 6
-        else:
-            self.J = deformation_jacobian(X, T)
-            dd = dim * dim
+
+        self.J = deformation_jacobian(X, T)
+        dd = dim * dim
         if pinned is None:
             mean_X = X.mean(axis=0).reshape(-1, dim)
             pinned = np.where(np.linalg.norm(X - mean_X, axis=1) < 0.01)[0]
