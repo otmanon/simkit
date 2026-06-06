@@ -23,6 +23,7 @@ import polyscope.imgui as psim
 import scipy as sp
 
 from simkit.dirichlet_penalty import dirichlet_penalty
+from simkit.pairwise_distance import pairwise_distance
 
 
 # =============================================================================
@@ -204,7 +205,7 @@ class Viewer2D:
         self.mesh = ps.register_surface_mesh(
             "mesh", X, T, material="flat", color=color, edge_width=edge_width)
         self.pc = ps.register_point_cloud(
-            "vertices", X, radius=point_radius, material="flat", color=BLACK)
+            "vertices", X, radius=point_radius, material="flat", color=BLACK, enabled=False)
 
     def refresh(self, U):
         self.mesh.update_vertex_positions(U)
@@ -308,18 +309,24 @@ class MouseHandle2D:
     """
 
     def __init__(self, sims, sel_pc=None, target_pc=None,
-                 K_handle=1e4, pick_radius=0.15):
+                 K_handle=1e4, pick_radius=0.15, selection_radius=0.1):
         self.sims = sims if isinstance(sims, dict) else {"_": sims}
         self.sim = next(iter(self.sims.values()))
         self.sel_pc = sel_pc
         self.target_pc = target_pc
         self.K_handle = float(K_handle)
         self.pick_radius = float(pick_radius)
+        self.selection_radius = selection_radius
         self.n = self.sim.n
         self.dim = self.sim.dim
         self.D = self.n * self.dim
+        self.idx0 = None
+        self.P0 = None
+        self.P = None
         self.idx = None
         self.target = None
+        self.target0 = None
+        self.target_displacement = None
         self.status = "left-click a vertex to grab; drag to move; release to drop"
 
     def update(self):
@@ -329,13 +336,22 @@ class MouseHandle2D:
             dist = np.linalg.norm(self.sim.U - pos.reshape(-1, 2), axis=1)
             nearest = int(np.argmin(dist))
             if dist[nearest] < self.pick_radius:
-                self.idx = nearest
-                self.target = self.sim.U[nearest].copy()
+                self.idx0 = nearest
+                self.target0 = self.sim.U[self.idx0].copy()
+                distance = pairwise_distance(self.sim.U, pos.reshape(1, -1)).flatten()
+                self.idx = np.where(distance < self.selection_radius)[0]
+                self.target_displacement = np.zeros((1, self.dim))
+                self.P0 = self.sim.U[self.idx].copy()
+                self.P = self.P0.copy()
+                self.target = self.target0
+        
                 self._write_handle()
                 self._set_markers_enabled(True)
                 self.status = f"grabbed vertex {nearest}"
         if self.idx is not None and psim.IsMouseDown(0):
             self.target = screen_to_world_2d(win_pos)[: self.dim].astype(float).copy()
+            self.target_displacement = self.target - self.target0
+            self.P = self.P0 + self.target_displacement
             self._write_handle()
         if psim.IsMouseReleased(0):
             if self.idx is not None:
@@ -347,14 +363,14 @@ class MouseHandle2D:
             return
         if self.sel_pc is not None:
             self.sel_pc.update_point_positions(
-                self.sim.U[self.idx].reshape(1, self.dim))
+                self.sim.U[self.idx0].reshape(-1, self.dim))
         if self.target_pc is not None:
             self.target_pc.update_point_positions(
-                self.target.reshape(1, self.dim))
+                self.target.reshape(-1, self.dim))
 
     def _write_handle(self):
-        bI = np.array([self.idx])
-        y = self.target.reshape(1, self.dim)
+        bI = np.array([self.idx]).flatten()
+        y = self.P.reshape(-1, self.dim)
         Q, b = dirichlet_penalty(bI, y, self.n, self.K_handle)
         for s in self.sims.values():
             s.Q_h = Q
@@ -363,6 +379,9 @@ class MouseHandle2D:
     def _clear(self):
         self.idx = None
         self.target = None
+        self.target0 = None
+        self.target_displacement = None
+
         self._set_markers_enabled(False)
         Q0 = sp.sparse.csc_matrix((self.D, self.D))
         b0 = np.zeros((self.D, 1))
@@ -375,6 +394,17 @@ class MouseHandle2D:
             self.sel_pc.set_enabled(on)
         if self.target_pc is not None:
             self.target_pc.set_enabled(on)
+
+    def draw(self):
+        psim.Text("Handle UI")
+        pass
+        # self.K_handle, changed_K = psim.SliderFloat(
+        #     "K_handle", self.K_handle, v_min=1e3, v_max=1e6, log_scale=True)
+        # self.selection_radius, changed_radius = psim.SliderFloat(
+        #     "selection radius", self.selection_radius, v_min=0.01, v_max=0.5)
+        psim.Text("Handle UI")
+        changed, self.K_handle = psim.SliderFloat("K_handle", self.K_handle, v_min=1e3, v_max=1e6, power=10.0)
+        changed, self.selection_radius = psim.SliderFloat("selection radius", self.selection_radius,  v_min=0.01, v_max=1.0)
 
 
 # -----------------------------------------------------------------------------
@@ -481,7 +511,7 @@ class MouseHandle3D:
                 self.sim.U[self.idx].reshape(1, self.dim))
         if self.target_pc is not None:
             self.target_pc.update_point_positions(
-                self.target.reshape(1, self.dim))
+                self.target.reshape(-1, self.dim))
 
     # ---- internals --------------------------------------------------------
     def _write_handle(self):
@@ -510,7 +540,10 @@ class MouseHandle3D:
         if self.target_pc is not None:
             self.target_pc.set_enabled(on)
 
-
+    def draw(self):
+        psim.Test("Handle UI")
+        psim.SliderFloat("K_handle", self.K_handle, v_min=1e3, v_max=1e6, log_scale=True)
+        psim.SliderFloat("selection radius", self.selection_radius, v_min=0.01, v_max=0.5)
 # =============================================================================
 # TutorialUI - configurable imgui control panel.
 # =============================================================================
@@ -633,6 +666,9 @@ class TutorialUI:
                 self.log_K_contact, v_min=2.0, v_max=9.0)
             if changed_K:
                 self._apply_contact_K()
+
+        if self.handle is not None and self.handle_enabled:
+            self.handle.draw()
 
         msg = self.status or (self.handle.status if self.handle else "")
         if msg:

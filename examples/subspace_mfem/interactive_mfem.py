@@ -6,6 +6,7 @@ import numpy as np
 import scipy as sp
 
 import simkit as sk
+import simkit.sims.elastic 
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _SCRIPT_DIR not in sys.path:
@@ -119,14 +120,14 @@ if __name__ == "__main__":
     dirname =  os.path.dirname(__file__)
 
 
-    configs = [TConfig()]
+    configs = [crabConfig()]
     for c in configs:
         print(c.name)
         [X, T] = load_mesh(c.geometry_path)
         dim = X.shape[1]
         X = normalize_mesh(X)
         
-        c.max_iter = 1000
+        c.max_iter = 4
         W, E, B, cI, cW, labels = compute_subspace(X, T, c.m, c.k, 
                                                    mu=c.ym, bI=c.bI)
 

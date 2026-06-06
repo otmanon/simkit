@@ -11,6 +11,7 @@ boundary condition.
 import numpy as np
 import polyscope.imgui as psim
 
+from simkit.pairwise_distance import pairwise_distance
 from simkit.deformation_jacobian import deformation_jacobian
 from simkit.dirichlet_penalty import dirichlet_penalty
 from simkit.solvers.NewtonSolver import NewtonSolver, NewtonSolverParams
@@ -22,13 +23,14 @@ from utils import MouseHandle2D, RollingPlot, Viewer2D, triangulated_grid
 
 
 # ---------- mesh + precomputed operators -----------------------------------
-X, T = triangulated_grid(nx=15, ny=5, width=2.0, height=0.6)
+X, T = triangulated_grid(nx=40, ny=20, width=2.0, height=0.6)
 n, dim = X.shape
 
 J   = deformation_jacobian(X, T)
 vol = volume(X, T)
 
 pin_idx = np.where(X[:, 0] <= X[:, 0].min() + 1e-6)[0]
+
 Q_pin, b_pin = dirichlet_penalty(pin_idx, X[pin_idx], n, 1e4)
 
 

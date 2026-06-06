@@ -24,7 +24,7 @@ from utils import MouseHandle2D, RollingPlot, TutorialUI, Viewer2D, triangulated
 
 
 # ---------- mesh + precomputed operators -----------------------------------
-X, T = triangulated_grid(nx=15, ny=5, width=2.0, height=0.6)
+X, T = triangulated_grid(nx=50, ny=20, width=2.0, height=0.6)
 n, dim = X.shape
 
 RHO = 1.0
@@ -169,7 +169,7 @@ class ElasticSimBDF2:
 
 
 # ---------- build sims + viewer + UI --------------------------------------
-common = dict(X=X, T=T, J=J, vol=vol, M=M, mu=1.0, lam=1.0,
+common = dict(X=X, T=T, J=J, vol=vol, M=M, mu=100, lam=100.0,
               Q_pin=Q_pin, b_pin=b_pin, h=0.02)
 sims = {
     "Backward Euler": ElasticSimBE  (**common),
