@@ -6,7 +6,6 @@ import numpy as np
 import scipy as sp
 
 import simkit as sk
-import simkit.sims.elastic 
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _SCRIPT_DIR not in sys.path:
@@ -25,9 +24,10 @@ def interactive_click_demo(sim, bI):
 
     s = None
     l = None
-    if isinstance(sim, sk.sims.elastic.ElasticMFEMSim):
+    is_mfem = isinstance(sim, MFEMSim)
+    if is_mfem:
         z, s, l, z_dot = sim.rest_state()
-    elif isinstance(sim, sk.sims.elastic.ElasticFEMSim):
+    else:
         z, z_dot = sim.rest_state()
 
     z_curr = z.copy()
@@ -95,10 +95,10 @@ def interactive_click_demo(sim, bI):
             Bb_ext = Bb_handle + Bb_pin + Bb_gravity
                     
 
-        if isinstance(sim, sk.sims.elastic.ElasticMFEMSim):
+        if is_mfem:
             z_next, s, l = sim.step(z_curr, z_prev, s, l,  Q_ext=BQB_ext, b_ext=Bb_ext)
-        
-        elif isinstance(sim, sk.sims.elastic.ElasticFEMSim):
+
+        else:
             z_next = sim.step(z_curr, z_prev,
                                 Q_ext=BQB_ext, b_ext=Bb_ext)
             

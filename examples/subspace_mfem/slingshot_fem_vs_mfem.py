@@ -15,8 +15,8 @@ from utils import *  # noqa: E402,F401,F403
 from config import *  # noqa: E402,F401,F403
 
 def simulate_slingshot_mfem(
-    sim : sk.sims.elastic.ElasticMFEMSim, 
-    bI, pullI, 
+    sim,
+    bI, pullI,
     pull_disp, 
     pull_timesteps, free_timesteps, 
     return_info=False):
@@ -98,8 +98,8 @@ def simulate_slingshot_mfem(
         return Zs, As, las
           
 
-def simulate_slingshot_fem(sim : sk.sims.elastic.ElasticFEMSim, 
-                           bI, pullI, 
+def simulate_slingshot_fem(sim,
+                           bI, pullI,
                            pull_disp, pull_timesteps, 
                            free_timesteps, 
                            return_info=False):

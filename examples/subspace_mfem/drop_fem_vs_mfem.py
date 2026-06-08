@@ -16,7 +16,7 @@ from utils import *  # noqa: E402,F401,F403
 from config import *  # noqa: E402,F401,F403
 
 
-def simulate_drop_mfem(sim : sk.sims.elastic.ElasticMFEMSim, bI,
+def simulate_drop_mfem(sim, bI,
                        num_timesteps, return_info=False):
     
     if isinstance(bI, str):
@@ -34,10 +34,14 @@ def simulate_drop_mfem(sim : sk.sims.elastic.ElasticMFEMSim, bI,
     Bb_ext = sim.B.T @ (b_ext + bg)
     
     z, s, la, z_dot = sim.rest_state()
+    z_curr = z.copy()
+    z_prev = z.copy()
     Zs = np.zeros((z.shape[0], num_timesteps + 1))
     As = np.zeros((s.shape[0], num_timesteps + 1))
     Ls = np.zeros((la.shape[0], num_timesteps + 1))
-    
+    Zs[:, 0] = z.flatten()
+    As[:, 0] = s.flatten()
+
     if return_info:
         info_history = np.empty(num_timesteps, dtype=object)
         
@@ -63,7 +67,7 @@ def simulate_drop_mfem(sim : sk.sims.elastic.ElasticMFEMSim, bI,
     else:
         return Zs, As, Ls
 
-def simulate_drop_fem(sim : sk.sims.elastic.ElasticFEMSim, bI,
+def simulate_drop_fem(sim, bI,
                       num_timesteps, return_info=False):
     
     if isinstance(bI, str):

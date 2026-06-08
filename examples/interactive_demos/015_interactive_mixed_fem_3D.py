@@ -257,6 +257,14 @@ def _run_gui():
 
     sims = {"Subspace MFEM": sim}
     viewer = Viewer3D(X, T, camera_eye=(1.2, 0.8, 2.0), camera_target=(0.0, 0.0, 0.0))
+
+    # Color the (per-tet) boundary faces by the heterogeneous Young's modulus so
+    # the soft 1e6 joints read distinctly from the stiff 1e12 shell. log10 keeps
+    # the six-decade spread legible; enabled on load so the material is visible.
+    viewer.mesh.add_scalar_quantity(
+        "log10 Young's modulus", np.log10(ym).flatten(),
+        defined_on="cells", cmap="viridis", enabled=True)
+
     ps.register_point_cloud("pinned", X[pin_idx], radius=0.006, material="flat",
                             color=(0.4, 0.4, 0.4), enabled=True)
     sel_pc, target_pc = viewer.add_handle_markers()
