@@ -3,7 +3,45 @@
 import numpy as np
 import scipy as sp
 
-from .p2_shape_functions import p2_shape_functions, p2_num_nodes
+from .p2_shape_functions import p2_num_nodes, _SIMPLEX_EDGE_LOCAL
+
+
+def _p2_shape_gradients_batched(L: np.ndarray, s: int) -> np.ndarray:
+    """Barycentric gradients ``dN/dL`` of the P2 shape functions, batched.
+
+    Vectorized counterpart of :func:`p2_shape_functions` (gradients only) that
+    evaluates many points at once. The loops here are over the *constant* number
+    of simplex corners and edges, not over elements.
+
+    Parameters
+    ----------
+    L : np.ndarray (m, s)
+        Barycentric coordinates of ``m`` evaluation points.
+    s : int
+        Number of simplex corners (3 triangle, 4 tet).
+
+    Returns
+    -------
+    dNdL : np.ndarray (m, n_nodes, s)
+    """
+    L = np.asarray(L, dtype=float)
+    m = L.shape[0]
+    edges_local = _SIMPLEX_EDGE_LOCAL[s]
+    n_nodes = s + len(edges_local)
+
+    dNdL = np.zeros((m, n_nodes, s))
+
+    # Corner nodes: dN_i/dL_j = (4 L_i - 1) delta_ij.
+    for i in range(s):
+        dNdL[:, i, i] = 4.0 * L[:, i] - 1.0
+
+    # Edge-midpoint nodes: N = 4 L_a L_b, dN/dL_a = 4 L_b, dN/dL_b = 4 L_a.
+    for e, (a, b) in enumerate(edges_local):
+        node = s + e
+        dNdL[:, node, a] = 4.0 * L[:, b]
+        dNdL[:, node, b] = 4.0 * L[:, a]
+
+    return dNdL
 
 
 # Reference-element P1 shape-function gradients dL/dxi (rows = corner, cols =
@@ -114,43 +152,43 @@ def deformation_jacobian_p2(
     n_rows = t * n_quad * dim * dim
     n_cols = n2 * dim
 
-    # Triplet lists for sparse assembly (explicit loops, no vectorization).
-    rows = []
-    cols = []
-    vals = []
+    # Affine reference->rest Jacobian from the corner nodes only, for every
+    # element at once. XH = dX/dxi, XHi = dxi/dX; both constant over an element.
+    Xc = V2[T2[:, :s]]                              # (t, s, dim)
+    XH = np.einsum("esd,sk->edk", Xc, H_p1)        # (t, dim, dim)
+    XHi = np.linalg.inv(XH)                         # (t, dim, dim)
 
-    for e in range(t):
-        # Affine reference->rest Jacobian from the corner nodes only. XH = dX/dxi
-        # and XHi = dxi/dX are constant over the element.
-        corners = T2[e, :s]
-        Xc = V2[corners]                 # (s, dim)
-        XH = Xc.T @ H_p1                  # (dim, dim)
-        XHi = np.linalg.inv(XH)          # (dim, dim)
+    # Spatial shape-function gradients at every cubature point of every element.
+    # bary is (t, n_quad, s); flatten the (element, quad) axes to one batch.
+    m = t * n_quad
+    dNdL = _p2_shape_gradients_batched(
+        bary.reshape(m, s), s
+    )                                              # (m, n_nodes, s)
 
-        for q in range(n_quad):
-            L = bary[e, q]               # (s,)
-            _, dNdL = p2_shape_functions(L, s)   # (n_nodes, s)
+    # Chain rule: dN/dX = (dN/dL)(dL/dxi)(dxi/dX) = dNdL @ H_p1 @ XHi.
+    dNdxi = np.einsum("mns,sk->mnk", dNdL, H_p1)   # (m, n_nodes, dim)
+    dNdxi = dNdxi.reshape(t, n_quad, n_nodes, dim)
+    G = np.einsum("eqnk,ekj->eqnj", dNdxi, XHi)    # (t, n_quad, n_nodes, dim)
+    G = G.reshape(m, n_nodes, dim)                 # row-block order is e*n_quad+q
 
-            # Chain rule: dN/dX = (dN/dL)(dL/dxi)(dxi/dX) = dNdL @ H_p1 @ XHi.
-            dNdxi = dNdL @ H_p1          # (n_nodes, dim)
-            G = dNdxi @ XHi              # (n_nodes, dim) spatial shape gradients
+    # Vectorized triplet assembly. For each (block m, node, i, j):
+    #   row = m*(dim*dim) + i*dim + j
+    #   col = global_node*dim + i
+    #   val = G[m, node, j]            (F[i,j] = Σ_node u_node[i] * G[node, j])
+    gnodes = np.repeat(T2, n_quad, axis=0)         # (m, n_nodes) global node ids
 
-            # Row offset for this element's q-th cubature point.
-            block = (e * n_quad + q) * (dim * dim)
+    m_idx = np.arange(m)[:, None, None, None]
+    i_idx = np.arange(dim)[None, None, :, None]
+    j_idx = np.arange(dim)[None, None, None, :]
 
-            # F[i, j] = Σ_node u_node[i] * G[node, j]; place the coefficients.
-            for node in range(n_nodes):
-                global_node = int(T2[e, node])
-                for i in range(dim):
-                    col = global_node * dim + i
-                    for j in range(dim):
-                        row = block + i * dim + j
-                        rows.append(row)
-                        cols.append(col)
-                        vals.append(G[node, j])
+    rows = m_idx * (dim * dim) + i_idx * dim + j_idx
+    cols = gnodes[:, :, None, None] * dim + i_idx
+    vals = np.broadcast_to(G[:, :, None, :], (m, n_nodes, dim, dim))
 
     J = sp.sparse.csc_matrix(
-        (np.array(vals), (np.array(rows), np.array(cols))),
+        (vals.ravel(),
+         (np.broadcast_to(rows, vals.shape).ravel(),
+          np.broadcast_to(cols, vals.shape).ravel())),
         shape=(n_rows, n_cols),
     )
     return J

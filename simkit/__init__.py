@@ -80,6 +80,8 @@ with _core:
     from .pairwise_distance import pairwise_distance
     from .psd_project import psd_project
     from .average_onto_simplex import average_onto_simplex
+    from .combine_meshes import combine_meshes
+    from .winding_number import winding_number
     from .edge_lengths import edge_lengths
     from .gradient_cfd import gradient_cfd
     from .hessian_cfd import hessian_cfd
@@ -134,6 +136,9 @@ with _core:
     from .p2_shape_functions import p2_shape_functions
     from .p2_massmatrix import p2_massmatrix
     from .p2_gravity_force import p2_gravity_force
+
+    from . import integrators  # noqa: F401
+
 
 
 # ---------------------------------------------------------------------------

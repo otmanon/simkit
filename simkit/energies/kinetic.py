@@ -84,13 +84,13 @@ def velocity_bdf2(x_curr: np.ndarray, x_prev: np.ndarray, x_prev2: np.ndarray, h
     return (3.0 * x_curr - 4.0 * x_prev + x_prev2) / (2.0 * h)
 
 
-def _be_target(x_curr: np.ndarray, x_prev: np.ndarray, h: float) -> np.ndarray:
+def be_target(x_curr: np.ndarray, x_prev: np.ndarray, h: float) -> np.ndarray:
     """Backward-Euler inertial target ``x_curr + h * v_curr``."""
     v_curr = velocity_be(x_curr, x_prev, h)
     return x_curr + h * v_curr
 
 
-def _bdf2_target(x_curr: np.ndarray, x_prev: np.ndarray, x_prev2: np.ndarray, x_prev3: np.ndarray, h: float) -> np.ndarray:
+def bdf2_target(x_curr: np.ndarray, x_prev: np.ndarray, x_prev2: np.ndarray, x_prev3: np.ndarray, h: float) -> np.ndarray:
     """Constant-step BDF2 inertial target built from reconstructed velocities.
 
     ``(4/3) x_curr - (1/3) x_prev + (8h/9) v_curr - (2h/9) v_prev`` with both
@@ -104,17 +104,17 @@ def _bdf2_target(x_curr: np.ndarray, x_prev: np.ndarray, x_prev2: np.ndarray, x_
 # --------------------------------------------------------------------------- #
 # Shared quadratic core                                                       #
 # --------------------------------------------------------------------------- #
-def _kinetic_energy(d: np.ndarray, M: sp.sparse.spmatrix, h: float, c: float) -> float:
+def kinetic_energy(d: np.ndarray, M: sp.sparse.spmatrix, h: float, c: float) -> float:
     """``0.5 * c / h^2 * d^T M d`` as a Python float."""
     return float((0.5 * c * (d.T @ M @ d) * (1 / (h ** 2))).item())
 
 
-def _kinetic_gradient(d: np.ndarray, M: sp.sparse.spmatrix, h: float, c: float) -> np.ndarray:
+def kinetic_gradient(d: np.ndarray, M: sp.sparse.spmatrix, h: float, c: float) -> np.ndarray:
     """``c / h^2 * M d``."""
     return c * (M @ d) * (1 / (h ** 2))
 
 
-def _kinetic_hessian(M: sp.sparse.spmatrix, h: float, c: float) -> sp.sparse.spmatrix:
+def kinetic_hessian(M: sp.sparse.spmatrix, h: float, c: float) -> sp.sparse.spmatrix:
     """``c / h^2 * M``."""
     return M * (c / (h ** 2))
 
@@ -146,8 +146,8 @@ def kinetic_energy_be(x: np.ndarray, x_curr: np.ndarray, x_prev: np.ndarray, M: 
     k : float
         Kinetic energy.
     """
-    x_tilde = _be_target(x_curr, x_prev, h)
-    return _kinetic_energy(x - x_tilde, M, h, _BE_COEFF)
+    x_tilde = be_target(x_curr, x_prev, h)
+    return kinetic_energy(x - x_tilde, M, h, _BE_COEFF)
 
 
 def kinetic_gradient_be(x: np.ndarray, x_curr: np.ndarray, x_prev: np.ndarray, M: sp.sparse.spmatrix, h: float) -> np.ndarray:
@@ -171,8 +171,8 @@ def kinetic_gradient_be(x: np.ndarray, x_curr: np.ndarray, x_prev: np.ndarray, M
     g : np.ndarray (n*d, 1)
         Energy gradient.
     """
-    x_tilde = _be_target(x_curr, x_prev, h)
-    return _kinetic_gradient(x - x_tilde, M, h, _BE_COEFF)
+    x_tilde = be_target(x_curr, x_prev, h)
+    return kinetic_gradient(x - x_tilde, M, h, _BE_COEFF)
 
 
 def kinetic_hessian_be(M: sp.sparse.spmatrix, h: float) -> sp.sparse.spmatrix:
@@ -191,7 +191,7 @@ def kinetic_hessian_be(M: sp.sparse.spmatrix, h: float) -> sp.sparse.spmatrix:
         Energy Hessian, ``M / h^2``. PSD by construction. Independent of ``x``
         and of the history states.
     """
-    return _kinetic_hessian(M, h, _BE_COEFF)
+    return kinetic_hessian(M, h, _BE_COEFF)
 
 
 # --------------------------------------------------------------------------- #
@@ -227,8 +227,8 @@ def kinetic_energy_bdf2(x: np.ndarray, x_curr: np.ndarray, x_prev: np.ndarray, x
     k : float
         Kinetic energy.
     """
-    x_tilde = _bdf2_target(x_curr, x_prev, x_prev2, x_prev3, h)
-    return _kinetic_energy(x - x_tilde, M, h, _BDF2_COEFF)
+    x_tilde = bdf2_target(x_curr, x_prev, x_prev2, x_prev3, h)
+    return kinetic_energy(x - x_tilde, M, h, _BDF2_COEFF)
 
 
 def kinetic_gradient_bdf2(x: np.ndarray, x_curr: np.ndarray, x_prev: np.ndarray, x_prev2: np.ndarray, x_prev3: np.ndarray, M: sp.sparse.spmatrix, h: float) -> np.ndarray:
@@ -256,8 +256,8 @@ def kinetic_gradient_bdf2(x: np.ndarray, x_curr: np.ndarray, x_prev: np.ndarray,
     g : np.ndarray (n*d, 1)
         Energy gradient.
     """
-    x_tilde = _bdf2_target(x_curr, x_prev, x_prev2, x_prev3, h)
-    return _kinetic_gradient(x - x_tilde, M, h, _BDF2_COEFF)
+    x_tilde = bdf2_target(x_curr, x_prev, x_prev2, x_prev3, h)
+    return kinetic_gradient(x - x_tilde, M, h, _BDF2_COEFF)
 
 
 def kinetic_hessian_bdf2(M: sp.sparse.spmatrix, h: float) -> sp.sparse.spmatrix:
@@ -276,7 +276,7 @@ def kinetic_hessian_bdf2(M: sp.sparse.spmatrix, h: float) -> sp.sparse.spmatrix:
         Energy Hessian, ``(9/4) M / h^2``. PSD by construction. Independent of
         ``x`` and of the history states.
     """
-    return _kinetic_hessian(M, h, _BDF2_COEFF)
+    return kinetic_hessian(M, h, _BDF2_COEFF)
 
 
 # --------------------------------------------------------------------------- #

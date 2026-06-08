@@ -99,7 +99,7 @@ def eigs(
     n0 = np.ones(A.shape[0])
 
     if k < A.shape[0] - 1:
-        [D, B] = sp.sparse.linalg.eigs(
+        [D, B] = sp.sparse.linalg.eigsh(
             A, M=M, k=k, sigma=0, which='LM', OPinv=OpInv, v0=n0
         )
     else:
