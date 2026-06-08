@@ -1,9 +1,11 @@
-from .Solver import Solver, SolverParams
+from .newton import newton_solver
 
-from .NewtonSolver import NewtonSolver, NewtonSolverParams
+from .gradient_descent import gradient_descent
 
-from .GradientDescentSolver import GradientDescentSolver, GradientDescentSolverParams
+from .block_coord_descent import block_coord
 
-from .BlockCoordSolver import BlockCoordSolver, BlockCoordSolverParams
+from .sqpmfem import sqp_mfem
 
-from .CMAESSolver import CMAESSolver, CMAESSolverParams
+from .local_global import local_global
+
+from .cmaes import cmaes
