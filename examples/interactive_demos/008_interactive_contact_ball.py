@@ -16,8 +16,9 @@ import scipy as sp
 from simkit.deformation_jacobian import deformation_jacobian
 from simkit.dirichlet_penalty import dirichlet_penalty
 from simkit.gravity_force import gravity_force
+from simkit.integrators import backward_euler, bdf2
 from simkit.massmatrix import massmatrix
-from simkit.solvers.NewtonSolver import NewtonSolver, NewtonSolverParams
+from simkit.solvers import newton_solver
 from simkit.volume import volume
 import simkit.energies as energies
 
@@ -68,10 +69,7 @@ class ElasticSimStatic:
         self.h = float(h)
         self.U = X.copy()
 
-        self._solver = NewtonSolver(
-            self.energy, self.gradient, self.hessian,
-            NewtonSolverParams(max_iter=8, do_line_search=True),
-        )
+        self._newton_iters = 8
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
@@ -101,7 +99,7 @@ class ElasticSimStatic:
         return H_el + self.Q_pin + H_contact
 
     def step(self):
-        x_next = self._solver.solve(self.U.flatten().reshape(-1, 1))
+        x_next = newton_solver(self.U.flatten().reshape(-1, 1), self.energy, self.gradient, self.hessian, max_iter=self._newton_iters, do_line_search=True)
         self.U[:] = x_next.reshape(self.n, self.dim)
 
 
@@ -124,10 +122,7 @@ class ElasticSimBE:
         self.U      = X.copy()
         self.U_prev = X.copy()
 
-        self._solver = NewtonSolver(
-            self.energy, self.gradient, self.hessian,
-            NewtonSolverParams(max_iter=8, do_line_search=True),
-        )
+        self._newton_iters = 8
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
@@ -137,9 +132,7 @@ class ElasticSimBE:
         E_grav    = -float((self.f_g.T @ xc)[0, 0])
         E_contact = float(energies.contact_springs_sphere_energy(
             xn, self.K_contact, self.ball_center, self.ball_radius, M=self.M_n))
-        E_kin     = float(energies.kinetic_energy_be(
-            xc, self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1), self.M, self.h))
-        return E_el + E_pin + E_grav + E_contact + E_kin
+        return E_el + E_pin + E_grav + E_contact
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
@@ -148,9 +141,7 @@ class ElasticSimBE:
         g_grav    = -self.f_g
         g_contact = energies.contact_springs_sphere_gradient(
             xn, self.K_contact, self.ball_center, self.ball_radius, M=self.M_n)
-        g_kin     = energies.kinetic_gradient_be(
-            xc, self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1), self.M, self.h)
-        return g_el + g_pin + g_grav + g_contact + g_kin
+        return g_el + g_pin + g_grav + g_contact
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
@@ -158,11 +149,13 @@ class ElasticSimBE:
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_contact = energies.contact_springs_sphere_hessian(
             xn, self.K_contact, self.ball_center, self.ball_radius, M=self.M_n)
-        H_kin     = energies.kinetic_hessian_be(self.M, self.h)
-        return H_el + self.Q_pin + H_contact + H_kin
+        return H_el + self.Q_pin + H_contact
 
     def step(self):
-        x_next = self._solver.solve(self.U.flatten().reshape(-1, 1))
+        x_next = backward_euler(
+            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
+            self.energy, self.gradient, self.hessian, self.M, self.h,
+            max_iter=self._newton_iters, do_line_search=True)
         self.U_prev[:] = self.U
         self.U[:] = x_next.reshape(self.n, self.dim)
 
@@ -188,10 +181,7 @@ class ElasticSimBDF2:
         self.U_prev2 = X.copy()
         self.U_prev3 = X.copy()
 
-        self._solver = NewtonSolver(
-            self.energy, self.gradient, self.hessian,
-            NewtonSolverParams(max_iter=8, do_line_search=True),
-        )
+        self._newton_iters = 8
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
@@ -201,13 +191,7 @@ class ElasticSimBDF2:
         E_grav    = -float((self.f_g.T @ xc)[0, 0])
         E_contact = float(energies.contact_springs_sphere_energy(
             xn, self.K_contact, self.ball_center, self.ball_radius, M=self.M_n))
-        E_kin     = float(energies.kinetic_energy_bdf2(
-            xc,
-            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
-            self.U_prev2.reshape(-1, 1), self.U_prev3.reshape(-1, 1),
-            self.M, self.h,
-        ))
-        return E_el + E_pin + E_grav + E_contact + E_kin
+        return E_el + E_pin + E_grav + E_contact
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
@@ -216,13 +200,7 @@ class ElasticSimBDF2:
         g_grav    = -self.f_g
         g_contact = energies.contact_springs_sphere_gradient(
             xn, self.K_contact, self.ball_center, self.ball_radius, M=self.M_n)
-        g_kin     = energies.kinetic_gradient_bdf2(
-            xc,
-            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
-            self.U_prev2.reshape(-1, 1), self.U_prev3.reshape(-1, 1),
-            self.M, self.h,
-        )
-        return g_el + g_pin + g_grav + g_contact + g_kin
+        return g_el + g_pin + g_grav + g_contact
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
@@ -230,11 +208,14 @@ class ElasticSimBDF2:
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
         H_contact = energies.contact_springs_sphere_hessian(
             xn, self.K_contact, self.ball_center, self.ball_radius, M=self.M_n)
-        H_kin     = energies.kinetic_hessian_bdf2(self.M, self.h)
-        return H_el + self.Q_pin + H_contact + H_kin
+        return H_el + self.Q_pin + H_contact
 
     def step(self):
-        x_next = self._solver.solve(self.U.flatten().reshape(-1, 1))
+        x_next = bdf2(
+            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
+            self.U_prev2.reshape(-1, 1), self.U_prev3.reshape(-1, 1),
+            self.energy, self.gradient, self.hessian, self.M, self.h,
+            max_iter=self._newton_iters, do_line_search=True)
         self.U_prev3[:] = self.U_prev2
         self.U_prev2[:] = self.U_prev
         self.U_prev[:]  = self.U

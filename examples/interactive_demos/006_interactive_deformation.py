@@ -14,7 +14,7 @@ import polyscope.imgui as psim
 from simkit.pairwise_distance import pairwise_distance
 from simkit.deformation_jacobian import deformation_jacobian
 from simkit.dirichlet_penalty import dirichlet_penalty
-from simkit.solvers.NewtonSolver import NewtonSolver, NewtonSolverParams
+from simkit.solvers import newton_solver
 from simkit.volume import volume
 import scipy as sp
 import simkit.energies as energies
@@ -55,10 +55,7 @@ class ElasticSimStatic:
         self.Q_h = sp.sparse.csc_matrix((D, D))
         self.b_h = np.zeros((D, 1))
 
-        self._solver = NewtonSolver(
-            self.energy, self.gradient, self.hessian,
-            NewtonSolverParams(max_iter=5, do_line_search=True),
-        )
+        self._newton_iters = 5
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
@@ -83,7 +80,7 @@ class ElasticSimStatic:
         return H_el + self.Q_pin + self.Q_h
 
     def step(self):
-        x_next = self._solver.solve(self.U.flatten().reshape(-1, 1))
+        x_next = newton_solver(self.U.flatten().reshape(-1, 1), self.energy, self.gradient, self.hessian, max_iter=self._newton_iters, do_line_search=True)
         self.U[:] = x_next.reshape(self.n, self.dim)
 
 

@@ -15,8 +15,8 @@ import scipy as sp
 
 from simkit.deformation_jacobian import deformation_jacobian
 from simkit.dirichlet_penalty import dirichlet_penalty
+from simkit.integrators import backward_euler, bdf2
 from simkit.massmatrix import massmatrix
-from simkit.solvers.NewtonSolver import NewtonSolver, NewtonSolverParams
 from simkit.volume import volume
 import simkit.energies as energies
 
@@ -61,10 +61,7 @@ class ElasticSimBE:
         self.Q_h    = sp.sparse.csc_matrix((D, D))
         self.b_h    = np.zeros((D, 1))
 
-        self._solver = NewtonSolver(
-            self.energy, self.gradient, self.hessian,
-            NewtonSolverParams(max_iter=5, do_line_search=True),
-        )
+        self._newton_iters = 5
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
@@ -73,28 +70,26 @@ class ElasticSimBE:
                  + float((self.b_pin.T @ xc)[0, 0]))
         E_h   = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
                  + float((self.b_h.T @ xc)[0, 0]))
-        E_kin = float(energies.kinetic_energy_be(
-            xc, self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1), self.M, self.h))
-        return E_el + E_pin + E_h + E_kin
+        return E_el + E_pin + E_h
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
         g_el  = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin = self.Q_pin @ xc + self.b_pin
         g_h   = self.Q_h   @ xc + self.b_h
-        g_kin = energies.kinetic_gradient_be(
-            xc, self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1), self.M, self.h)
-        return g_el + g_pin + g_h + g_kin
+        return g_el + g_pin + g_h
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
         H_el  = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
-        H_kin = energies.kinetic_hessian_be(self.M, self.h)
-        return H_el + self.Q_pin + self.Q_h + H_kin
+        return H_el + self.Q_pin + self.Q_h
 
     def step(self):
-        x_next = self._solver.solve(self.U.flatten().reshape(-1, 1))
+        x_next = backward_euler(
+            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
+            self.energy, self.gradient, self.hessian, self.M, self.h,
+            max_iter=self._newton_iters, do_line_search=True)
         self.U_prev[:] = self.U
         self.U[:] = x_next.reshape(self.n, self.dim)
 
@@ -119,10 +114,7 @@ class ElasticSimBDF2:
         self.Q_h     = sp.sparse.csc_matrix((D, D))
         self.b_h     = np.zeros((D, 1))
 
-        self._solver = NewtonSolver(
-            self.energy, self.gradient, self.hessian,
-            NewtonSolverParams(max_iter=5, do_line_search=True),
-        )
+        self._newton_iters = 5
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
@@ -131,36 +123,27 @@ class ElasticSimBDF2:
                  + float((self.b_pin.T @ xc)[0, 0]))
         E_h   = (0.5 * float((xc.T @ (self.Q_h @ xc))[0, 0])
                  + float((self.b_h.T @ xc)[0, 0]))
-        E_kin = float(energies.kinetic_energy_bdf2(
-            xc,
-            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
-            self.U_prev2.reshape(-1, 1), self.U_prev3.reshape(-1, 1),
-            self.M, self.h,
-        ))
-        return E_el + E_pin + E_h + E_kin
+        return E_el + E_pin + E_h
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
         g_el  = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin = self.Q_pin @ xc + self.b_pin
         g_h   = self.Q_h   @ xc + self.b_h
-        g_kin = energies.kinetic_gradient_bdf2(
-            xc,
-            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
-            self.U_prev2.reshape(-1, 1), self.U_prev3.reshape(-1, 1),
-            self.M, self.h,
-        )
-        return g_el + g_pin + g_h + g_kin
+        return g_el + g_pin + g_h
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
         H_el  = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
-        H_kin = energies.kinetic_hessian_bdf2(self.M, self.h)
-        return H_el + self.Q_pin + self.Q_h + H_kin
+        return H_el + self.Q_pin + self.Q_h
 
     def step(self):
-        x_next = self._solver.solve(self.U.flatten().reshape(-1, 1))
+        x_next = bdf2(
+            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
+            self.U_prev2.reshape(-1, 1), self.U_prev3.reshape(-1, 1),
+            self.energy, self.gradient, self.hessian, self.M, self.h,
+            max_iter=self._newton_iters, do_line_search=True)
         self.U_prev3[:] = self.U_prev2
         self.U_prev2[:] = self.U_prev
         self.U_prev[:]  = self.U

@@ -15,8 +15,7 @@ import scipy as sp
 
 from simkit.deformation_jacobian import deformation_jacobian
 from simkit.dirichlet_penalty import dirichlet_penalty
-from simkit.solvers.GradientDescentSolver import GradientDescentSolver, GradientDescentSolverParams
-from simkit.solvers.NewtonSolver import NewtonSolver, NewtonSolverParams
+from simkit.solvers import gradient_descent, newton_solver
 from simkit.volume import volume
 import simkit.energies as energies
 
@@ -86,10 +85,11 @@ class ElasticSimStatic:
         return H_el + self.Q_pin + self.Q_h
 
     def step(self):
-        x_next = NewtonSolver(
+        x_next = newton_solver(
+            self.U.flatten().reshape(-1, 1),
             self.energy, self.gradient, self.hessian,
-            NewtonSolverParams(max_iter=5, do_line_search=True),
-        ).solve(self.U.flatten().reshape(-1, 1))
+            max_iter=5, do_line_search=True,
+        )
         self.U[:] = x_next.reshape(self.n, self.dim)
 
 
@@ -117,15 +117,15 @@ GD_STEP = 1.0
 
 
 def build_solver():
+    """Return a ``solve(x0) -> (x, info)`` closure for the current UI config."""
     if solver_choice == 0:
-        return NewtonSolver(
-            sim.energy, sim.gradient, sim.hessian,
-            NewtonSolverParams(max_iter=MAX_ITERS, do_line_search=NEWTON_LS),
+        return lambda x0: newton_solver(
+            x0, sim.energy, sim.gradient, sim.hessian,
+            max_iter=MAX_ITERS, do_line_search=NEWTON_LS, return_info=True,
         )
-    return GradientDescentSolver(
-        sim.energy, sim.gradient,
-        GradientDescentSolverParams(
-            max_iter=MAX_ITERS, do_line_search=GD_LS, step_size=GD_STEP),
+    return lambda x0: gradient_descent(
+        x0, sim.energy, sim.gradient,
+        max_iter=MAX_ITERS, do_line_search=GD_LS, step_size=GD_STEP, return_info=True,
     )
 
 
@@ -170,7 +170,7 @@ def callback():
         set_handle_target(handle_target)
 
     # minimize energy once
-    x_col, info = solver.solve(sim.U.flatten().reshape(-1, 1), return_info=True)
+    x_col, info = solver(sim.U.flatten().reshape(-1, 1))
     sim.U[:] = x_col.reshape(sim.n, sim.dim)
     iters_run = info["iters"] + 1
     iter_plot.push(iters_run)

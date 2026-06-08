@@ -1,13 +1,15 @@
 """Tutorial 005 - Integration schemes: Backward Euler vs. BDF2 vs. Forward Euler.
 
 A cantilever beam under gravity, sagging. The dropdown swaps between three
-integrators that share the same potential (elastic + pin + gravity); the only
-difference is the kinetic-energy term they minimize -- or, for Forward Euler,
-that they skip the implicit minimize entirely and do an explicit acceleration
-step instead.
+integrators that share the same potential (elastic + pin + gravity). Each sim
+class exposes only the *potential* energy / gradient / hessian; the time
+stepping is delegated to ``simkit.integrators``: the implicit schemes
+(``backward_euler``, ``bdf2``) layer on the inertial term and run a Newton
+solve internally, while ``forward_euler`` skips the implicit minimize and takes
+an explicit acceleration step instead.
 
-Each integrator is written out as its own class with five methods. Read one
-top to bottom and the rest follow by analogy.
+Each integrator is written out as its own class. Read one top to bottom and the
+rest follow by analogy.
 """
 import numpy as np
 import polyscope.imgui as psim
@@ -16,8 +18,8 @@ import scipy as sp
 from simkit.deformation_jacobian import deformation_jacobian
 from simkit.dirichlet_penalty import dirichlet_penalty
 from simkit.gravity_force import gravity_force
+from simkit.integrators import backward_euler, bdf2, forward_euler
 from simkit.massmatrix import massmatrix
-from simkit.solvers.NewtonSolver import NewtonSolver, NewtonSolverParams
 from simkit.volume import volume
 import simkit.energies as energies
 
@@ -63,10 +65,7 @@ class ElasticSimBE:
         self.U      = X.copy()
         self.U_prev = X.copy()
 
-        self._solver = NewtonSolver(
-            self.energy, self.gradient, self.hessian,
-            NewtonSolverParams(max_iter=5, do_line_search=True),
-        )
+        self._newton_iters = 5
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
@@ -74,28 +73,27 @@ class ElasticSimBE:
         E_pin  = (0.5 * float((xc.T @ (self.Q_pin @ xc))[0, 0])
                   + float((self.b_pin.T @ xc)[0, 0]))
         E_grav = -float((self.f_g.T @ xc)[0, 0])
-        E_kin  = float(energies.kinetic_energy_be(
-            xc, self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1), self.M, self.h))
-        return E_el + E_pin + E_grav + E_kin
+        return E_el + E_pin + E_grav
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
         g_el   = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin  = self.Q_pin @ xc + self.b_pin
         g_grav = -self.f_g
-        g_kin  = energies.kinetic_gradient_be(
-            xc, self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1), self.M, self.h)
-        return g_el + g_pin + g_grav + g_kin
+        return g_el + g_pin + g_grav
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
         H_el  = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
-        H_kin = energies.kinetic_hessian_be(self.M, self.h)
-        return H_el + self.Q_pin + H_kin
+        return H_el + self.Q_pin
 
     def step(self):
-        x_next = self._solver.solve(self.U.flatten().reshape(-1, 1))
+        # backward_euler adds the inertial term to this potential and Newton-solves.
+        x_next = backward_euler(
+            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
+            self.energy, self.gradient, self.hessian, self.M, self.h,
+            max_iter=self._newton_iters, do_line_search=True)
         self.U_prev[:] = self.U
         self.U[:] = x_next.reshape(self.n, self.dim)
 
@@ -117,10 +115,7 @@ class ElasticSimBDF2:
         self.U_prev2 = X.copy()
         self.U_prev3 = X.copy()
 
-        self._solver = NewtonSolver(
-            self.energy, self.gradient, self.hessian,
-            NewtonSolverParams(max_iter=5, do_line_search=True),
-        )
+        self._newton_iters = 5
 
     def energy(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
@@ -128,36 +123,28 @@ class ElasticSimBDF2:
         E_pin  = (0.5 * float((xc.T @ (self.Q_pin @ xc))[0, 0])
                   + float((self.b_pin.T @ xc)[0, 0]))
         E_grav = -float((self.f_g.T @ xc)[0, 0])
-        E_kin  = float(energies.kinetic_energy_bdf2(
-            xc,
-            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
-            self.U_prev2.reshape(-1, 1), self.U_prev3.reshape(-1, 1),
-            self.M, self.h,
-        ))
-        return E_el + E_pin + E_grav + E_kin
+        return E_el + E_pin + E_grav
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim); xc = x.reshape(-1, 1)
         g_el   = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin  = self.Q_pin @ xc + self.b_pin
         g_grav = -self.f_g
-        g_kin  = energies.kinetic_gradient_bdf2(
-            xc,
-            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
-            self.U_prev2.reshape(-1, 1), self.U_prev3.reshape(-1, 1),
-            self.M, self.h,
-        )
-        return g_el + g_pin + g_grav + g_kin
+        return g_el + g_pin + g_grav
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
         H_el  = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
-        H_kin = energies.kinetic_hessian_bdf2(self.M, self.h)
-        return H_el + self.Q_pin + H_kin
+        return H_el + self.Q_pin
 
     def step(self):
-        x_next = self._solver.solve(self.U.flatten().reshape(-1, 1))
+        # bdf2 reconstructs both velocities from the 4-level position history.
+        x_next = bdf2(
+            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
+            self.U_prev2.reshape(-1, 1), self.U_prev3.reshape(-1, 1),
+            self.energy, self.gradient, self.hessian, self.M, self.h,
+            max_iter=self._newton_iters, do_line_search=True)
         self.U_prev3[:] = self.U_prev2
         self.U_prev2[:] = self.U_prev
         self.U_prev[:]  = self.U
@@ -178,7 +165,6 @@ class ElasticSimFE:
         self.Q_pin, self.b_pin = Q_pin, b_pin
         self.h = float(h)
         self.pin_idx = pin_idx
-        self.M_diag = M.diagonal()
 
         self.U = X.copy()
         self.V = np.zeros_like(X)
@@ -205,10 +191,12 @@ class ElasticSimFE:
         return H_el + self.Q_pin
 
     def step(self):
-        f = -np.asarray(self.gradient(self.U.flatten())).flatten()
-        a = (f / self.M_diag).reshape(self.n, self.dim)
-        self.U[:] = self.U + self.h * self.V
-        self.V[:] = self.V + self.h * a
+        # forward_euler reads the force off self.gradient and lumps the mass.
+        x_next, v_next = forward_euler(
+            self.U.reshape(-1, 1), self.V.reshape(-1, 1),
+            self.gradient, self.M, self.h)
+        self.U[:] = x_next.reshape(self.n, self.dim)
+        self.V[:] = v_next.reshape(self.n, self.dim)
         if len(self.pin_idx):
             self.U[self.pin_idx] = self.X[self.pin_idx]
             self.V[self.pin_idx] = 0.0

@@ -541,9 +541,9 @@ class MouseHandle3D:
             self.target_pc.set_enabled(on)
 
     def draw(self):
-        psim.Test("Handle UI")
-        psim.SliderFloat("K_handle", self.K_handle, v_min=1e3, v_max=1e6, log_scale=True)
-        psim.SliderFloat("selection radius", self.selection_radius, v_min=0.01, v_max=0.5)
+        psim.Text("Handle UI")
+        changed, self.K_handle = psim.SliderFloat(
+            "K_handle", self.K_handle, v_min=1e3, v_max=1e9, power=10.0)
 # =============================================================================
 # TutorialUI - configurable imgui control panel.
 # =============================================================================

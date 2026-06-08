@@ -97,8 +97,8 @@ A static (no time, no inertia) beam pinned on the left, with one vertex on the r
 This makes a single point: Newton uses curvature information (`H = ∇²E`) and converges in a handful of iterations near the optimum; gradient descent uses only the gradient and converges much more slowly on this kind of ill-conditioned elastic problem.
 
 **Focus code:**
-- `build_solver` constructs either a [NewtonSolver](../../simkit/solvers/NewtonSolver.py) or [GradientDescentSolver](../../simkit/solvers/GradientDescentSolver.py) directly off the `sim.potential_E` / `sim.potential_g` / `sim.potential_H` callables.
-- `solver.solve(...)` is the one-line API hiding the optimization loop.
+- `build_solver` returns a `solve(x0)` closure wrapping either [newton_solver](../../simkit/solvers/NewtonSolver.py) or [gradient_descent_solver](../../simkit/solvers/GradientDescentSolver.py), called directly off the `sim.potential_E` / `sim.potential_g` / `sim.potential_H` callables.
+- `newton_solver(x0, ...)` / `gradient_descent_solver(x0, ...)` is the one-line API hiding the optimization loop.
 
 ---
 
@@ -116,7 +116,7 @@ A cantilever beam under gravity, dynamic this time. Three integrators sit behind
 - Increase Young's modulus with Forward Euler — it explodes at smaller and smaller `dt`.
 
 **Focus code:**
-- `sim.step(integrator=..., h=h)` is the only line that differs between integrators. The dispatch and history bookkeeping live in `ElasticSim.step` ([utils.py](utils.py)); the actual kinetic-energy variants live in [simkit/energies/](../../simkit/energies/) under `kinetic_energy_be`, `kinetic_energy_bdf2`, etc.
+- `sim.step(integrator=..., h=h)` is the only line that differs between integrators. The dispatch and history bookkeeping live in `ElasticSim.step` ([utils.py](utils.py)); each `step` delegates to one of the time integrators in [simkit/integrators/](../../simkit/integrators/) (`backward_euler`, `bdf2`, `forward_euler`), which layer the inertial term (from `simkit/energies/kinetic_energy_be`, `kinetic_energy_bdf2`, ...) onto the potential and run the Newton solve.
 
 ---
 
@@ -197,10 +197,58 @@ The 2D scene from 009 lifted into 3D: a tetrahedral block dropped onto a floor. 
 
 ---
 
+## 012 — Interactive subspace Mixed FEM (MFEM)
+
+[012_interactive_mixed_fem.py](012_interactive_mixed_fem.py)
+
+The same pinned beam + mouse-handle UI as 007, but solved in a **reduced space**: instead of every vertex, the sim solves for a handful of skinning-eigenmode weights `u` (positions `x = B u + q`) plus a small set of per-cubature-point stretch auxiliaries `a`. This is the subspace Mixed FEM method ([subspace-mfem](https://www.dgp.toronto.edu/projects/subspace-mfem/)): the auxiliary `a` lets the elastic energy be evaluated element-locally, so per-iteration cost stays tiny even though `B` is dense.
+
+**What to try / how to interact:**
+- Drag a vertex — the beam deforms, but you're only ever moving ~60 subspace DOFs, not thousands of vertices.
+- The header reports the subspace dimension and cubature-point count versus the full vertex count.
+
+**Focus code:**
+- A small *local* `MixedFEMSim` class. Its `step()` stacks `p = [u; a]` and hands `energy` / `grad_blocks` / `hess_blocks` to the flat `sqp_mfem` solver in [simkit/solvers/](../../simkit/solvers/), which eliminates the constraint's Lagrange multiplier internally.
+- Note the pin/handle are full-space penalties on absolute positions `x = B u + q`; projecting them into the subspace keeps the `Q q` cross-term so the pin anchors at the rest offset (dropping it would inflate the rest shape). A full notebook walkthrough lives in [../tutorials/24_subspace_mixed_fem.ipynb](../tutorials/24_subspace_mixed_fem.ipynb).
+
+---
+
+## 013 — Fast Complementary Dynamics
+
+[013_fast_complementary_dynamics.py](013_fast_complementary_dynamics.py)
+
+A 2D beam driven by an animator **rig** (a single global affine handle, `J @ p`). The rig handles the low-frequency, art-directed motion; the simulation adds *complementary* secondary jiggle `B @ z` on top. The trick (Benchekroun et al., "Fast Complementary Dynamics via Skinning Eigenmodes", SIGGRAPH 2023) is that the simulation subspace `B` is built **orthogonal** to the rig via a momentum-leaking constraint, so the secondary motion never fights or duplicates what the animator authored.
+
+**What to try / how to interact:**
+- Left-click and drag anywhere to steer the rig translation; release to let the rig ease back to rest and watch the beam settle with complementary jiggle.
+- The "complementary motion ‖B z‖" plot reads out how much secondary motion the simulation is contributing in real time.
+
+**Focus code:**
+- Like 007, the simulator is a small *local* `CoDySim` class. Its `step()` is two closures handed to `block_coord` from [simkit/solvers/](../../simkit/solvers/): a **local** per-cluster polar-SVD rotation fit and a **global** Cholesky back-solve in the reduced subspace.
+- The subspace is built from `skinning_eigenmodes` with a `lbs_weight_space_constraint` orthogonality constraint and a `spectral_cubature` clustering — all flat simkit functions. A full notebook walkthrough lives in [../tutorials/25_fast_complementary_dynamics.ipynb](../tutorials/25_fast_complementary_dynamics.ipynb).
+
+---
+
+## 014 — Modal Muscles
+
+[014_modal_muscles.py](014_modal_muscles.py)
+
+A 2D creature whose **muscles are displacement modes**. A handful of linear-modal-analysis modes `D` act as actuators: contracting one applies a clustered *plastic stretch* that the passive ARAP elasticity + inertia then respond to, producing whole-body motion. One slider per muscle mode lets you contract/relax interactively.
+
+**What to try / how to interact:**
+- Drag the per-muscle sliders to pose the creature; toggle **auto wiggle** to drive them sinusoidally and watch it locomote.
+- **Reset** returns to the rest pose.
+
+**Focus code:**
+- A small *local* `ModalMuscleSim` class. Its `step()` is a `block_coord` local/global alternation: the **local** step fits per-cluster rotations to both the passive deformation and the actuated (plastic-stretch) target via `polar_svd`; the **global** step is a Cholesky back-solve. The actuation tensor comes from `clustered_plastic_stretch_tensor` + `fast_sandwich_transform_clustered`.
+- A full notebook walkthrough lives in [../tutorials/26_modal_muscles.ipynb](../tutorials/26_modal_muscles.ipynb).
+
+---
+
 ## Where to go next
 
 The tutorials cover the spine of an FEM simulator: deformation gradient → energy → static solve → dynamic solve → contact → 3D. Once these feel comfortable, look at:
 
 - [simkit/energies/](../../simkit/energies/) — the actual Macklin-Mueller Neo-Hookean / kinetic / contact energy implementations, including their analytic gradients and PSD-projected Hessians.
-- [simkit/solvers/](../../simkit/solvers/) — `NewtonSolver`, `GradientDescentSolver`, and the line-search and backtracking utilities.
+- [simkit/solvers/](../../simkit/solvers/) — `newton_solver`, `gradient_descent_solver`, and the line-search and backtracking utilities.
 - [examples/](..) — larger end-to-end scenes that compose these same primitives.

@@ -21,7 +21,7 @@ from simkit.deformation_jacobian import deformation_jacobian
 from simkit.dirichlet_penalty import dirichlet_penalty
 from simkit.gravity_force import gravity_force
 from simkit.massmatrix import massmatrix
-from simkit.solvers.NewtonSolver import NewtonSolver, NewtonSolverParams
+from simkit.integrators import bdf2
 from simkit.volume import volume
 import simkit.energies as energies
 
@@ -66,13 +66,7 @@ class ElasticSimBDF2:
         E_pin  = (0.5 * float((xc.T @ (self.Q_pin @ xc))[0, 0])
                   + float((self.b_pin.T @ xc)[0, 0]))
         E_grav = -float((self.f_g.T @ xc)[0, 0])
-        E_kin  = float(energies.kinetic_energy_bdf2(
-            xc,
-            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
-            self.U_prev2.reshape(-1, 1), self.U_prev3.reshape(-1, 1),
-            self.M, self.h,
-        ))
-        return E_el + E_pin + E_grav + E_kin
+        return E_el + E_pin + E_grav
 
     def gradient(self, x):
         xn = x.reshape(-1, self.dim)
@@ -80,26 +74,21 @@ class ElasticSimBDF2:
         g_el   = energies.macklin_mueller_neo_hookean_gradient_x(xn, self.J, self.mu, self.lam, self.vol)
         g_pin  = self.Q_pin @ xc + self.b_pin
         g_grav = -self.f_g
-        g_kin  = energies.kinetic_gradient_bdf2(
-            xc,
-            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
-            self.U_prev2.reshape(-1, 1), self.U_prev3.reshape(-1, 1),
-            self.M, self.h,
-        )
-        return g_el + g_pin + g_grav + g_kin
+        return g_el + g_pin + g_grav
 
     def hessian(self, x):
         xn = x.reshape(-1, self.dim)
         H_el  = energies.macklin_mueller_neo_hookean_hessian_x(
             xn, self.J, self.mu, self.lam, self.vol, psd=True)
-        H_kin = energies.kinetic_hessian_bdf2(self.M, self.h)
-        return H_el + self.Q_pin + H_kin
+        return H_el + self.Q_pin
 
     def step(self):
-        x_next = NewtonSolver(
-            self.energy, self.gradient, self.hessian,
-            NewtonSolverParams(max_iter=NEWTON_ITERS, do_line_search=True),
-        ).solve(self.U.flatten().reshape(-1, 1))
+        x_next = bdf2(
+            self.U.reshape(-1, 1), self.U_prev.reshape(-1, 1),
+            self.U_prev2.reshape(-1, 1), self.U_prev3.reshape(-1, 1),
+            self.energy, self.gradient, self.hessian, self.M, self.h,
+            max_iter=NEWTON_ITERS, do_line_search=True,
+        )
         self.U_prev3[:] = self.U_prev2
         self.U_prev2[:] = self.U_prev
         self.U_prev[:]  = self.U
@@ -124,21 +113,31 @@ def make_beam(nx, ny, y_offset):
 def newton_step_timed(sim, dt):
     """One BDF2 step with per-iteration wall-clock timing.
 
-    The pin and kinetic Hessian pieces don't depend on ``x``, so we hoist them
-    out of the inner loop. The remaining per-iter work -- ``macklin_mueller_neo_hookean_hessian``,
-    sparse solve, line search -- is what the rolling plot measures.
+    This is the hand-unrolled twin of :func:`simkit.integrators.bdf2`: it adds
+    the same BDF2 inertial term to the sim's potential-only energy / gradient /
+    hessian and Newton-solves, but times each iteration so the rolling plot can
+    show where the cost goes. The pin and kinetic Hessian pieces don't depend on
+    ``x``, so we hoist them out of the inner loop; the remaining per-iter work --
+    ``macklin_mueller_neo_hookean_hessian``, sparse solve, line search -- is what
+    the plot measures.
     """
-    x_curr  = sim.U.flatten().reshape(-1, 1)
+    x_curr   = sim.U.reshape(-1, 1)
+    x_prev   = sim.U_prev.reshape(-1, 1)
+    x_prev2  = sim.U_prev2.reshape(-1, 1)
+    x_prev3  = sim.U_prev3.reshape(-1, 1)
     H_const = sim.Q_pin + energies.kinetic_hessian_bdf2(sim.M, dt)
 
     def Etot(x):
-        return sim.energy(x.flatten())
+        # potential + BDF2 inertial term -- matches bdf2()'s incremental potential.
+        return sim.energy(x.flatten()) + float(energies.kinetic_energy_bdf2(
+            x.reshape(-1, 1), x_curr, x_prev, x_prev2, x_prev3, sim.M, dt))
 
     x = x_curr.copy()
     iter_times_ms = []
     for _ in range(NEWTON_ITERS):
         t0 = time.perf_counter()
-        g = sim.gradient(x.flatten())
+        g = sim.gradient(x.flatten()) + energies.kinetic_gradient_bdf2(
+            x.reshape(-1, 1), x_curr, x_prev, x_prev2, x_prev3, sim.M, dt)
         H_el = energies.macklin_mueller_neo_hookean_hessian_x(
             x.reshape(-1, sim.dim), sim.J, sim.mu, sim.lam, sim.vol, psd=True)
         H = H_el + H_const
