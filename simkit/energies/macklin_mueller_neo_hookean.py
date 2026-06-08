@@ -57,6 +57,7 @@ from ..mat2py import (
 from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
 from ..psd_project import psd_project
+from ..symmetric_stretch_map import symmetric_stretch_map
 
 
 # --------------------------------------------------------------------------- #
@@ -358,6 +359,123 @@ def macklin_mueller_neo_hookean_hessian_element_F(F: np.ndarray, mu: np.ndarray,
     else:
         raise ValueError("Macklin-Mueller Neo-Hookean supports dim=2 or dim=3")
     return H
+
+
+# --------------------------------------------------------------------------- #
+# Element tier: symmetric stretch (S) representation                          #
+# --------------------------------------------------------------------------- #
+# The Macklin-Mueller density psi(F) = mu*(1 - det F) + (lam/2)*(1 - det F)**2
+# + (mu/2)*(||F||_F**2 - dim) is isotropic, so for a symmetric stretch S the
+# energy equals psi(F) evaluated at F = S (the rotation factors out). The
+# mixed/MFEM solver works in the d(d+1)/2 independent components ``a`` of S; the
+# embedding ``S_flat = C0 @ a`` (duplicating the off-diagonals) lets us reuse
+# the trusted F-tier derivatives by change of variables:
+#     g_a = C0.T @ g_F ,      H_a = C0.T @ H_F @ C0
+# which automatically applies the correct off-diagonal doubling. ``C0`` is the
+# per-element symmetric-stretch embedding, taken from ``symmetric_stretch_map``
+# so the component ordering matches the constraint used by the MFEM solver.
+def _stretch_embedding_map(dim: int) -> np.ndarray:
+    """Dense ``(dim*dim, dim*(dim+1)//2)`` compact-to-full stretch embedding."""
+    Se, _ = symmetric_stretch_map(1, dim)
+    return np.asarray(Se.todense())
+
+
+def _stretch_compact_to_full(S: np.ndarray) -> np.ndarray:
+    """Reshape compact ``(t, k)`` or full ``(t, dim, dim)`` stretch to full matrices."""
+    if S.ndim == 3:
+        return S
+    t, k = S.shape
+    dim = 2 if k == 3 else 3 if k == 6 else None
+    if dim is None:
+        raise ValueError("Compact stretch must have 3 (2D) or 6 (3D) components, got " + str(k))
+    C0 = _stretch_embedding_map(dim)
+    return (S @ C0.T).reshape(t, dim, dim)
+
+
+def macklin_mueller_neo_hookean_energy_element_S(S: np.ndarray, mu: np.ndarray, lam: np.ndarray) -> np.ndarray:
+    """Per-element Macklin-Mueller Neo-Hookean energy density in the stretch ``S``.
+
+    Parameters
+    ----------
+    S : np.ndarray (t, dim, dim) or (t, k)
+        Per-element symmetric stretch, full matrices or compact components
+        (``k = 3`` in 2D, ``6`` in 3D), with the ordering of
+        :func:`simkit.symmetric_stretch_map`.
+    mu, lam : np.ndarray (t, 1)
+        Per-element shear modulus and first Lame parameter.
+
+    Returns
+    -------
+    psi : np.ndarray (t, 1)
+        Per-element energy densities. No quadrature weighting applied.
+    """
+    Sf = _stretch_compact_to_full(np.asarray(S))
+    return macklin_mueller_neo_hookean_energy_element_F(Sf, mu, lam)
+
+
+def macklin_mueller_neo_hookean_gradient_element_S(S: np.ndarray, mu: np.ndarray, lam: np.ndarray) -> np.ndarray:
+    """Per-element gradient of the density w.r.t. the stretch ``S``.
+
+    For full-matrix input the gradient matches the ``F`` tier exactly; for
+    compact input it is mapped to the independent components via ``C0.T``.
+
+    Parameters
+    ----------
+    S : np.ndarray (t, dim, dim) or (t, k)
+        Per-element symmetric stretch (full or compact form).
+    mu, lam : np.ndarray (t, 1)
+        Per-element shear modulus and first Lame parameter.
+
+    Returns
+    -------
+    g : np.ndarray (t, dim, dim) or (t, k)
+        Per-element gradient, matching the input representation. No quadrature
+        weighting applied.
+    """
+    S = np.asarray(S)
+    if S.ndim == 3:
+        return macklin_mueller_neo_hookean_gradient_element_F(S, mu, lam)
+    t, k = S.shape
+    dim = 2 if k == 3 else 3
+    Sf = _stretch_compact_to_full(S)
+    Pf = macklin_mueller_neo_hookean_gradient_element_F(Sf, mu, lam).reshape(t, dim * dim)
+    C0 = _stretch_embedding_map(dim)
+    return Pf @ C0
+
+
+def macklin_mueller_neo_hookean_hessian_element_S(S: np.ndarray, mu: np.ndarray, lam: np.ndarray, psd: bool = True) -> np.ndarray:
+    """Per-element Hessian of the density w.r.t. the stretch ``S``.
+
+    Unlike the ``F`` tier (projected later in the global assembly), the ``S``
+    Hessian is consumed directly by the mixed solver, so it is PSD-projected
+    here by default.
+
+    Parameters
+    ----------
+    S : np.ndarray (t, dim, dim) or (t, k)
+        Per-element symmetric stretch (full or compact form).
+    mu, lam : np.ndarray (t, 1)
+        Per-element shear modulus and first Lame parameter.
+    psd : bool, optional
+        If ``True`` (default), project each per-element block to PSD.
+
+    Returns
+    -------
+    H : np.ndarray (t, b, b)
+        Per-element Hessian blocks, where ``b = dim*dim`` for full input and
+        ``b = k`` for compact input. No quadrature weighting applied.
+    """
+    S = np.asarray(S)
+    if S.ndim == 3:
+        Hf = macklin_mueller_neo_hookean_hessian_element_F(S, mu, lam)
+        return psd_project(Hf) if psd else Hf
+    t, k = S.shape
+    dim = 2 if k == 3 else 3
+    Sf = _stretch_compact_to_full(S)
+    Hf = macklin_mueller_neo_hookean_hessian_element_F(Sf, mu, lam)
+    C0 = _stretch_embedding_map(dim)
+    H = np.einsum('ji,tjk,kl->til', C0, Hf, C0)
+    return psd_project(H) if psd else H
 
 
 # --------------------------------------------------------------------------- #

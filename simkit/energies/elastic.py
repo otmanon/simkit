@@ -59,10 +59,13 @@ from .linear_elasticity import (
 )
 from .macklin_mueller_neo_hookean import (
     macklin_mueller_neo_hookean_energy_element_F,
+    macklin_mueller_neo_hookean_energy_element_S,
     macklin_mueller_neo_hookean_energy_u,
     macklin_mueller_neo_hookean_gradient_element_F,
+    macklin_mueller_neo_hookean_gradient_element_S,
     macklin_mueller_neo_hookean_gradient_u,
     macklin_mueller_neo_hookean_hessian_element_F,
+    macklin_mueller_neo_hookean_hessian_element_S,
     macklin_mueller_neo_hookean_hessian_u,
 )
 from ..deformation_jacobian import deformation_jacobian
@@ -344,8 +347,11 @@ def elastic_energy_S(S: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.nda
     """
     if material == 'arap':
         psi = arap_energy_element_S(S, mu)
-        return float((np.asarray(vol).reshape(-1, 1) * psi).sum())
-    raise ValueError("Unknown or unsupported material type for S: " + str(material))
+    elif material == 'macklin-mueller-neo-hookean':
+        psi = macklin_mueller_neo_hookean_energy_element_S(S, mu, lam)
+    else:
+        raise ValueError("Unknown or unsupported material type for S: " + str(material))
+    return float((np.asarray(vol).reshape(-1, 1) * psi).sum())
 
 
 # --------------------------------------------------------------------------- #
@@ -577,8 +583,11 @@ def elastic_gradient_S(S: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.n
     """
     if material == 'arap':
         g = arap_gradient_element_S(S, mu)
-        return g * np.asarray(vol).reshape((-1,) + (1,) * (g.ndim - 1))
-    raise ValueError("Unknown or unsupported material type for S: " + str(material))
+    elif material == 'macklin-mueller-neo-hookean':
+        g = macklin_mueller_neo_hookean_gradient_element_S(S, mu, lam)
+    else:
+        raise ValueError("Unknown or unsupported material type for S: " + str(material))
+    return g * np.asarray(vol).reshape((-1,) + (1,) * (g.ndim - 1))
 
 
 # --------------------------------------------------------------------------- #
@@ -827,8 +836,11 @@ def elastic_hessian_S(S: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.nd
     """
     if material == 'arap':
         H = arap_hessian_element_S(S, mu)
-        return H * np.asarray(vol).reshape((-1,) + (1,) * (H.ndim - 1))
-    raise ValueError("Unknown or unsupported material type for S: " + str(material))
+    elif material == 'macklin-mueller-neo-hookean':
+        H = macklin_mueller_neo_hookean_hessian_element_S(S, mu, lam)
+    else:
+        raise ValueError("Unknown or unsupported material type for S: " + str(material))
+    return H * np.asarray(vol).reshape((-1,) + (1,) * (H.ndim - 1))
 
 
 # --------------------------------------------------------------------------- #

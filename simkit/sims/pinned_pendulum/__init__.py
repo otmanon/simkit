@@ -1,5 +1,0 @@
-
-from .PinnedPendulumFEMSim import PinnedPendulumFEMSim, PinnedPendulumFEMSimParams
-
-
-from .PinnedPendulumMFEMSim import PinnedPendulumMFEMSim, PinnedPendulumMFEMSimParams

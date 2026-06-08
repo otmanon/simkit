@@ -69,15 +69,21 @@ def sqp_mfem(p0, energy_func, hess_blocks_func, grad_blocks_func,
         g_z = - (f_mu + G_u.T @ du)
         dz = G_zi @ g_z
 
-        g = np.vstack([f_u, f_z])
+        mu = -G_zi @ (f_z + H_z @ dz)
+
+        g = np.vstack([f_u + G_u @ mu, f_z + G_z @ mu])
         dp = np.vstack([du, dz])
         if do_line_search:
-            alpha, lx, ex = backtracking_line_search(energy_func, p, g, dp)
+            energy_lambda = lambda p : energy_func(np.vstack([p, mu]))
+            alpha, lx, ex = backtracking_line_search(energy_lambda, p[:-mu.shape[0]], g, dp)
         else:
             alpha = 1.0
 
-        p += alpha * dp
-        if np.linalg.norm(g) < tolerance:
+        p[:-mu.shape[0]] += alpha * dp
+        p[-mu.shape[0]:] =  mu
+
+        nd = float(g_u.T @ du)
+        if nd < tolerance:
             break
 
     return p
