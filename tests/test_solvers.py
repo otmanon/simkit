@@ -11,8 +11,8 @@ import pytest
 
 from simkit.solvers import (
     newton_solver,
-    gradient_descent_solver,
-    block_coord_solver,
+    gradient_descent,
+    block_coord,
 )
 
 
@@ -56,7 +56,7 @@ def test_newton_solver_return_info() -> None:
 
 def test_gradient_descent_solver_converges() -> None:
     Q, b, x_star, energy, gradient, hessian = _quadratic(n=5, seed=3)
-    x = gradient_descent_solver(np.zeros_like(b), energy, gradient,
+    x = gradient_descent(np.zeros_like(b), energy, gradient,
                                 max_iter=2000, tolerance=1e-10, do_line_search=True)
     assert np.allclose(x, x_star, atol=1e-5)
 
@@ -66,6 +66,6 @@ def test_block_coord_solver_runs_to_fixed_point() -> None:
     t = np.array([[1.0], [-2.0], [3.0]])
     local_step = lambda x: t - x          # auxiliary residual
     global_step = lambda x, r: x + r       # move all the way to the target
-    x = block_coord_solver(np.zeros_like(t), global_step, local_step,
+    x = block_coord(np.zeros_like(t), global_step, local_step,
                            tolerance=1e-12, max_iter=10)
     assert np.allclose(x, t, atol=1e-10)
