@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simkit"
-version = "0.1.0"
+version = "0.1.1"
 description = "SimKit: A Simulation Toolkit For Computer Animation"
 readme = "README.md"
 license = {text = "MIT"}
@@ -67,6 +67,7 @@ docs = [
     "sphinx>=7",
     "sphinx-autoapi>=3",
     "pydata-sphinx-theme>=0.15",
+    "sphinx-design>=0.5",
     "myst-nb>=1",
 ]
 

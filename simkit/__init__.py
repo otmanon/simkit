@@ -18,8 +18,14 @@ end with concrete install hints.
 from __future__ import annotations
 
 import warnings as _warnings
+from importlib.metadata import version as _pkg_version, PackageNotFoundError
 
-__version__ = "0.1.0"
+# Single source of truth is the version in pyproject.toml, read here from the
+# installed package metadata (mirrors docs/conf.py).
+try:
+    __version__ = _pkg_version("simkit")
+except PackageNotFoundError:  # running from a source tree without an install
+    __version__ = "0.0.0+unknown"
 
 # Maps extra name -> set of dependency module names that failed to import.
 _missing: dict[str, set[str]] = {}

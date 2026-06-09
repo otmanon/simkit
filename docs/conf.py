@@ -37,6 +37,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "autoapi.extension",
+    "sphinx_design",
     # myst_nb renders both Markdown (it bundles myst_parser) and the tutorial
     # notebooks that CI checks out under docs/tutorials/.
     "myst_nb",
@@ -53,6 +54,8 @@ autoapi_type = "python"
 autoapi_dirs = [os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "simkit"))]
 autoapi_root = "autoapi"
 autoapi_keep_files = False
+# autoapi generates ``autoapi/index`` and injects its own nav entry. The landing
+# page links to it via a card, so we let autoapi own the sidebar entry here.
 autoapi_add_toctree_entry = True
 autoapi_ignore = [
     "*/old/*",

@@ -1,33 +1,47 @@
-SimKit Documentation
-====================
+SimKit
+======
 
 **SimKit** is a toolbox for the development of physically-based animation
 research. It is designed to be modular, easy to use, and easy to extend, with
 an emphasis on fast creative and experimental prototyping.
 
+.. grid:: 1 2 2 2
+   :gutter: 3
+   :class-container: sd-text-center
+
+   .. grid-item-card:: 🚀 Installation
+      :link: installation
+      :link-type: doc
+
+      Install SimKit and pick the optional extras you need.
+
+   .. grid-item-card:: 📖 Usage
+      :link: usage
+      :link-type: doc
+
+      A minimal example to get you up and running in minutes.
+
+   .. grid-item-card:: 📚 Tutorials
+      :link: tutorials
+      :link-type: doc
+
+      Step-by-step notebooks covering common simulation workflows.
+
+   .. grid-item-card:: 🔧 API Reference
+      :link: autoapi/index
+      :link-type: doc
+
+      Every function and submodule, generated from the docstrings.
+
 .. toctree::
-   :maxdepth: 2
+   :hidden:
    :caption: Getting started
 
    installation
    usage
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
    :caption: Tutorials
-   :glob:
 
-   tutorials/*
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Reference
-
-   autoapi/index
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   tutorials
