@@ -143,6 +143,6 @@ Recommended flow: claim the project on PyPI/TestPyPI with one local upload,
 then switch to tag-triggered GitHub Actions for everything afterward:
 
 ```bash
-git tag v0.1.0
+git tag v0.1.1
 git push --tags
 ```
