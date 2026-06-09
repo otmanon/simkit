@@ -64,12 +64,13 @@ dev = [
     "pytest>=7",
     "pytest-cov",
 ]
-# Documentation tooling.
+# Documentation tooling. myst-nb supersedes myst-parser (it renders both
+# Markdown and Jupyter notebooks), so it's the only MyST dep we need.
 docs = [
     "sphinx>=7",
     "sphinx-autoapi>=3",
     "pydata-sphinx-theme>=0.15",
-    "myst-parser",
+    "myst-nb>=1",
 ]
 
 [project.urls]

@@ -13,6 +13,13 @@ an emphasis on fast creative and experimental prototyping.
    usage
 
 .. toctree::
+   :maxdepth: 1
+   :caption: Tutorials
+   :glob:
+
+   tutorials/*
+
+.. toctree::
    :maxdepth: 2
    :caption: Reference
 

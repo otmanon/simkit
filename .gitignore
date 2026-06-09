@@ -66,6 +66,9 @@ nosetests.xml
 # ---------------------------------------------------------------------------
 docs/_build/
 docs/autoapi/
+# Tutorial notebooks are checked out here from the simkit-tutorials repo at
+# docs-build time only -- never committed to this repo.
+docs/tutorials/
 
 # ---------------------------------------------------------------------------
 # Notebooks

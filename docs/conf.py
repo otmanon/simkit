@@ -37,8 +37,16 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "autoapi.extension",
-    "myst_parser",
+    # myst_nb renders both Markdown (it bundles myst_parser) and the tutorial
+    # notebooks that CI checks out under docs/tutorials/.
+    "myst_nb",
 ]
+
+# Render the notebooks' *stored* outputs rather than executing them at build
+# time: the tutorials need polyscope/libigl and interactive viewers that won't
+# run in a headless CI. Re-run a notebook locally and commit its outputs to the
+# simkit-tutorials repo to refresh what the website shows.
+nb_execution_mode = "off"
 
 # AutoAPI walks the package and turns every docstring into a doc page.
 autoapi_type = "python"
@@ -91,7 +99,8 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 source_suffix = {
     ".rst": "restructuredtext",
-    ".md": "markdown",
+    ".md": "myst-nb",
+    ".ipynb": "myst-nb",
 }
 
 html_theme = "pydata_sphinx_theme"

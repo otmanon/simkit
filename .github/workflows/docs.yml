@@ -27,6 +27,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Tutorial notebooks live in a separate repo to keep simkit clones light.
+      # Pull them in under docs/tutorials/ so Sphinx can render them; this path
+      # is gitignored in the main repo and exists only during the build.
+      - name: Fetch tutorials
+        uses: actions/checkout@v4
+        with:
+          repository: otmanon/simkit-tutorials
+          path: docs/tutorials
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
