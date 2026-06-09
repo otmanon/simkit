@@ -43,6 +43,14 @@ extensions = [
     "myst_nb",
 ]
 
+# Enable dollar-delimited math ($...$ inline, $$...$$ display) and AMS math
+# environments in MyST. Without this, the tutorials' `$$` blocks render as
+# literal text instead of equations.
+myst_enable_extensions = [
+    "dollarmath",
+    "amsmath",
+]
+
 # Render the notebooks' *stored* outputs rather than executing them at build
 # time: the tutorials need polyscope/libigl and interactive viewers that won't
 # run in a headless CI. Re-run a notebook locally and commit its outputs to the
