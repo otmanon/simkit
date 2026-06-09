@@ -114,7 +114,6 @@ with _core:
     from .massmatrix import massmatrix
     from .volume import volume
     from .dirichlet_laplacian import dirichlet_laplacian
-    from .joint_lengths import joint_lengths
     from .stretch import stretch
     from .subspace_com import subspace_com
     from .subspace_rotation import subspace_rotation
@@ -127,8 +126,7 @@ with _core:
     )
     from .limit_actuation_dirichlet_energy import limit_actuation_dirichlet_energy
     from .rotation_strain_coordinates import rotation_strain_coordinates, RSPrecompute
-    from .joint_lengths import joint_lengths
-    
+
     from .gauss_legendre_quadrature import gauss_legendre_quadrature
     from .linear_to_quadratic_elements import linear_to_quadratic_elements
     from .deformation_jacobian_p2 import deformation_jacobian_p2
@@ -146,6 +144,7 @@ with _core:
 # ---------------------------------------------------------------------------
 with _mesh:
     from .shape_outlines import *  # noqa: F401,F403
+    from .joint_lengths import joint_lengths
 
 # ---------------------------------------------------------------------------
 # scikit-learn-dependent (pip install 'simkit[learn]').
