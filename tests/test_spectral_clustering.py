@@ -3,10 +3,6 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
-
-pytest.importorskip("sklearn")
-pytestmark = pytest.mark.learn
 
 from simkit.spectral_clustering import spectral_clustering
 

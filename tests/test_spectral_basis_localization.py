@@ -6,8 +6,7 @@ import numpy as np
 import pytest
 
 pytest.importorskip("cvxopt")
-pytest.importorskip("sklearn")
-pytestmark = [pytest.mark.solvers, pytest.mark.learn]
+pytestmark = pytest.mark.solvers
 
 from simkit.spectral_basis_localization import spectral_basis_localization
 
