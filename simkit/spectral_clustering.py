@@ -3,7 +3,7 @@
 from typing import Optional, Tuple
 
 import numpy as np
-from sklearn.cluster import KMeans
+from scipy.cluster.vq import kmeans2
 
 
 def spectral_clustering(
@@ -39,7 +39,7 @@ def spectral_clustering(
 
     B = W * D
 
-    kmeans = KMeans(n_clusters=k, random_state=seed).fit(B)
-    l = kmeans.labels_
-    c = kmeans.cluster_centers_
+    # scipy's kmeans2 returns (centroids, labels); k-means++ init keeps the
+    # result close to (though not identical to) sklearn's KMeans.
+    c, l = kmeans2(B, k, seed=seed, minit="++")
     return l, c

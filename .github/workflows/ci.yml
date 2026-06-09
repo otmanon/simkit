@@ -44,7 +44,7 @@ jobs:
   test-full:
     name: Tests (full install, py${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    # Optional installs (cvxopt, libigl, polyscope, bpy, ...) occasionally break
+    # Optional installs (cvxopt, libigl, polyscope, ...) occasionally break
     # on PyPI; don't fail the whole pipeline when that happens.
     continue-on-error: true
     strategy:
@@ -70,9 +70,7 @@ jobs:
       - name: Install simkit with all end-user extras
         run: |
           python -m pip install --upgrade pip
-          # We omit [blender] because bpy is a ~200MB wheel that doesn't add
-          # coverage we don't already get elsewhere.
-          pip install -e ".[mesh,viz,learn,solvers,video,cmaes,dev]"
+          pip install -e ".[mesh,viz,solvers,video,cmaes,dev]"
 
       - name: Run pytest
         run: pytest -ra

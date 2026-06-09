@@ -27,20 +27,20 @@ pip install -e .
 
 ## Optional Dependencies
 
-The base install only requires `numpy` and `scipy`. Heavier or specialized
-dependencies are exposed as named extras so you only install what you need.
-Importing `simkit` is always safe -- functionality whose extras are missing
-just isn't exported, and a one-line warning tells you exactly what to install.
+The base install only requires `numpy` and `scipy` -- and now covers the
+clustering / sampling helpers (`farthest_point_sampling`, `spectral_clustering`,
+`spectral_cubature`) too. Heavier or specialized dependencies are exposed as
+named extras so you only install what you need. Importing `simkit` is always
+safe -- functionality whose extras are missing just isn't exported, and a
+one-line warning tells you exactly what to install.
 
 | Extra      | Adds                                       | Enables                                                          |
 | ---------- | ------------------------------------------ | ---------------------------------------------------------------- |
-| `mesh`     | `libigl`                                   | Core mesh ops: `deformation_jacobian`, `massmatrix`, `volume`, ... |
-| `viz`      | `matplotlib`, `polyscope`, `libigl`        | `simkit.matplotlib`, `simkit.polyscope` plotters                 |
-| `learn`    | `scikit-learn`                             | `farthest_point_sampling`, `spectral_clustering`                 |
+| `mesh`     | `libigl`                                   | 2D Triangle meshing (`shape_outlines`)                           |
+| `viz`      | `matplotlib`, `polyscope`                  | `simkit.matplotlib`, `simkit.polyscope` plotters                 |
 | `solvers`  | `cvxopt`                                   | Sparse eigensolvers (`simkit.eigs`)                              |
-| `video`    | `opencv-python`                            | `simkit.filesystem` GIF / video helpers                          |
+| `video`    | `Pillow`                                   | `simkit.filesystem` image / video frame helpers                 |
 | `cmaes`    | `cma`                                      | `simkit.solvers.CMAESSolver`                                     |
-| `blender`  | `bpy`, `blendertoolbox`                    | Blender rendering helpers                                        |
 | `all`      | union of the above                         | Everything end-user-facing                                       |
 | `dev`      | `pytest`, `pytest-cov`                     | Running the test suite                                           |
 | `docs`     | `sphinx`, `sphinx-autoapi`, `pydata-sphinx-theme`, ... | Building the documentation                            |
@@ -49,7 +49,7 @@ Install one or more extras with the usual `pip` syntax:
 
 ```bash
 pip install -e ".[mesh]"            # just mesh ops
-pip install -e ".[mesh,viz,learn]"  # multiple extras
+pip install -e ".[mesh,viz]"        # multiple extras
 pip install -e ".[all]"             # everything end-user-facing
 pip install -e ".[all,dev,docs]"    # everything, including dev tooling
 ```
@@ -69,7 +69,7 @@ to run. See [`examples/README.md`](examples/README.md) for the index. As a
 quick start:
 
 ```bash
-pip install -e ".[mesh,viz,learn,video]"
+pip install -e ".[mesh,viz,video]"
 python examples/subspace_mfem/drop_fem_vs_mfem.py
 ```
 

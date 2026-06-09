@@ -16,13 +16,11 @@ The base install requires only `numpy` and `scipy`. Heavier dependencies are
 opt-in:
 
 ```bash
-pip install -e ".[mesh]"     # libigl       -> core mesh utilities
-pip install -e ".[viz]"      # matplotlib, polyscope (also pulls libigl)
-pip install -e ".[learn]"    # scikit-learn -> clustering, sampling
+pip install -e ".[mesh]"     # libigl       -> 2D Triangle meshing
+pip install -e ".[viz]"      # matplotlib, polyscope
 pip install -e ".[solvers]"  # cvxopt       -> sparse eigensolvers
-pip install -e ".[video]"    # opencv-python
+pip install -e ".[video]"    # Pillow       -> image/video frame helpers
 pip install -e ".[cmaes]"    # cma          -> CMA-ES solver
-pip install -e ".[blender]"  # bpy, blendertoolbox
 pip install -e ".[all]"      # everything end-user-facing
 pip install -e ".[dev]"      # pytest + coverage
 pip install -e ".[docs]"     # Sphinx tooling

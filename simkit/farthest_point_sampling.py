@@ -3,8 +3,7 @@
 from typing import Optional
 
 import numpy as np
-from sklearn.neighbors import NearestNeighbors
-from sklearn.metrics import pairwise_distances
+from scipy.spatial.distance import cdist
 
 
 def farthest_point_sampling(
@@ -40,7 +39,7 @@ def farthest_point_sampling(
         I = I.reshape(1)
     for i in range(0, d - 1):
 
-        D = pairwise_distances(V, V[I, :])
+        D = cdist(V, V[I, :])
         idx = np.argmax(np.min(D, axis=1))
         I = np.append(I, idx)
 

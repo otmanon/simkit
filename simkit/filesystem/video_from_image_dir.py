@@ -135,16 +135,16 @@
 
 
 
-import cv2
 import os
 import numpy as np
 import subprocess
+from PIL import Image
 
 def apply_gamma_correction(image, gamma=2.2):
     """Apply gamma correction to the image to adjust brightness."""
     inv_gamma = 1.0 / gamma
     table = np.array([((i / 255.0) ** inv_gamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
-    return cv2.LUT(image, table)
+    return table[image]
 
 def preprocess_images(image_folder, output_folder, mogrify=False, gamma_correction=False):
     """Preprocess images in the folder (mogrify, gamma correction) and save them to output folder."""
@@ -161,7 +161,7 @@ def preprocess_images(image_folder, output_folder, mogrify=False, gamma_correcti
 
     for i, image in enumerate(images):
         img_path = os.path.join(image_folder, image)
-        img = cv2.imread(img_path, cv2.IMREAD_UNCHANGED)
+        img = np.array(Image.open(img_path))
 
         if mogrify:
             if img.shape[2] == 4:  # If image has an alpha channel
@@ -170,14 +170,14 @@ def preprocess_images(image_folder, output_folder, mogrify=False, gamma_correcti
                 img[(img[:, :, 0] < 10) & (img[:, :, 1] < 10) & (img[:, :, 2] < 10)] = [255, 255, 255, 255]
 
         if img.shape[2] == 4:  # If image has alpha channel
-            img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
+            img = img[:, :, :3]  # drop alpha (RGBA -> RGB)
 
         if gamma_correction:
             img = apply_gamma_correction(img, gamma=2.2)
 
         # Save preprocessed image to the output folder
         output_img_path = os.path.join(output_folder, f"{i:04d}.png")
-        cv2.imwrite(output_img_path, img)
+        Image.fromarray(img).save(output_img_path)
 
 def create_video_with_ffmpeg(image_folder, video_name, fps=60):
     """Use ffmpeg to create a video from the preprocessed images."""

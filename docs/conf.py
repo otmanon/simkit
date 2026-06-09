@@ -78,13 +78,7 @@ autodoc_mock_imports = [
     "igl",
     "libigl",
     "polyscope",
-    "cv2",
-    "opencv-python",
     "cvxopt",
-    "sklearn",
-    "scikit-learn",
-    "bpy",
-    "blendertoolbox",
     "cma",
 ]
 

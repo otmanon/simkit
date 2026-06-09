@@ -11,7 +11,7 @@ A 2D beam is driven by an animator rig (a single global handle) and that handle 
 
 ## Requirements
 
-This demo uses matplotlib for rendering and OpenCV for `.mp4` / `.gif` export. From the repo root:
+This demo uses matplotlib for rendering, plus Pillow and a system `ffmpeg` for `.mp4` / `.gif` export. From the repo root:
 
 ```bash
 pip install -e ".[viz,video]"

@@ -3,11 +3,10 @@
 The base install requires only ``numpy`` and ``scipy``. Optional functionality
 is enabled by installing extras::
 
-    pip install 'simkit[mesh]'     # libigl       -> mesh utilities
+    pip install 'simkit[mesh]'     # libigl       -> 2D Triangle meshing
     pip install 'simkit[viz]'      # matplotlib, polyscope
-    pip install 'simkit[learn]'    # scikit-learn -> clustering / sampling
     pip install 'simkit[solvers]'  # cvxopt       -> sparse eigensolvers
-    pip install 'simkit[video]'    # opencv-python
+    pip install 'simkit[video]'    # Pillow       -> image/video helpers
     pip install 'simkit[cmaes]'    # cma          -> CMA-ES solver
     pip install 'simkit[all]'      # everything
 
@@ -19,6 +18,8 @@ end with concrete install hints.
 from __future__ import annotations
 
 import warnings as _warnings
+
+__version__ = "0.1.0"
 
 # Maps extra name -> set of dependency module names that failed to import.
 _missing: dict[str, set[str]] = {}
@@ -55,7 +56,6 @@ class _OptionalImport:
 _core = _OptionalImport("all")
 _mesh = _OptionalImport("mesh")
 _viz = _OptionalImport("viz")
-_learn = _OptionalImport("learn")
 _solvers = _OptionalImport("solvers")
 _video = _OptionalImport("video")
 _cmaes = _OptionalImport("cmaes")
@@ -136,6 +136,15 @@ with _core:
     from .p2_massmatrix import p2_massmatrix
     from .p2_gravity_force import p2_gravity_force
 
+    # Clustering / sampling -- pure numpy/scipy (formerly the [learn] extra).
+    from .farthest_point_sampling import farthest_point_sampling
+    from .spectral_clustering import spectral_clustering
+    from .spectral_cubature import spectral_cubature
+
+    # Finite-difference variations -- pure numpy.
+    from .variation_fd import variation_fd
+    from .equillibrium_variation_fd import equillibrium_variation_fd
+
     from . import integrators  # noqa: F401
 
 
@@ -145,14 +154,6 @@ with _core:
 # ---------------------------------------------------------------------------
 with _mesh:
     from .shape_outlines import *  # noqa: F401,F403
-
-# ---------------------------------------------------------------------------
-# scikit-learn-dependent (pip install 'simkit[learn]').
-# ---------------------------------------------------------------------------
-with _learn:
-    from .farthest_point_sampling import farthest_point_sampling
-    from .spectral_clustering import spectral_clustering
-    from .spectral_cubature import spectral_cubature
 
 # ---------------------------------------------------------------------------
 # cvxopt-dependent (pip install 'simkit[solvers]').

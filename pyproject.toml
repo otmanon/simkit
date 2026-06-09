@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simkit"
-version = "0.0.0"
+version = "0.1.0"
 description = "SimKit: A Simulation Toolkit For Computer Animation"
 readme = "README.md"
 license = {text = "MIT"}
@@ -36,17 +36,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Core mesh/geometry utilities (deformation jacobian, mass matrix, volume, ...).
+# 2D Triangle-based meshing (simkit.shape_outlines). Most mesh/geometry ops
+# (mass matrix, volume, deformation jacobian, ...) are native numpy/scipy.
 mesh = ["libigl"]
-# Plotting / interactive visualization. Pulls in libigl too because some
-# plotters render mesh-based artifacts.
-viz = ["matplotlib", "polyscope==2.5.0", "libigl"]
-# Clustering and nearest-neighbor utilities.
-learn = ["scikit-learn"]
+# Plotting / interactive visualization.
+viz = ["matplotlib", "polyscope==2.5.0"]
 # Sparse eigensolvers (cvxopt provides UMFPACK bindings used by simkit.eigs).
 solvers = ["cvxopt"]
-# Video / GIF export helpers in simkit.filesystem.
-video = ["opencv-python"]
+# Image/video frame helpers in simkit.filesystem.
+video = ["pillow"]
 # CMA-ES solver (simkit.solvers.CMAESSolver).
 cmaes = ["cma"]
 # Everything end-user-facing.
@@ -54,9 +52,8 @@ all = [
     "libigl",
     "matplotlib",
     "polyscope==2.5.0",
-    "scikit-learn",
     "cvxopt",
-    "opencv-python",
+    "pillow",
     "cma"
 ]
 # Development tooling.
@@ -76,7 +73,7 @@ docs = [
 [project.urls]
 Homepage = "https://github.com/otmanon/simkit"
 Repository = "https://github.com/otmanon/simkit"
-Documentation = "https://github.com/otmanon/simkit"
+Documentation = "https://otmanon.github.io/simkit/"
 Issues = "https://github.com/otmanon/simkit/issues"
 
 [tool.setuptools]
@@ -98,7 +95,6 @@ python_functions = ["test_*"]
 addopts = "-ra"
 markers = [
     "solvers: needs cvxopt (pip install simkit[solvers])",
-    "learn: needs scikit-learn (pip install simkit[learn])",
     "mesh: needs libigl (pip install simkit[mesh])",
     "viz: needs polyscope/matplotlib (pip install simkit[viz])",
 ]

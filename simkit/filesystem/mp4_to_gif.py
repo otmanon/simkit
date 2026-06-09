@@ -1,6 +1,4 @@
 
-from PIL import Image
-import cv2
 import subprocess
 
 def mp4_to_gif(input_path, output_path, fps=30, scale=None, bitrate='8192k', crf=15):

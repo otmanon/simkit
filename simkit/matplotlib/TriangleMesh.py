@@ -1,8 +1,8 @@
-import igl
 import matplotlib.pyplot as plt
 from matplotlib.collections import PolyCollection
 
 
+from ..boundary_edges import boundary_edges
 from .Curve import Curve
 from .colors import *
 class TriangleMesh():
@@ -15,8 +15,7 @@ class TriangleMesh():
         self.pc = PolyCollection(triangles, facecolors=facecolors, edgecolor=edgecolors, linewidth = linewidths, linewidths=linewidths)
         plt.gca().add_collection(self.pc)
 
-        self.E = igl.boundary_facets(T)[0]
-        self.E = self.E.reshape(-1, 2)
+        self.E = boundary_edges(T)
         self.outline = Curve(X, self.E, color=black, linewidth=outlinewidth)
         return
 

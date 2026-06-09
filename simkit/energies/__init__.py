@@ -13,5 +13,4 @@ from .contact_springs_sphere import *
 from .emu import *
 from .bending_energy import *
 from .barrier_energies import *
-from .arap import *
 from .mass_springs import *

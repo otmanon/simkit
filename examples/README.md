@@ -31,4 +31,4 @@ git submodule update --init --recursive
 
 - Each demo writes generated artifacts (videos, gifs, cached subspaces, optimisation histories, ...) to `examples/<demo>/results/`. That directory is gitignored -- nothing under it should be committed.
 - Scripts use `os.path.dirname(__file__)` to locate data and write outputs, so they can be run from any working directory.
-- Optional simkit features (matplotlib, polyscope, libigl, scikit-learn, cma, opencv-python, ...) are pulled in via the `simkit` extras documented in the [root README](../README.md). Each demo's README lists the extras it actually needs.
+- Optional simkit features (matplotlib, polyscope, libigl, cma, Pillow, ...) are pulled in via the `simkit` extras documented in the [root README](../README.md). Each demo's README lists the extras it actually needs.
