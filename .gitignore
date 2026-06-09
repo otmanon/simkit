@@ -112,6 +112,7 @@ Thumbs.db
 # Project-specific media artifacts produced by examples / renders
 # ---------------------------------------------------------------------------
 *.mp4
+*.mov
 *.png
 *.gif
 
