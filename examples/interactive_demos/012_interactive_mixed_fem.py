@@ -158,8 +158,8 @@ class MixedFEMSim:
         quad = quadratic_energy(u, self._Q, self._b)
         c  = (self.Ci @ sk.stretch(F) - a)
         wc = self.w * c
-        lag = float(ll.T @ wc)                       # Lagrangian term
-        aug = 0.5 * self.rho_aug * float(c.T @ wc)   # 0.5 rho c^T W c
+        lag = float((ll.T @ wc).item())                       # Lagrangian term
+        aug = 0.5 * self.rho_aug * float((c.T @ wc).item())   # 0.5 rho c^T W c
         return el + kin + quad + lag + aug
 
     def grad_blocks(self, p):

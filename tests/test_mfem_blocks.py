@@ -109,8 +109,8 @@ def _build(rho_aug):
         el = elastic_energy_S(A, mu, lam, vol, MATERIAL)
         kin = kinetic_energy_be(u, z_curr, z_prev, kin_pre, h)
         quad = quadratic_energy(u, Q, b)
-        lag = float(ll.T @ wc)
-        aug = 0.5 * rho_aug * float(c.T @ wc)
+        lag = float((ll.T @ wc).item())
+        aug = 0.5 * rho_aug * float((c.T @ wc).item())
         return el + kin + quad + lag + aug
 
     def grad_blocks(p):

@@ -82,7 +82,7 @@ def sqp_mfem(p0, energy_func, hess_blocks_func, grad_blocks_func,
         p[:-mu.shape[0]] += alpha * dp
         p[-mu.shape[0]:] =  mu
 
-        nd = float(g_u.T @ du)
+        nd = float((g_u.T @ du).item())
         if nd < tolerance:
             break
 
