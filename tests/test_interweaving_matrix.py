@@ -24,6 +24,10 @@ def test_interweaving_matrix_permutes_vertex_to_component_order() -> None:
 def test_interweaving_matrix_is_permutation() -> None:
     t, d = 5, 2
     M = interweaving_matrix(t, d).toarray()
-    assert np.allclose(M @ M.T, np.eye(t * d))
+    # numpy's matmul can emit spurious FP warnings on some array layouts even
+    # though the result is correct.
+    with np.errstate(divide='ignore', over='ignore', invalid='ignore'):
+        MMt = M @ M.T
+    assert np.allclose(MMt, np.eye(t * d))
     assert np.allclose(M.sum(axis=0), 1.0)
     assert np.allclose(M.sum(axis=1), 1.0)

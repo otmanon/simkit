@@ -1,6 +1,5 @@
 """Average simplex volume along the two edges of each joint."""
 
-import igl
 import numpy as np
 
 from .edge_lengths import edge_lengths

@@ -39,6 +39,9 @@ def psd_project(H: np.ndarray, method: str = 'proj') -> np.ndarray:
     Id = np.identity(dim)[None, ...]
     S = Id * s.reshape(-1, dim, 1)
 
-    HbI = U @ S @ U.transpose(0, 2, 1)
+    # numpy's matmul can emit spurious divide/overflow/invalid FP warnings on
+    # some batched-array layouts even though the result is correct.
+    with np.errstate(divide='ignore', over='ignore', invalid='ignore'):
+        HbI = U @ S @ U.transpose(0, 2, 1)
 
     return HbI
