@@ -1,8 +1,12 @@
-"""Rotation–strain (RS) coordinates via Jacobian fitting and polar decomposition.
+"""Rotation–strain (RS) coordinates via Jacobian fitting.
 
-Extracts a per-element rotation from a displacement field, forms the
-rotation-only target ``Y = R - I``, and fits vertex displacements that
-reproduce ``Y`` in Jacobian space using a precomputed factorization.
+Splits a per-element deformation gradient ``F = I + grad u`` into a rotation
+``R`` and a symmetric stretch ``S``. The rotation is taken from the *linear*
+field's axis-angle (the axial vector of the antisymmetric part of ``grad u``)
+and turned into a finite rotation by the matrix exponential (Rodrigues). The
+rotation–strain target ``Y = R @ S - I`` keeps **both** the rotation and the
+strain, and vertex displacements reproducing ``Y`` in Jacobian space are fit
+using a precomputed factorization.
 """
 
 from typing import Optional, Tuple, Union
@@ -99,8 +103,11 @@ def rotation_strain_coordinates(
 ) -> Union[np.ndarray, Tuple[np.ndarray, RSPrecompute]]:
     """Map a displacement field to rotation–strain coordinates.
 
-    Decomposes ``F = I + grad u`` (or membrane ``F``) into rotation ``R``,
-    sets ``Y = R - I``, and fits ``u_rs`` so ``J u_rs ≈ Y``.
+    Decomposes ``F = I + grad u`` into a rotation ``R`` and a symmetric stretch
+    ``S = I + sym(grad u)``. ``R`` is the matrix exponential of the linear
+    field's axis-angle (the axial vector of the antisymmetric part of
+    ``grad u``). Sets the rotation–strain target ``Y = R @ S - I`` and fits
+    ``u_rs`` so ``J u_rs ≈ Y``.
 
     Parameters
     ----------
@@ -137,20 +144,31 @@ def rotation_strain_coordinates(
 
     F = grad_u + I
 
-    symmetric = (F + F.transpose(0, 2, 1)) / 2.0
-    antisymmetric = (F - F.transpose(0, 2, 1)) / 2.0
+    symmetric = (F + F.transpose(0, 2, 1)) / 2.0      # S = I + sym(grad u)  (strain)
+    antisymmetric = (F - F.transpose(0, 2, 1)) / 2.0  # skew(grad u) = rotation generator
 
+    # Rotation from the linear field's axis-angle, exponentiated to a finite
+    # rotation R = exp(antisymmetric).
     if dim == 2:
+        # The 2D skew is [[0, -w], [w, 0]]; its exponential is a planar rotation.
         w = -antisymmetric[:, 0, 1]
         R = np.array([[np.cos(w), -np.sin(w)],
                         [np.sin(w),  np.cos(w)]]
                     ).transpose(2, 0, 1)
     else:
-        # safer: use polar instead of axis-angle approx
-        U, _, Vt = np.linalg.svd(F)
-        R = U @ Vt
+        # Rodrigues: A is already the skew matrix [w]x, so A @ A is the K^2 term.
+        A = antisymmetric
+        w = np.stack([A[:, 2, 1], A[:, 0, 2], A[:, 1, 0]], axis=1)  # axial vector
+        theta = np.linalg.norm(w, axis=1)
+        small = theta < 1e-8
+        safe_theta = np.where(small, 1.0, theta)
+        # sinθ/θ → 1 and (1 - cosθ)/θ² → 1/2 as θ → 0 (exact, numerically safe limits).
+        c1 = np.where(small, 1.0, np.sin(theta) / safe_theta)
+        c2 = np.where(small, 0.5, (1.0 - np.cos(theta)) / safe_theta ** 2)
+        R = I + c1[:, None, None] * A + c2[:, None, None] * (A @ A) # Rodrigues formula!
 
-    Y = R - I
+    # Keep both rotation and strain: target is R @ S - I.
+    Y = R @ symmetric - I
 
     # -------------------------------------------------
     # Fit back to displacement coordinates
