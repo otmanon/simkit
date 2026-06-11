@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simkit"
-version = "0.1.3"
+version = "0.1.4"
 description = "SimKit: A Simulation Toolkit For Computer Animation"
 readme = "README.md"
 license = {text = "MIT"}
