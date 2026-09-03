@@ -81,7 +81,7 @@ class RSPrecompute:
 
         Parameters
         ----------
-        Y : np.ndarray (*, dim, dim) or (*, 3, 2)
+        Y : np.ndarray (..., dim, dim) or (..., 3, 2)
             Per-element rotation targets (flattened internally).
 
         Returns

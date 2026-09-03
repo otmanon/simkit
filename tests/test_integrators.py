@@ -217,3 +217,94 @@ def test_forward_euler_uses_lumped_mass_and_force(sho):
     a = f / sho["m"].reshape(-1, 1)
     np.testing.assert_allclose(x_next, x + h * v, rtol=0, atol=1e-12)
     np.testing.assert_allclose(v_next, v + h * a, rtol=0, atol=1e-12)
+
+
+# --------------------------------------------------------------------------- #
+# Free particle: zero potential, so every scheme is exact                      #
+# --------------------------------------------------------------------------- #
+@pytest.fixture
+def free_particle():
+    """No forces: the schemes must reduce to constant-velocity motion."""
+    n = 3
+    M = sps.identity(n, format="csc")
+    return dict(
+        n=n,
+        M=M,
+        energy=lambda x: 0.0,
+        gradient=lambda x: np.zeros_like(x.reshape(-1, 1)),
+        hessian=lambda x: sps.csc_matrix((n, n)),
+    )
+
+
+def test_forward_euler_free_particle_is_exact(free_particle):
+    fp = free_particle
+    x = np.zeros((fp["n"], 1))
+    v = np.array([[1.0], [-2.0], [0.5]])
+    h = 0.1
+    x_next, v_next = forward_euler(x, v, fp["gradient"], fp["M"], h)
+    np.testing.assert_allclose(x_next, x + h * v, atol=1e-14)
+    np.testing.assert_allclose(v_next, v, atol=1e-14)
+
+
+def test_backward_euler_free_particle_extrapolates_linearly(free_particle):
+    """With no force the implicit solve reduces to ``2 x_curr - x_prev``."""
+    fp = free_particle
+    x_prev = np.zeros((fp["n"], 1))
+    x_curr = np.array([[0.1], [0.2], [-0.3]])
+    x_next = backward_euler(x_curr, x_prev, fp["energy"], fp["gradient"],
+                            fp["hessian"], fp["M"], 0.05,
+                            max_iter=20, tolerance=1e-14)
+    np.testing.assert_allclose(x_next, 2 * x_curr - x_prev, atol=1e-9)
+
+
+# --------------------------------------------------------------------------- #
+# Unconditional vs conditional stability                                       #
+# --------------------------------------------------------------------------- #
+def test_backward_euler_is_stable_at_a_step_that_breaks_forward_euler(sho):
+    """The documented tradeoff between the implicit and explicit schemes.
+
+    At ``h * omega_max = 3``, implicit Euler must stay bounded (and damp)
+    while explicit Euler diverges.
+    """
+    h = 3.0 / sho["omega"].max()
+    x0 = np.ones((3, 1))
+
+    # Implicit: bounded and decaying.
+    x_prev, x_curr = x0.copy(), x0.copy()
+    peak = 0.0
+    for _ in range(200):
+        x_next = backward_euler(x_curr, x_prev, sho["energy"], sho["gradient"],
+                                sho["hessian"], sho["M"], h,
+                                max_iter=50, tolerance=1e-12)
+        x_prev, x_curr = x_curr, x_next
+        peak = max(peak, np.abs(x_curr).max())
+    assert np.all(np.isfinite(x_curr))
+    assert peak <= np.abs(x0).max() + 1e-9
+    assert np.abs(x_curr).max() < 0.5 * np.abs(x0).max()
+
+    # Explicit: blows up at the same step size.
+    x, v = x0.copy(), np.zeros((3, 1))
+    for _ in range(200):
+        x, v = forward_euler(x, v, sho["gradient"], sho["M"], h)
+    assert np.abs(x).max() > 10.0
+
+
+def test_implicit_integrators_accept_dense_mass_matrices(sho):
+    """Demos hand in whatever ``massmatrix`` returned; both forms must work."""
+    x = np.ones((3, 1))
+    sparse_out = backward_euler(x, x, sho["energy"], sho["gradient"],
+                                sho["hessian"], sho["M"], 0.01,
+                                max_iter=10, tolerance=1e-12)
+    dense_out = backward_euler(x, x, sho["energy"], sho["gradient"],
+                               sho["hessian"], sho["M"].toarray(), 0.01,
+                               max_iter=10, tolerance=1e-12)
+    np.testing.assert_allclose(sparse_out, dense_out, atol=1e-10)
+
+
+def test_integrators_are_exported_and_documented():
+    import simkit.integrators as I
+
+    for name in ("backward_euler", "bdf2", "forward_euler"):
+        fn = getattr(I, name, None)
+        assert callable(fn), name
+        assert fn.__doc__, f"{name} must be documented"

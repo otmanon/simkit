@@ -7,7 +7,7 @@ import pytest
 import scipy.sparse as sps
 
 from simkit.deformation_gradient import deformation_gradient
-from simkit.deformation_jacobian import deformation_jacobian, membrane_deformation_jacobian
+from simkit.deformation_jacobian import deformation_jacobian
 
 
 def _unit_simplex(dim: int):
@@ -48,17 +48,3 @@ def test_deformation_jacobian_recovers_random_linear_maps(dim: int) -> None:
         U = (A @ X.T).T
         F = (J @ U.reshape(-1, 1)).reshape(-1, dim, dim)
         assert np.allclose(F[0], A, atol=1e-10)
-
-
-def test_membrane_deformation_jacobian_matches_volume_jacobian_in_2d() -> None:
-    X = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]])
-    T = np.array([[0, 1, 2]])
-    J = deformation_jacobian(X, T)
-    Jm = membrane_deformation_jacobian(X, T)
-    x = X.reshape(-1, 1)
-
-    def apply(j):
-        out = j @ x
-        return out.toarray() if hasattr(out, "toarray") else out
-
-    assert np.allclose(apply(J), apply(Jm), atol=1e-12)

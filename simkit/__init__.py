@@ -13,6 +13,10 @@ is enabled by installing extras::
 Importing ``simkit`` is always safe: if an optional dependency is missing, the
 affected names simply aren't exported and a single warning is emitted at the
 end with concrete install hints.
+
+``[cmaes]`` is the one extra with no bucket here: ``simkit.solvers.cmaes``
+guards ``import cma`` itself and raises only when the solver is actually
+called, so the whole ``solvers`` package stays available on a lean install.
 """
 
 from __future__ import annotations
@@ -64,7 +68,6 @@ _mesh = _OptionalImport("mesh")
 _viz = _OptionalImport("viz")
 _solvers = _OptionalImport("solvers")
 _video = _OptionalImport("video")
-_cmaes = _OptionalImport("cmaes")
 
 
 # ---------------------------------------------------------------------------
@@ -116,7 +119,6 @@ with _core:
     from .lbs_jacobian import lbs_jacobian
     from .deformation_gradient import deformation_gradient
     from .deformation_jacobian import deformation_jacobian
-    from .deformation_jacobian import membrane_deformation_jacobian
     from .massmatrix import massmatrix
     from .volume import volume
     from .dirichlet_laplacian import dirichlet_laplacian
@@ -151,7 +153,47 @@ with _core:
     from .variation_fd import variation_fd
     from .equillibrium_variation_fd import equillibrium_variation_fd
 
+
+    # Mesh topology, linear-algebra and subspace helpers. These are public
+    # functions living in same-named modules: without an explicit import the
+    # attribute `simkit.<name>` resolves to the *module*, so calling it raises
+    # "'module' object is not callable".
+    from .backward_euler_rollout_matrix import backward_euler_rollout_matrix
+    from .biharmonic_coordinates import biharmonic_coordinates
+    from .boundary_edges import boundary_edges
+    from .clustered_plastic_stretch_tensor import clustered_plastic_stretch_tensor
+    from .density_ratio import density_ratio
+    from .diffuse_field import diffuse_field
+    from .dihedral_wedge_height import dihedral_wedge_height
+    from .dihedral_wedge_map import dihedral_wedge_map
+    from .dihedral_wedges import dihedral_wedges
+    from .edge_face_adjacency import edge_face_adjacency
+    from .edge_gradient import edge_gradient
+    from .edge_laplacian import edge_laplacian
+    from .edges import edges
+    from .fast_sandwich_transform_clustered import fast_sandwich_transform_clustered
+    from .gaussian_rbf import gaussian_rbf
+    from .harmonic_coordinates import harmonic_coordinates
+    from .interweaving_matrix import interweaving_matrix
+    from .joint_edge_map import joint_edge_map
+    from .lbs_weight_space_constraint import lbs_weight_space_constraint
+    from .normals import normals
+    from .remove_redundant_columns import remove_redundant_columns
+    from .svd_rv import svd_rv
+    from .tetrahedron_volumes import tetrahedron_volumes
+    from .triangle_areas import triangle_areas
+    from .triangle_map import triangle_map
+    from .uniform_line import uniform_line
+    from .vectorized_trace import vectorized_trace
+    from .vectorized_transpose import vectorized_transpose
+    from .vertex_to_simplex_adjacency import vertex_to_simplex_adjacency
+
+    from .membrane_deformation_jacobian import membrane_deformation_jacobian
+
+    from . import energies  # noqa: F401
     from . import integrators  # noqa: F401
+    from . import solvers  # noqa: F401
+    from . import filesystem  # noqa: F401
 
 
 
@@ -166,6 +208,7 @@ with _mesh:
 # ---------------------------------------------------------------------------
 with _solvers:
     from .eigs import eigs
+    from .eigs_iccm import eigs_iccm
     from .spectral_basis_localization import spectral_basis_localization
     from .linear_modal_analysis import linear_modal_analysis
     from .skinning_eigenmodes import skinning_eigenmodes
@@ -177,12 +220,11 @@ with _solvers:
 with _viz:
     from . import matplotlib  # noqa: F401
     from . import polyscope  # noqa: F401
-    
+
 with _video:
-    from . import filesystem  # noqa: F401
-    
-with _cmaes:
-    from . import solvers  # noqa: F401
+    # Pillow-only helper; the rest of `simkit.filesystem` imports unconditionally
+    # above and stays available on a lean install.
+    from .filesystem import video_from_image_dir  # noqa: F401
 
 
 # ---------------------------------------------------------------------------

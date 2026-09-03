@@ -17,7 +17,7 @@ def simplex_vertex_map(
 
     Parameters
     ----------
-    T : np.ndarray (nt, dt) or (*, dt)
+    T : np.ndarray (nt, dt) or (..., dt)
         Simplex vertex indices (triangles, tets, etc.).
     nv : int, optional
         Number of vertices. Defaults to ``T.max() + 1``.

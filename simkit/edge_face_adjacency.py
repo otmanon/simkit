@@ -13,14 +13,14 @@ def edge_face_adjacency(F: np.ndarray, E: np.ndarray) -> sp.sparse.csc_matrix:
 
     Parameters
     ----------
-    F : np.ndarray (|F|, 3)
+    F : np.ndarray (nf, 3)
         Triangle face indices.
-    E : np.ndarray (|E|, 2)
+    E : np.ndarray (ne, 2)
         Undirected edge vertex pairs (sorted internally).
 
     Returns
     -------
-    A : scipy.sparse.csc_matrix (|F|, |E|)
+    A : scipy.sparse.csc_matrix (nf, ne)
         Face–edge adjacency; ``A[f, e] = 1`` if edge ``e`` lies on face ``f``.
     """
     F = np.asarray(F, dtype=int)

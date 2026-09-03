@@ -11,11 +11,12 @@ self-contained README.
 | [`fast_complementary_dynamics/`](fast_complementary_dynamics) | [Fast Complementary Dynamics via Skinning Eigenmodes (SIGGRAPH 2023)](https://www.dgp.toronto.edu/projects/fast-complementary-dynamics/) | Rig-driven 2D beam with complementary secondary motion vs. a pinned baseline. |
 | [`modal_muscles/`](modal_muscles) | Modal Muscles / Actuators a la Mode | 2D creature whose modal-actuator parameters are optimised by CMA-ES to walk forward. |
 | [`subspace_mfem/`](subspace_mfem) | [Subspace Mixed FEM for Real-Time Heterogeneous Elastodynamics (SIGGRAPH Asia 2023)](https://www.dgp.toronto.edu/projects/subspace-mfem/) | FEM vs. MFEM drop and slingshot tests, plus an interactive click-to-pull demo. |
-| [`force_dual_modes/`](force_dual_modes) | Force-dual modes / linear modal analysis subspaces | _Source not yet on `main` -- see the [`force_dual_modes`](https://github.com/otmanon/simkit/tree/force_dual_modes/examples/force_dual_modes) branch._ |
+| [`interactive_demos/`](interactive_demos) | -- | 15 short polyscope demos (`001`-`015`) building from a single deformation gradient up to interactive 3D mixed FEM. |
+| `force_dual_modes/` | Force-dual modes / linear modal analysis subspaces | _Source not yet on `main` -- see the [`force_dual_modes`](https://github.com/otmanon/simkit/tree/force_dual_modes/examples/force_dual_modes) branch._ |
 
 ## Running a demo
 
-All demos are standalone scripts -- they assume `simkit` is installed (e.g. `pip install -e ".[mesh,viz,learn,video]"` from the repo root) and can be invoked directly:
+All demos are standalone scripts -- they assume `simkit` is installed (e.g. `pip install -e ".[all]"` from the repo root) and can be invoked directly:
 
 ```bash
 python examples/<demo>/<script>.py

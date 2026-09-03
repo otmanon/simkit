@@ -4,7 +4,7 @@ Implements the final stable Neo-Hookean formulation from Smith, de Goes,
 and Kim, "Stable Neo-Hookean Flesh Simulation" (TOG / SIGGRAPH 2018):
 https://dl.acm.org/doi/10.1145/3180491
 
-Per-element energy density:
+Per-element energy density::
 
     psi(F) = (mu / 2) * (I_C - dim)
            - (mu / 2) * log(I_C + 1)

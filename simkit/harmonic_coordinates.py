@@ -26,7 +26,7 @@ def harmonic_coordinates(
 
     Returns
     -------
-    x : np.ndarray (n, |bI|)
+    x : np.ndarray (n, nb)
         Harmonic coordinate values; ``x[bI]`` is the identity matrix.
     """
     L = dirichlet_laplacian(X, T)

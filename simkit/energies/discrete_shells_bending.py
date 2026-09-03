@@ -5,14 +5,14 @@ This is the 3D sibling of :mod:`simkit.energies.bending_energy`. Both penalize
 deviation of an angle from its rest value; the only difference is dimension and
 the angle/operator used:
 
-================  ============================  ========================
-                  this module (3D)              bending_energy (2D)
-================  ============================  ========================
-ambient space     3D (positions ``n, 3``)       2D (positions ``n, 2``)
-per-element angle  dihedral angle ``theta``      hinge angle ``theta``
-connectivity      ``D`` (vertex quadruples)     ``H`` (vertex triples)
-angle operator    dihedral Jacobian + wedge map hinge Jacobian/Hessian
-================  ============================  ========================
+=================  =============================  =======================
+                   this module (3D)               bending_energy (2D)
+=================  =============================  =======================
+ambient space      3D (positions ``n, 3``)        2D (positions ``n, 2``)
+per-element angle  dihedral angle ``theta``       hinge angle ``theta``
+connectivity       ``D`` (vertex quadruples)      ``H`` (vertex triples)
+angle operator     dihedral Jacobian + wedge map  hinge Jacobian/Hessian
+=================  =============================  =======================
 
 Follows the standardized layout (see :mod:`simkit.energies.arap`), adapted to
 shells. The per-element variable is the dihedral angle ``theta`` (representation

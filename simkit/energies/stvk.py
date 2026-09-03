@@ -2,12 +2,12 @@
 
 Implements the classical Saint Venant-Kirchhoff hyperelastic energy density
 in the form taught in the FEM-deformables course notes by Sifakis and
-Barbic (http://barbic.usc.edu/femdefo/):
+Barbic (http://barbic.usc.edu/femdefo/)::
 
     psi(F) = mu * tr(E**2) + (lam / 2) * tr(E)**2
     E      = (1/2) * (F^T F - I)              (Green strain tensor)
 
-The first Piola-Kirchhoff stress and Hessian have clean closed forms
+The first Piola-Kirchhoff stress and Hessian have clean closed forms::
 
     P                = F * S
     S                = 2*mu*E + lam*tr(E)*I    (second Piola-Kirchhoff stress)

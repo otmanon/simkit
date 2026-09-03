@@ -73,7 +73,10 @@ def cmaes(x, objective_func, maxiter=10, sigma=1.0, popsize=10, seed=0,
 
             es.tell(X, objs)
             es.disp()
-            running_history.append(es.result._asdict())
+
+            # save result to running history every iteration
+            if return_history:
+                running_history.append(es.result._asdict())
 
     output = es.result.xbest
     if return_result:

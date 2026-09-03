@@ -2,7 +2,7 @@
 
 Implements the classical Neo-Hookean hyperelastic energy density in the
 form taught in the FEM-deformables course notes by Sifakis and Barbic
-(http://barbic.usc.edu/femdefo/):
+(http://barbic.usc.edu/femdefo/)::
 
     psi(F) = (mu / 2) * (I_C - dim)
            - mu * log(J)
@@ -11,7 +11,7 @@ form taught in the FEM-deformables course notes by Sifakis and Barbic
     I_C    = ||F||_F**2 = sum_{i,j} F_{ij}**2
     J      = det(F)
 
-The closed-form first Piola-Kirchhoff stress and Hessian are
+The closed-form first Piola-Kirchhoff stress and Hessian are::
 
     P                = mu * F + (lam * log(J) - mu) * F^{-T}
     d2 psi / dF dF   = mu * delta_ik * delta_jl

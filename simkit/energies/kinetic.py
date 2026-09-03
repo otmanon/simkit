@@ -45,16 +45,16 @@ def velocity_be(x_curr: np.ndarray, x_prev: np.ndarray, h: float) -> np.ndarray:
 
     Parameters
     ----------
-    x_curr : np.ndarray (*, 1)
+    x_curr : np.ndarray (n, 1)
         Most recent known position.
-    x_prev : np.ndarray (*, 1)
+    x_prev : np.ndarray (n, 1)
         Position one step earlier.
     h : float
         Timestep.
 
     Returns
     -------
-    v : np.ndarray (*, 1)
+    v : np.ndarray (n, 1)
         Velocity estimate at ``x_curr``.
     """
     return (x_curr - x_prev) / h
@@ -67,18 +67,18 @@ def velocity_bdf2(x_curr: np.ndarray, x_prev: np.ndarray, x_prev2: np.ndarray, h
 
     Parameters
     ----------
-    x_curr : np.ndarray (*, 1)
+    x_curr : np.ndarray (n, 1)
         Most recent known position.
-    x_prev : np.ndarray (*, 1)
+    x_prev : np.ndarray (n, 1)
         Position one step earlier.
-    x_prev2 : np.ndarray (*, 1)
+    x_prev2 : np.ndarray (n, 1)
         Position two steps earlier.
     h : float
         Timestep.
 
     Returns
     -------
-    v : np.ndarray (*, 1)
+    v : np.ndarray (n, 1)
         Velocity estimate at ``x_curr``.
     """
     return (3.0 * x_curr - 4.0 * x_prev + x_prev2) / (2.0 * h)

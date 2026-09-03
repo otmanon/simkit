@@ -1,9 +1,29 @@
 """Elastic material energy, gradient, and Hessian (combined).
 
-Material dispatch over the per-material modules (``arap``, ``fcr``,
-``linear_elasticity``, ``macklin_mueller_neo_hookean``), selected by the
-``material`` string (one of ``'linear-elasticity'``, ``'arap'``, ``'fcr'``,
-``'macklin-mueller-neo-hookean'``).
+Material dispatch over the per-material modules, selected by the ``material``
+string. Dispatch covers every material with the standard hyperelastic
+signature -- per-element Lame parameters ``(mu, lam)`` and a square deformation
+gradient:
+
+- ``'linear-elasticity'`` -- :mod:`~simkit.energies.linear_elasticity`
+- ``'arap'`` -- :mod:`~simkit.energies.arap`
+- ``'fcr'`` -- :mod:`~simkit.energies.fcr`
+- ``'macklin-mueller-neo-hookean'`` -- :mod:`~simkit.energies.macklin_mueller_neo_hookean`
+- ``'stvk'`` -- :mod:`~simkit.energies.stvk`
+- ``'neo-hookean'`` -- :mod:`~simkit.energies.neo_hookean`
+- ``'stable-neo-hookean'`` -- :mod:`~simkit.energies.stable_neo_hookean`
+
+Two materials are deliberately *not* dispatchable, because they do not share
+that signature -- call their modules directly:
+
+``emu``
+    Parameterized by a fibre direction and activation ``(F, d, a)`` rather
+    than ``(mu, lam)``. See :mod:`~simkit.energies.emu`.
+``membrane_neo_hookean``
+    Uses a non-square ``F`` (``3x2``) built from
+    :func:`~simkit.membrane_deformation_jacobian`, so the ``(dim, dim)``
+    reshape every dispatched tier performs does not apply. See
+    :mod:`~simkit.energies.membrane_neo_hookean`.
 
 This file combines what were previously ``elastic_energy.py``,
 ``elastic_gradient.py`` and ``elastic_hessian.py`` into one module. The three
@@ -13,7 +33,7 @@ Element tier (``*_element_F``)
     Per-element density / stress / Hessian via the chosen material. No ``vol``
     weighting.
 
-Global explicit tiers (``*_x``, ``*_z``)
+Global explicit tiers (``*_x``, ``*_u``, ``*_z``, ``*_S``)
     Apply ``vol`` and the operator (``J`` or the reduced ``JB``) during assembly.
 
 Self-contained tier (no suffix)
@@ -23,6 +43,16 @@ ARAP takes only ``mu`` (no ``lam``); the dispatchers handle that signature
 difference internally so callers pass ``lam`` uniformly. The reduced-coordinate
 precompute classes ``ElasticEnergyZPrecomp`` and ``ElasticEnergyZFilteredPrecomp``
 live here too.
+
+Tier coverage
+-------------
+``_element_F``, ``_x``, ``_u``, ``_z``, ``_filtered_z`` and the self-contained
+tier accept every material in ``_MATERIALS``. The mixed/stretch tier ``_S`` is
+narrower on purpose: it needs a per-material energy written in terms of the
+symmetric stretch ``S`` rather than ``F``, which only ``arap`` and
+``macklin_mueller_neo_hookean`` provide (those are the materials the subspace
+mixed-FEM work required). Passing any other material to ``elastic_*_S`` raises
+:class:`ValueError`.
 """
 
 from typing import Optional
@@ -68,11 +98,43 @@ from .macklin_mueller_neo_hookean import (
     macklin_mueller_neo_hookean_hessian_element_S,
     macklin_mueller_neo_hookean_hessian_u,
 )
+from .stvk import (
+    stvk_energy_element_F,
+    stvk_energy_u,
+    stvk_gradient_element_F,
+    stvk_gradient_u,
+    stvk_hessian_element_F,
+    stvk_hessian_u,
+)
+from .neo_hookean import (
+    neo_hookean_energy_element_F,
+    neo_hookean_energy_u,
+    neo_hookean_gradient_element_F,
+    neo_hookean_gradient_u,
+    neo_hookean_hessian_element_F,
+    neo_hookean_hessian_u,
+)
+from .stable_neo_hookean import (
+    stable_neo_hookean_energy_element_F,
+    stable_neo_hookean_energy_u,
+    stable_neo_hookean_gradient_element_F,
+    stable_neo_hookean_gradient_u,
+    stable_neo_hookean_hessian_element_F,
+    stable_neo_hookean_hessian_u,
+)
 from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
 from ..psd_project import psd_project
 
-_MATERIALS = ('linear-elasticity', 'arap', 'fcr', 'macklin-mueller-neo-hookean')
+_MATERIALS = (
+    'linear-elasticity',
+    'arap',
+    'fcr',
+    'macklin-mueller-neo-hookean',
+    'stvk',
+    'neo-hookean',
+    'stable-neo-hookean',
+)
 
 
 
@@ -110,6 +172,12 @@ def elastic_energy_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray, mat
         return fcr_energy_element_F(F, mu, lam)
     elif material == 'macklin-mueller-neo-hookean':
         return macklin_mueller_neo_hookean_energy_element_F(F, mu, lam)
+    elif material == 'stvk':
+        return stvk_energy_element_F(F, mu, lam)
+    elif material == 'neo-hookean':
+        return neo_hookean_energy_element_F(F, mu, lam)
+    elif material == 'stable-neo-hookean':
+        return stable_neo_hookean_energy_element_F(F, mu, lam)
     raise ValueError("Unknown material type: " + str(material))
 
 
@@ -185,6 +253,12 @@ def elastic_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, m
         return fcr_energy_u(u, J, Jx_bar, mu, lam, vol)
     elif material == 'macklin-mueller-neo-hookean':
         return macklin_mueller_neo_hookean_energy_u(u, J, Jx_bar, mu, lam, vol)
+    elif material == 'stvk':
+        return stvk_energy_u(u, J, Jx_bar, mu, lam, vol)
+    elif material == 'neo-hookean':
+        return neo_hookean_energy_u(u, J, Jx_bar, mu, lam, vol)
+    elif material == 'stable-neo-hookean':
+        return stable_neo_hookean_energy_u(u, J, Jx_bar, mu, lam, vol)
     raise ValueError("Unknown material type: " + str(material))
 
 
@@ -420,6 +494,12 @@ def elastic_gradient_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray, m
         return fcr_gradient_element_F(F, mu, lam)
     elif material == 'macklin-mueller-neo-hookean':
         return macklin_mueller_neo_hookean_gradient_element_F(F, mu, lam)
+    elif material == 'stvk':
+        return stvk_gradient_element_F(F, mu, lam)
+    elif material == 'neo-hookean':
+        return neo_hookean_gradient_element_F(F, mu, lam)
+    elif material == 'stable-neo-hookean':
+        return stable_neo_hookean_gradient_element_F(F, mu, lam)
     raise ValueError("Unknown material type: " + str(material))
 
 
@@ -494,6 +574,12 @@ def elastic_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray,
         return fcr_gradient_u(u, J, Jx_bar, mu, lam, vol)
     elif material == 'macklin-mueller-neo-hookean':
         return macklin_mueller_neo_hookean_gradient_u(u, J, Jx_bar, mu, lam, vol)
+    elif material == 'stvk':
+        return stvk_gradient_u(u, J, Jx_bar, mu, lam, vol)
+    elif material == 'neo-hookean':
+        return neo_hookean_gradient_u(u, J, Jx_bar, mu, lam, vol)
+    elif material == 'stable-neo-hookean':
+        return stable_neo_hookean_gradient_u(u, J, Jx_bar, mu, lam, vol)
     raise ValueError("Unknown material type: " + str(material))
 
 
@@ -658,6 +744,12 @@ def elastic_hessian_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray, ma
         Q = fcr_hessian_element_F(F, mu, lam)
     elif material == 'macklin-mueller-neo-hookean':
         Q = macklin_mueller_neo_hookean_hessian_element_F(F, mu, lam)
+    elif material == 'stvk':
+        Q = stvk_hessian_element_F(F, mu, lam)
+    elif material == 'neo-hookean':
+        Q = neo_hookean_hessian_element_F(F, mu, lam)
+    elif material == 'stable-neo-hookean':
+        Q = stable_neo_hookean_hessian_element_F(F, mu, lam)
     else:
         raise ValueError("Unknown material type: " + str(material))
     if psd:
@@ -743,6 +835,12 @@ def elastic_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, 
         return fcr_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=psd)
     elif material == 'macklin-mueller-neo-hookean':
         return macklin_mueller_neo_hookean_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=psd)
+    elif material == 'stvk':
+        return stvk_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=psd)
+    elif material == 'neo-hookean':
+        return neo_hookean_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=psd)
+    elif material == 'stable-neo-hookean':
+        return stable_neo_hookean_hessian_u(u, J, Jx_bar, mu, lam, vol, psd=psd)
     raise ValueError("Unknown material type: " + str(material))
 
 

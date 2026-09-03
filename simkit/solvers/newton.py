@@ -1,3 +1,8 @@
+"""Newton's method.
+
+Note the ``max_iter=1`` default -- see :func:`newton_solver`.
+"""
+
 import scipy as sp
 import numpy as np
 
@@ -26,7 +31,8 @@ def newton_solver(x0, energy_func, gradient_func, hessian_func,
     tolerance : float
         Convergence tolerance on the norm of the step ``alpha * dx``.
     max_iter : int
-        Maximum number of Newton iterations.
+        Maximum number of Newton iterations. **Defaults to 1**, i.e. a single
+        Newton step rather than a solve to convergence -- see Notes.
     do_line_search : bool
         If True, run a backtracking line search to pick the step size.
     return_info : bool
@@ -38,6 +44,27 @@ def newton_solver(x0, energy_func, gradient_func, hessian_func,
         Minimizer estimate.
     info : dict, optional
         Returned only when ``return_info`` is True.
+
+    Notes
+    -----
+    ``max_iter`` defaults to ``1``, which is deliberate but easy to trip over.
+    The default serves the library's primary caller -- an implicit integrator
+    taking one Newton step per timestep, where the previous step is already a
+    good initial guess and the timestep itself bounds the error. Called that
+    way, ``newton_solver`` is a stepper, not a solver, and ``tolerance`` only
+    decides whether that single step is taken at all.
+
+    To use it as an actual solver -- minimizing a static energy, solving for an
+    equilibrium, or anything where you want the returned ``x`` to satisfy
+    ``g(x) ~= 0`` -- pass ``max_iter`` explicitly::
+
+        x = newton_solver(x0, energy, gradient, hessian,
+                          max_iter=100, tolerance=1e-10)
+
+    The loop exits early once ``||alpha * dx|| < tolerance``, so an overshooting
+    ``max_iter`` costs nothing on well-conditioned problems. There is no
+    non-convergence warning: check ``info['iters']`` from ``return_info=True``
+    if you need to know whether the tolerance was actually met.
     """
     x = x0.copy()
     if return_info:

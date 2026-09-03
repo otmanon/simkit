@@ -32,7 +32,7 @@ A few ideas appear in almost every tutorial. Glance at these now and refer back 
 - **Energy `E(U)`.** A single scalar measuring how unhappy the material is in its current pose. Forces are `−∇E`. Simulating = repeatedly nudging `U` to reduce `E`.
 - **Macklin-Mueller Neo-Hookean energy.** The specific elastic energy used throughout (in [simkit/energies/](../../simkit/energies/)). It penalizes both stretching and volume change and blows up if a triangle inverts. From Macklin and Mueller, "A Constraint-based Formulation of Stable Neo-Hookean Materials" (MIG 2021): https://dl.acm.org/doi/10.1145/3487983.3488289.
 - **Soft pins (Dirichlet penalty).** Instead of hard-fixing a vertex to a target position, we add a stiff quadratic spring `½ K ‖x − target‖²` to the energy. The pin contributes a constant matrix `Q_pin` and vector `b_pin` to the system — see [simkit/dirichlet_penalty.py](../../simkit/dirichlet_penalty.py).
-- **Newton's method.** To minimize `E`, we repeatedly solve `H Δx = −g` (where `g = ∇E`, `H = ∇²E`) and step `x ← x + α Δx`. See [simkit/solvers/NewtonSolver.py](../../simkit/solvers/NewtonSolver.py).
+- **Newton's method.** To minimize `E`, we repeatedly solve `H Δx = −g` (where `g = ∇E`, `H = ∇²E`) and step `x ← x + α Δx`. See [simkit/solvers/newton.py](../../simkit/solvers/newton.py).
 
 ---
 
@@ -97,7 +97,7 @@ A static (no time, no inertia) beam pinned on the left, with one vertex on the r
 This makes a single point: Newton uses curvature information (`H = ∇²E`) and converges in a handful of iterations near the optimum; gradient descent uses only the gradient and converges much more slowly on this kind of ill-conditioned elastic problem.
 
 **Focus code:**
-- `build_solver` returns a `solve(x0)` closure wrapping either [newton_solver](../../simkit/solvers/NewtonSolver.py) or [gradient_descent_solver](../../simkit/solvers/GradientDescentSolver.py), called directly off the `sim.potential_E` / `sim.potential_g` / `sim.potential_H` callables.
+- `build_solver` returns a `solve(x0)` closure wrapping either [newton_solver](../../simkit/solvers/newton.py) or [gradient_descent](../../simkit/solvers/gradient_descent.py), called directly off the `sim.potential_E` / `sim.potential_g` / `sim.potential_H` callables.
 - `newton_solver(x0, ...)` / `gradient_descent_solver(x0, ...)` is the one-line API hiding the optimization loop.
 
 ---
@@ -209,7 +209,7 @@ The same pinned beam + mouse-handle UI as 007, but solved in a **reduced space**
 
 **Focus code:**
 - A small *local* `MixedFEMSim` class. Its `step()` stacks `p = [u; a]` and hands `energy` / `grad_blocks` / `hess_blocks` to the flat `sqp_mfem` solver in [simkit/solvers/](../../simkit/solvers/), which eliminates the constraint's Lagrange multiplier internally.
-- Note the pin/handle are full-space penalties on absolute positions `x = B u + q`; projecting them into the subspace keeps the `Q q` cross-term so the pin anchors at the rest offset (dropping it would inflate the rest shape). A full notebook walkthrough lives in [../tutorials/24_subspace_mixed_fem.ipynb](../tutorials/24_subspace_mixed_fem.ipynb).
+- Note the pin/handle are full-space penalties on absolute positions `x = B u + q`; projecting them into the subspace keeps the `Q q` cross-term so the pin anchors at the rest offset (dropping it would inflate the rest shape). A full notebook walkthrough lives in [the Subspace Mixed FEM tutorial](https://otmanon.github.io/simkit/tutorials/24_subspace_mixed_fem.html).
 
 ---
 
@@ -225,7 +225,7 @@ A 2D beam driven by an animator **rig** (a single global affine handle, `J @ p`)
 
 **Focus code:**
 - Like 007, the simulator is a small *local* `CoDySim` class. Its `step()` is two closures handed to `block_coord` from [simkit/solvers/](../../simkit/solvers/): a **local** per-cluster polar-SVD rotation fit and a **global** Cholesky back-solve in the reduced subspace.
-- The subspace is built from `skinning_eigenmodes` with a `lbs_weight_space_constraint` orthogonality constraint and a `spectral_cubature` clustering — all flat simkit functions. A full notebook walkthrough lives in [../tutorials/25_fast_complementary_dynamics.ipynb](../tutorials/25_fast_complementary_dynamics.ipynb).
+- The subspace is built from `skinning_eigenmodes` with a `lbs_weight_space_constraint` orthogonality constraint and a `spectral_cubature` clustering — all flat simkit functions. A full notebook walkthrough lives in [the Fast Complementary Dynamics tutorial](https://otmanon.github.io/simkit/tutorials/23_fast_complementary_dynamics.html).
 
 ---
 
@@ -241,7 +241,7 @@ A 2D creature whose **muscles are displacement modes**. A handful of linear-moda
 
 **Focus code:**
 - A small *local* `ModalMuscleSim` class. Its `step()` is a `block_coord` local/global alternation: the **local** step fits per-cluster rotations to both the passive deformation and the actuated (plastic-stretch) target via `polar_svd`; the **global** step is a Cholesky back-solve. The actuation tensor comes from `clustered_plastic_stretch_tensor` + `fast_sandwich_transform_clustered`.
-- A full notebook walkthrough lives in [../tutorials/26_modal_muscles.ipynb](../tutorials/26_modal_muscles.ipynb).
+- A full notebook walkthrough lives in [the Modal Muscle Actuation tutorial](https://otmanon.github.io/simkit/tutorials/25_modal_muscle_actuation.html).
 
 ---
 

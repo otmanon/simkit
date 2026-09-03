@@ -10,7 +10,7 @@ https://www.tkim.graphics/DYNAMIC_DEFORMABLES/DynamicDeformables.pdf
 
 
 Per-element energy density (3D form; the 2D form drops the third determinant
-factor):
+factor)::
 
     psi(F) = mu * (1 - det(F))
            + (lam / 2) * (1 - det(F))**2

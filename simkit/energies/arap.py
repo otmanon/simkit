@@ -1,8 +1,9 @@
 """As-Rigid-As-Possible (ARAP) elastic energy.
 
 Reference implementation for the standardized energy layout used throughout
-``simkit.energies``. Every energy exposes three tiers, where the suffix tells
-you how much you must supply yourself:
+``simkit.energies``. Every energy exposes the same tiers, where the suffix
+tells you how much you must supply yourself. Each tier comes in ``energy`` /
+``gradient`` / ``hessian`` flavours:
 
 Element tier (``*_element_F`` / ``*_element_S``)
     Per-element densities and derivative blocks. Material parameters only:
@@ -10,15 +11,27 @@ Element tier (``*_element_F`` / ``*_element_S``)
     outputs are stacked per-element arrays. This is the only tier that holds
     the material formula.
 
-Global explicit tier (``*_x`` / ``*_S``)
-    Takes a prebuilt operator (``J`` for ``x``; none for ``S``, which is its
-    own variable) and the quadrature weights ``vol``. Calls the element tier,
-    weights by ``vol``, and assembles. This is what a simulation loop calls
-    every step, since ``J`` and ``vol`` are built once and reused.
+Global explicit tier (``*_x`` / ``*_u`` / ``*_S``)
+    Takes a prebuilt operator (``J`` for ``x`` and ``u``; none for ``S``, which
+    is its own variable) and the quadrature weights ``vol``. Calls the element
+    tier, weights by ``vol``, and assembles. This is what a simulation loop
+    calls every step, since ``J`` and ``vol`` are built once and reused. The
+    three differ only in the primary variable:
+
+    - ``*_x`` -- current positions ``x``.
+    - ``*_u`` -- displacement ``u`` from a reference, so it additionally takes
+      the precomputed ``Jx_bar = J @ x_bar`` of that reference.
+    - ``*_S`` -- symmetric stretch ``S`` as an independent (mixed) variable.
 
 Self-contained tier (no suffix)
     Builds ``J`` and ``vol`` from the rest geometry ``(X, T)`` and forwards to
     the explicit tier. The a-la-carte one-liner for demos and tests.
+
+Not every material implements every tier. ``_element_F``, ``_x``, ``_u`` and
+the self-contained tier are the baseline that all of them provide; ``_S``
+(mixed/stretch) and ``_z`` (reduced coordinates) exist only where a paper
+reproduction needed them. See :mod:`simkit.energies.elastic` for which
+materials the ``material=`` dispatcher covers.
 
 Notes
 -----
