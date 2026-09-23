@@ -10,9 +10,6 @@ While the version stays below `1.0`, the public API may change in any release.
 
 ### Added
 
-- **`filesystem.notebook_results_path`** — returns (and creates)
-  `results/<notebook_name>/`, optionally joined with a filename, so every file a
-  notebook writes lives in one per-notebook folder.
 - **`filesystem.save_figure`** — saves a Matplotlib figure, creating parent
   folders, and optionally copies it to extra destinations (e.g. a tracked
   `media/` folder).
