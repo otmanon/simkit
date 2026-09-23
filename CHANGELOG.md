@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 While the version stays below `1.0`, the public API may change in any release.
 
+## [Unreleased]
+
+### Added
+
+- **`filesystem.notebook_results_path`** — returns (and creates)
+  `results/<notebook_name>/`, optionally joined with a filename, so every file a
+  notebook writes lives in one per-notebook folder.
+- **`filesystem.save_figure`** — saves a Matplotlib figure, creating parent
+  folders, and optionally copies it to extra destinations (e.g. a tracked
+  `media/` folder).
+- **`filesystem.save_animation`** — saves a Matplotlib animation to `.mp4`
+  (ffmpeg) or `.gif` (Pillow) with the same copy-to behaviour. Matplotlib's
+  writers are imported only when called, so `simkit.filesystem` still imports
+  on a base install.
+
 ## [0.1.6] - 2026-09-03
 
 A cleanup release: no new numerics, but several public functions that were

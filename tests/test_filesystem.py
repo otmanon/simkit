@@ -175,3 +175,62 @@ def test_video_from_image_dir_is_exported_when_pillow_is_present():
     import simkit.filesystem as fs
 
     assert callable(fs.video_from_image_dir)
+
+
+# --------------------------------------------------------------------------- #
+# notebook_results_path / save_figure / save_animation
+# --------------------------------------------------------------------------- #
+def test_notebook_results_path_creates_the_notebook_folder(tmp_path):
+    from simkit.filesystem import notebook_results_path
+
+    root = str(tmp_path / "results")
+    folder = notebook_results_path("004_demo", root=root)
+    assert folder == os.path.join(root, "004_demo")
+    assert os.path.isdir(folder)
+
+    path = notebook_results_path("004_demo", "beam.mp4", root=root)
+    assert path == os.path.join(root, "004_demo", "beam.mp4")
+
+
+def test_notebook_results_path_can_skip_mkdir(tmp_path):
+    from simkit.filesystem import notebook_results_path
+
+    folder = notebook_results_path("x", root=str(tmp_path), mkdir=False)
+    assert not os.path.exists(folder)
+
+
+def test_save_figure_writes_and_copies(tmp_path):
+    matplotlib = pytest.importorskip("matplotlib")
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from simkit.filesystem import save_figure
+
+    fig, ax = plt.subplots()
+    ax.plot([0, 1], [0, 1])
+    media = tmp_path / "media"
+    media.mkdir()
+    out = save_figure(fig, str(tmp_path / "res" / "a.png"),
+                      copy_to=[str(media), str(tmp_path / "other" / "b.png")])
+    plt.close(fig)
+    assert out == str(tmp_path / "res" / "a.png")
+    assert os.path.getsize(out) > 0
+    assert (media / "a.png").read_bytes() == open(out, "rb").read()
+    assert (tmp_path / "other" / "b.png").exists()
+
+
+def test_save_animation_writes_gif_and_copy(tmp_path):
+    matplotlib = pytest.importorskip("matplotlib")
+    pytest.importorskip("PIL")
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation
+    from simkit.filesystem import save_animation
+
+    fig, ax = plt.subplots()
+    (ln,) = ax.plot([], [])
+    anim = FuncAnimation(fig, lambda i: ln.set_data([0, i], [0, i]), frames=3)
+    out = save_animation(anim, str(tmp_path / "res" / "a.gif"), fps=5,
+                         copy_to=str(tmp_path / "media" / "004_a.gif"))
+    plt.close(fig)
+    assert os.path.getsize(out) > 0
+    assert (tmp_path / "media" / "004_a.gif").exists()
