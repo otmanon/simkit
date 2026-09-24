@@ -178,27 +178,8 @@ def test_video_from_image_dir_is_exported_when_pillow_is_present():
 
 
 # --------------------------------------------------------------------------- #
-# notebook_results_path / save_figure / save_animation
+# save_figure / save_animation
 # --------------------------------------------------------------------------- #
-def test_notebook_results_path_creates_the_notebook_folder(tmp_path):
-    from simkit.filesystem import notebook_results_path
-
-    root = str(tmp_path / "results")
-    folder = notebook_results_path("004_demo", root=root)
-    assert folder == os.path.join(root, "004_demo")
-    assert os.path.isdir(folder)
-
-    path = notebook_results_path("004_demo", "beam.mp4", root=root)
-    assert path == os.path.join(root, "004_demo", "beam.mp4")
-
-
-def test_notebook_results_path_can_skip_mkdir(tmp_path):
-    from simkit.filesystem import notebook_results_path
-
-    folder = notebook_results_path("x", root=str(tmp_path), mkdir=False)
-    assert not os.path.exists(folder)
-
-
 def test_save_figure_writes_and_copies(tmp_path):
     matplotlib = pytest.importorskip("matplotlib")
     matplotlib.use("Agg")
