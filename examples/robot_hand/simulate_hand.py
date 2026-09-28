@@ -12,8 +12,8 @@
   analytic SDF (``cup_sdf.py``: capped cones + rim torus). Its centre of mass
   and incremental rotation vector are unknowns of the same Newton solve.
 * **Contact** -- every surface vertex of the rubber tips and silicone pads
-  (``--contact tips`` for tips only) vs the cup SDF: penalty
-  ``k/2 min(phi, 0)^2`` coupling the vertex with the cup's translation and
+  (``--contact tips`` for tips only) vs the cup SDF: cubic penalty
+  ``k/3 |min(phi, 0)|^3`` (SimKit's cubic barrier, d_hat = 0) coupling the vertex with the cup's translation and
   rotation, + lagged smoothed Coulomb friction on the slip relative to the
   cup's material point; cup base ring vs table penalty.
 
@@ -37,6 +37,8 @@ from simkit.deformation_jacobian import deformation_jacobian
 from simkit.massmatrix import massmatrix
 from simkit.volume import volume
 from simkit.backtracking_line_search import backtracking_line_search
+from simkit.energies.barrier_energies import (cubic_barrier_energy, cubic_barrier_gradient,
+                                              cubic_barrier_hessian)
 
 from allegro_kinematics import AllegroHand
 from hand_geometry import XML, CUP_Y_BOTTOM, CUP_AXIS_XZ, CupParamsTall
@@ -129,7 +131,7 @@ class RigidCup:
 
 
 class HandGraspSim:
-    def __init__(self, scene, schedule, h=0.01, k_contact=2e4, k_floor=2e5,
+    def __init__(self, scene, schedule, h=0.01, k_contact=4e7, k_floor=4e8,
                  friction=1.0, eps_v=1e-3, gravity=-9.81, newton_iters=25, newton_tol=1e-6,
                  contact_parts=("_tip_rubber", "_pad")):
         self.hand = AllegroHand(XML)
@@ -204,7 +206,7 @@ class HandGraspSim:
         self.cand = self.contact_v[keep]
         self.n0 = gl[keep] @ self.cup.R.T                    # world normals
         self.r0 = P[keep] - self.cup.c
-        self.lam_n = self.k_c * np.maximum(-d[keep], 0.0)
+        self.lam_n = self.k_c * np.maximum(-d[keep], 0.0) ** 2     # cubic penalty force
         self.xn = Xc[self.cand].copy()
         self.cn = self.cup.c.copy()
 
@@ -232,10 +234,13 @@ class HandGraspSim:
             d, gl = self.cup.sdf.sdf_and_grad(self.cup.local(P, c, R))
             n = gl @ R.T
             r = P - c
-            pen = np.minimum(d, 0.0)
-            E += 0.5 * self.k_c * (pen ** 2).sum()
+            # cubic penalty (k/3)|min(phi, 0)|^3 via SimKit's cubic barrier, d_hat = 0
+            kc3 = self.k_c / 3.0
+            E += kc3 * float(cubic_barrier_energy(d, 0.0).sum())
+            dE = kc3 * cubic_barrier_gradient(d, 0.0).ravel()          # -k phi^2
+            d2E = kc3 * cubic_barrier_hessian(d, 0.0).ravel()          # 2k|phi|
             Jn = np.concatenate([n, -n, np.cross(n, r)], 1)            # (m, 9)
-            gn = (self.k_c * pen)[:, None] * Jn
+            gn = dE[:, None] * Jn
             # friction: tangential slip of the vertex relative to the cup
             # material point under it, over the step (lagged n, r, lambda)
             n0, r0 = self.n0, self.r0
@@ -253,19 +258,19 @@ class HandGraspSim:
             idx = np.concatenate([3 * p_ids[:, None] + np.arange(3), np.tile(np.arange(ic, ic + 6), (len(p_ids), 1))], 1)
             np.add.at(g, idx.ravel(), (gn + gf).ravel())
             if need_hess:
-                B = (self.k_c * (pen < 0))[:, None, None] * np.einsum("mi,mj->mij", Jn, Jn) \
+                B = d2E[:, None, None] * np.einsum("mi,mj->mij", Jn, Jn) \
                     + (wf * f1_y)[:, None, None] * np.einsum("mki,mkj->mij", Ju, Ju)
                 scatter_block(idx, B)
         # cup base ring vs floor
         A = self.cup.base_ring @ R.T
         dfl = A[:, 1] + c[1] - self.floor_y
-        pen = np.minimum(dfl, 0.0)
-        E += 0.5 * self.k_f * (pen ** 2).sum()
+        kf3 = self.k_f / 3.0
+        E += kf3 * float(cubic_barrier_energy(dfl, 0.0).sum())
         Jf = np.concatenate([np.tile([0, 1.0, 0], (len(A), 1)), np.cross(A, [0, 1.0, 0])], 1)
-        g[ic:ic + 6] += ((self.k_f * pen)[:, None] * Jf).sum(0)
+        g[ic:ic + 6] += ((kf3 * cubic_barrier_gradient(dfl, 0.0).ravel())[:, None] * Jf).sum(0)
         H = None
         if need_hess:
-            Hf = self.k_f * np.einsum("mi,mj->ij", Jf[pen < 0], Jf[pen < 0])
+            Hf = np.einsum("m,mi,mj->ij", kf3 * cubic_barrier_hessian(dfl, 0.0).ravel(), Jf, Jf)
             ii, jj = np.meshgrid(np.arange(ic, ic + 6), np.arange(ic, ic + 6), indexing="ij")
             rows.append(ii.ravel()); cols.append(jj.ravel()); vals.append(Hf.ravel())
             H = sp.sparse.coo_matrix((np.concatenate(vals), (np.concatenate(rows),
@@ -347,7 +352,7 @@ class HandGraspSim:
         P = self.x.reshape(-1, 3)[self.contact_v]
         d = self.cup.sdf(self.cup.local(P, self.cup.c, self.cup.R))
         pen = np.maximum(-d, 0.0)
-        return int((pen > 0).sum()), float(self.k_c * pen.sum())
+        return int((pen > 0).sum()), float(self.k_c * (pen ** 2).sum())
 
 
 def main():
