@@ -42,14 +42,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 class HandSprings:
     def __init__(self, scene, meta, n_stations=5, half_span=6e-3, k_nn=4, arm=9e-3,
-                 span=8e-3, k_hinge=2e4, k_act=5e4):
+                 span=8e-3, k_hinge=2e4, k_act=5e4, k_off_axis=50.0):
         self.X = scene["X"].astype(float)
         self.body_names = [str(b) for b in scene["body_names"]]
         self.vb = vertex_bodies(scene)
         self.hand = AllegroHand(XML)
         X, vb, bn = self.X, self.vb, self.body_names
 
-        hinge, act, act_joint = [], [], []
+        hinge, hinge_k, act, act_joint = [], [], [], []
         for jname, J in meta["joints"].items():
             o, a = np.array(J["origin"]), np.array(J["axis"], float)
             a /= np.linalg.norm(a)
@@ -58,11 +58,20 @@ class HandSprings:
             pi = np.where(vb == bn.index(parent))[0]
 
             c_tree, p_tree = cKDTree(X[ci]), cKDTree(X[pi])
+            pairs = []
             for t in np.linspace(-half_span, half_span, n_stations):
                 station = o + t * a
                 c = ci[c_tree.query(station)[1]]
                 for j in np.atleast_1d(p_tree.query(station, k=k_nn)[1]):
-                    hinge.append((c, pi[j]))
+                    pairs.append((c, pi[j]))
+            pairs = list(dict.fromkeys(pairs))
+            # Off-axis (wobble) stiffness of a line hinge ~ sum_k k * t_k^2 over
+            # the anchors' axial offsets t_k: a short child link (anchors close
+            # together) needs stiffer springs, or it pivots about a point.
+            tk = (X[[c for c, _ in pairs]] - o) @ a
+            spread2 = max(((tk - tk.mean()) ** 2).sum(), 1e-12)
+            hinge += pairs
+            hinge_k += [max(k_hinge, k_off_axis / spread2)] * len(pairs)
 
             # actuator pair: w points from the joint into the child, d is the
             # lever direction (perpendicular to the axis and to w)
@@ -84,7 +93,7 @@ class HandSprings:
         self.E_act = np.array(act, np.int64)
         self.act_joint = np.array(act_joint)
         self.E = np.vstack([self.E_hinge, self.E_act])
-        self.k = np.r_[np.full(len(self.E_hinge), k_hinge), np.full(len(self.E_act), k_act)]
+        self.k = np.r_[np.array(hinge_k), np.full(len(self.E_act), k_act)]
         self.ym = self.k.reshape(-1, 1)
         self.vol = np.ones((len(self.E), 1))
         self.l0_rest = np.linalg.norm(X[self.E[:, 0]] - X[self.E[:, 1]], axis=1)
