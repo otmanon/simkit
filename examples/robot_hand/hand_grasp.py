@@ -6,7 +6,7 @@ actuation used by the simulation: joint angles -> link motion.
 
 ``fit_grasp`` picks, per finger, the joint angles that wrap the finger around
 the cup: rubber tips pressed ``squeeze`` into the cup wall, no aluminium
-penetration, and the links drawn towards the cup surface (a power grasp),
+penetration, soft palmar pads drawn onto the cup surface (a power grasp),
 within the Allegro joint limits.
 """
 from __future__ import annotations
@@ -68,6 +68,7 @@ def fit_grasp(scene, meta, squeeze=1.5e-3, n_samples=400, seed=0):
     part_of_v = np.full(len(scene["X"]), -1)
     part_of_v[scene["T"].ravel()] = np.repeat(scene["part"], 4)
     rubber = np.array(["_tip_rubber" in n for n in scene["part_names"]])[part_of_v.clip(0)]
+    pad = np.array([n.endswith("_pad") for n in scene["part_names"]])[part_of_v.clip(0)]
     q = {}
     for f in FINGERS:
         joints = FINGER_JOINTS[f]
@@ -75,7 +76,8 @@ def fit_grasp(scene, meta, squeeze=1.5e-3, n_samples=400, seed=0):
         idx = np.where(np.isin(vb, [body_names.index(b) for b in chain]))[0]
         idx = rng.choice(idx, min(len(idx), n_samples * len(chain)), replace=False)
         X = scene["X"][idx]
-        is_rub = rubber[idx]
+        is_rub, is_pad = rubber[idx], pad[idx]
+        metal = ~(is_rub | is_pad)
         lo = np.array([meta["joints"][j]["range"][0] for j in joints])
         hi = np.array([meta["joints"][j]["range"][1] for j in joints])
 
@@ -83,11 +85,15 @@ def fit_grasp(scene, meta, squeeze=1.5e-3, n_samples=400, seed=0):
             qq = dict(zip(joints, a))
             P = pose_vertices(X, vb[idx], hand, body_names, qq)
             d = cup_sdf(P)
-            metal_pen = np.minimum(d[~is_rub] - 2e-4, 0.0)
+            metal_pen = np.minimum(d[metal] - 2e-4, 0.0)
+            # soft pads may be pressed in, but no deeper than the tips
+            pad_pen = np.minimum(d[is_pad] + squeeze, 0.0)
             tip = d[is_rub].min()
-            wrap = np.maximum(d[~is_rub], 0.0)
-            return (1e6 * (metal_pen ** 2).sum() + 1e5 * (tip + squeeze) ** 2
-                    + 10.0 * np.sort(wrap)[: len(wrap) // 4].mean())
+            # power grasp: draw the palmar pads onto the cup surface
+            wrap = np.abs(d[is_pad] + 0.5 * squeeze)
+            return (1e6 * (metal_pen ** 2).sum() + 1e6 * (pad_pen ** 2).sum()
+                    + 1e5 * (tip + squeeze) ** 2
+                    + 10.0 * np.sort(wrap)[: max(len(wrap) // 4, 1)].mean())
 
         best = None
         for trial in range(12):

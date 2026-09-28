@@ -44,6 +44,20 @@ XML = os.path.join(HERE, "wonik_allegro", "right_hand.xml")
 CLEARANCE = 3e-4          # knuckle running clearance [m]
 SHAFT_RADIUS = 2.5e-3     # steel joint shaft radius [m]
 TIP_CORE_SCALE = 0.62     # aluminium core of the rubber tip, relative size
+PAD_THICKNESS = 4e-3      # silicone pads on the palmar side of the phalanges / palm
+PAD_ROUND = 1.2e-3
+
+# Palmar pads, in each link's own MJCF frame: every phalanx runs along local +z,
+# flexes about local y, so its palmar face is local +x (x = +9.8 mm). The z
+# window keeps each pad on the flat part of the link, clear of the knuckles.
+PAD_Z = {
+    "proximal": (0.008, 0.046),
+    "medial": (0.007, 0.031),
+    "distal": (0.003, 0.015),
+    "th_medial": (0.008, 0.043),
+    "th_distal": (0.004, 0.030),
+}
+LINK_HALF_X, LINK_HALF_Y = 0.0098, 0.0135
 
 # palm frame = world frame: fingers along +z, they curl towards +x (the palm
 # faces +x), finger spread along y (index at +y).
@@ -91,6 +105,41 @@ def cylinder_along(axis, center, r, length, segments=24):
     return c.transform(M)
 
 
+def _rounded_box(lo, hi, r, segments=8):
+    lo, hi = np.asarray(lo) + r, np.asarray(hi) - r
+    s = m3d.Manifold.sphere(r, segments)
+    return m3d.Manifold.batch_hull([s.translate((x, y, z)) for x in (lo[0], hi[0])
+                                    for y in (lo[1], hi[1]) for z in (lo[2], hi[2])])
+
+
+def _to_affine(T):
+    return np.ascontiguousarray(T[:3, :4])
+
+
+def build_pads(T, link, ball):
+    """Silicone pads on the palmar side of every phalanx and of the palm."""
+    pads = {}
+    for f in FINGERS:
+        for seg in ["proximal", "medial", "distal"]:
+            body = f"{f}_{seg}"
+            key = f"th_{seg}" if f == "th" else seg
+            if key not in PAD_Z:
+                continue            # the short thumb proximal link gets no pad
+            z0, z1 = PAD_Z[key]
+            lo = [LINK_HALF_X - 5e-4, -LINK_HALF_Y + 1e-3, z0]
+            hi = [LINK_HALF_X + PAD_THICKNESS, LINK_HALF_Y - 1e-3, z1]
+            pads[f"{body}_pad"] = _rounded_box(lo, hi, PAD_ROUND).transform(_to_affine(T[body]))
+    # palm pad on the palmar face (palm frame = world frame here)
+    pads["palm_pad"] = _rounded_box([0.0113 - 5e-4, -0.050, -0.086],
+                                    [0.0113 + PAD_THICKNESS, 0.050, -0.006], 2e-3)
+    # keep every pad clear of the links it is not bonded to
+    for name in pads:
+        own = name[: -len("_pad")]
+        others = [M for b, M in link.items() if b != own and not b.endswith("_tip")]
+        pads[name] = pads[name] - m3d.Manifold.batch_boolean(others, m3d.OpType.Add).minkowski_sum(ball)
+    return pads
+
+
 def build_hand_parts(hand: AllegroHand):
     """Return ``(parts, meta)``; ``parts`` maps part name -> Manifold (palm frame, q=0)."""
     T = hand.fk({}, BASE)
@@ -112,6 +161,9 @@ def build_hand_parts(hand: AllegroHand):
     link["palm"] = link["palm"] - link["th_base"].minkowski_sum(ball)
 
     parts = {"palm": link["palm"]}
+    # wrist flange (mounts the hand to an arm), below the palm
+    parts["wrist"] = cylinder_along([0, 0, 1], [-0.009, 0.0, -0.1055], 0.030, 0.022, 48)
+    parts.update(build_pads(T, link, ball))
     meta = {"bodies": {}, "joints": {}}
     for f in FINGERS:
         for seg in ["base", "proximal", "medial", "distal"]:
@@ -145,8 +197,10 @@ def build_hand_parts(hand: AllegroHand):
 
 def rigid_body_of_part(name):
     """Kinematic body that carries a part (tips ride on the distal link)."""
-    if name == "palm":
+    if name in ("palm", "wrist", "palm_pad"):
         return "palm"
+    if name.endswith("_pad"):
+        return name[: -len("_pad")]
     if name.endswith("_shaft"):
         return name[: -len("_shaft")]
     if "_tip" in name:
@@ -165,7 +219,7 @@ class CupParamsTall(CupParams):
     height: float = 0.130
 
 
-CUP_AXIS_XZ = (0.058, 0.068)   # cup axis (along palm y) in the palm's xz-plane
+CUP_AXIS_XZ = (0.063, 0.030)   # cup axis (along palm y): in front of the palm pad
 CUP_Y_BOTTOM = -0.075
 
 
@@ -194,5 +248,9 @@ def export(out_dir, cp=CupParamsTall()):
 
 
 if __name__ == "__main__":
+    if "--cup-only" in sys.argv:          # re-place the cup without rebuilding the hand
+        write_obj(os.path.join(HERE, "output", "cup.obj"),
+                  *manifold_VF(cup_in_palm_frame(CupParamsTall())))
+        sys.exit(0)
     meta = export(os.path.join(HERE, "output"))
     print(f"{len(meta['parts'])} parts, unified hand has {meta['n_shells']} shells")

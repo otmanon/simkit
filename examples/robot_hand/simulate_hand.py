@@ -4,7 +4,7 @@
   winding number) are driven by forward kinematics of the joint trajectory
   ``q(t)`` (flat hand -> fitted grasp pose), plus a wrist lift. That is how the
   Allegro's motors act: through the joint shafts. Aluminium phalanges, rubber
-  tips and the cup are free elastic bodies.
+  tips, silicone palmar pads and the cup are free elastic bodies.
 * **Elasticity** -- SimKit stable Neo-Hookean, per-tet ``mu, lam``.
 * **Time integration** -- backward Euler as incremental-potential minimisation
   (Newton + SimKit's backtracking line search) over the free DOFs.
@@ -73,7 +73,7 @@ class HandGraspSim:
 
         is_part = lambda pred: np.array([pred(nm) for nm in names])[part]
         verts = lambda mask: np.unique(T[mask])
-        driven = verts(is_part(lambda nm: nm == "palm" or nm.endswith("_shaft")))
+        driven = verts(is_part(lambda nm: nm in ("palm", "wrist") or nm.endswith("_shaft")))
         fixed = np.zeros(n, bool)
         fixed[driven] = True
         self.fixed_v = fixed

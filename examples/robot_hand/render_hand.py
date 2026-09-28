@@ -33,18 +33,23 @@ OUT = os.path.join(HERE, "output")
 # Map palm (x, y, z) -> world (z, y, x) mirrored so the hand is right-handed.
 WORLD = np.array([[0, 0, 1.0], [0, 1.0, 0], [-1.0, 0, 0]])
 
-FOCAL = (0.0, 0.0, 0.0)
-
-
 def views(center):
+    """Whole-hand cameras (world: fingers +x, index side +y, palm faces -z)."""
     c = np.asarray(center)
     return {
-        "back of hand": (c + [0.0, 0.05, 0.40], c),
-        "thumb side": (c + [0.33, 0.12, 0.20], c),
-        "palm side": (c + [-0.30, 0.18, -0.25], c),
-        "from above": (c + [0.10, 0.40, 0.08], c),
-        "fingertips": (c + [0.38, 0.02, -0.12], c),
+        "palm side": (c + [0.02, 0.06, -0.52], c),
+        "palm side, three-quarter": (c + [0.26, 0.22, -0.40], c),
+        "back of hand": (c + [-0.12, 0.14, 0.50], c),
+        "from above": (c + [0.04, 0.52, -0.08], c),
+        "fingertips": (c + [0.50, 0.08, -0.16], c),
     }
+
+
+APPEARANCE = {  # Allegro-like look: black anodised metal, white tips, grey silicone
+    "aluminium_6061_T6": "#2b2b2e", "aluminium_7075_T6": "#1c1c1f",
+    "steel_AISI_4140": "#9a9ca3", "polyurethane_40A": "#f2f2ef",
+    "silicone_shore_20A": "#8fa3b8", "polystyrene_GPPS": "#e9e4d8",
+}
 
 
 def tet_grid(X, T, **cell_data):
@@ -72,10 +77,11 @@ def render(scene, X, out_dir, title, suffix=""):
     X = X @ WORLD.T
     E_levels = np.unique(scene["E"])
     E_rank = np.searchsorted(E_levels, scene["E"]).astype(float)
-    palette = ["#3b4cc0", "#f2b134", "#8cc665", "#d7301f", "#6a3d9a"][:len(E_levels)]
+    palette = ["#3b4cc0", "#17becf", "#f2b134", "#8cc665", "#d7301f", "#6a3d9a"][:len(E_levels)]
     grid = tet_grid(X, T, E=E_rank, nu=scene["nu"], rho=scene["rho"])
     surf = grid.extract_surface(algorithm="dataset_surface")
-    center = X.mean(0)
+    cup_pid = len(scene["part_names"]) - 1
+    center = X[np.unique(T[scene["part"] != cup_pid])].mean(0)
     cup_c = X[np.unique(T[scene["part"] == len(scene["part_names"]) - 1])].mean(0)
     # cut-away through the middle finger's plane (palm y = 0) shows the steel
     # joint shafts and the aluminium cores inside the rubber tips
@@ -120,7 +126,7 @@ def render(scene, X, out_dir, title, suffix=""):
 
     # Poisson ratio + density
     cams = views(center)
-    panels = [("Poisson ratio ν", "nu", "plasma", (0.28, 0.48), surf, cams["thumb side"]),
+    panels = [("Poisson ratio ν", "nu", "plasma", (0.28, 0.48), surf, cams["palm side, three-quarter"]),
               ("density ρ [kg/m³] (cut-away)", "rho", "viridis", (1000, 8000), cut,
                (cup_c * [1, 0, 1] + [0.0, 0.30, 0.02], cup_c * [1, 0, 1] + [-0.03, 0, 0.0]))]
     fig, axes = plt.subplots(1, 2, figsize=(16, 7.2))
@@ -136,14 +142,35 @@ def render(scene, X, out_dir, title, suffix=""):
     path_nr = os.path.join(out_dir, f"hand_poisson_density{suffix}.png")
     fig.savefig(path_nr, dpi=120)
     plt.close(fig)
-    return path_E, path_nr
+    # appearance render (what the robot looks like)
+    mat_idx = {m: i for i, m in enumerate(APPEARANCE)}
+    grid.cell_data["mat"] = np.array([mat_idx[str(scene["material_names"][p])]
+                                      for p in scene["part"]], float)
+    surf2 = grid.extract_surface(algorithm="dataset_surface")
+    cmap = list(APPEARANCE.values())
+    cams = views(center)
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6.6))
+    for ax, name in zip(axes, ["palm side, three-quarter", "palm side", "back of hand"]):
+        img = shot(lambda pl: pl.add_mesh(surf2, scalars="mat", cmap=cmap, clim=(-0.5, len(cmap) - 0.5),
+                                          n_colors=len(cmap), show_scalar_bar=False,
+                                          smooth_shading=True, specular=0.4), cams[name])
+        ax.imshow(img)
+        ax.set_title(name, fontsize=13)
+        ax.axis("off")
+    fig.suptitle(title + " -- appearance", fontsize=15)
+    fig.tight_layout()
+    path_app = os.path.join(out_dir, f"hand_appearance{suffix}.png")
+    fig.savefig(path_app, dpi=120)
+    plt.close(fig)
+    return path_E, path_nr, path_app
 
 
 def _kind(part):
     if part == "cup":
         return "cup"
     for key, label in [("_shaft", "joint shafts"), ("_tip_rubber", "fingertips"),
-                       ("_tip_core", "tip cores"), ("palm", "palm")]:
+                       ("_pad", "palmar pads"), ("_tip_core", "tip cores"),
+                       ("palm", "palm"), ("wrist", "wrist flange")]:
         if part.endswith(key) or part == key:
             return label
     return "phalanges"

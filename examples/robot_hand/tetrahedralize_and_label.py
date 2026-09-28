@@ -12,6 +12,7 @@ Output: ``output/scene_tets.npz``.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -61,15 +62,10 @@ def tetrahedralize_shell(V, F, edge):
     return np.asarray(X, float), np.asarray(T, np.int64)
 
 
-def build(out_dir, finger_edge=2.5e-3, palm_edge=8e-3, cup_edge=3e-3):
-    rng = np.random.default_rng(0)
-    meta = json.load(open(os.path.join(out_dir, "hand_meta.json")))
-    Vh, Fh = read_obj(os.path.join(out_dir, "hand.obj"))
-    Vc, Fc = read_obj(os.path.join(out_dir, "cup.obj"))
-
-    # Each shell (one per rigid link) is meshed on its own: the shells are
-    # separate bodies anyway, and it keeps one awkward CAD surface from
-    # failing the whole run. The palm only moves rigidly, so it is coarse.
+def mesh_hand_shells(Vh, Fh, out_dir, finger_edge, palm_edge, rng):
+    """fTetWild each shell separately (the shells are separate bodies anyway,
+    and one awkward CAD surface cannot fail the whole run). The palm only moves
+    rigidly, so it is coarse."""
     comp = igl.facet_components(Fh)[1]
     palm_V, palm_F = read_obj(os.path.join(out_dir, "parts", "palm.obj"))
     Xs, Ts, nv = [], [], 0
@@ -86,7 +82,26 @@ def build(out_dir, finger_edge=2.5e-3, palm_edge=8e-3, cup_edge=3e-3):
         Xs.append(Xk)
         Ts.append(Tk + nv)
         nv += len(Xk)
-    Xh, Th = np.vstack(Xs), np.vstack(Ts)
+    return np.vstack(Xs), np.vstack(Ts)
+
+
+def build(out_dir, finger_edge=2.5e-3, palm_edge=8e-3, cup_edge=3e-3):
+    rng = np.random.default_rng(0)
+    meta = json.load(open(os.path.join(out_dir, "hand_meta.json")))
+    Vh, Fh = read_obj(os.path.join(out_dir, "hand.obj"))
+    Vc, Fc = read_obj(os.path.join(out_dir, "cup.obj"))
+
+    # Each shell (one per rigid link) is meshed on its own; cached on the hash
+    # of hand.obj so that cup-only changes re-mesh in seconds.
+    key = hashlib.sha1(open(os.path.join(out_dir, "hand.obj"), "rb").read()).hexdigest()
+    key += f"-{finger_edge}-{palm_edge}"
+    cache = os.path.join(out_dir, "hand_tets_cache.npz")
+    if os.path.exists(cache) and str(np.load(cache)["key"]) == key:
+        Xh, Th = np.load(cache)["X"], np.load(cache)["T"]
+        print("  reusing cached hand tets", flush=True)
+    else:
+        Xh, Th = mesh_hand_shells(Vh, Fh, out_dir, finger_edge, palm_edge, rng)
+        np.savez_compressed(cache, X=Xh, T=Th, key=key)
     Xc, Tc = tetrahedralize_shell(Vc, Fc, cup_edge)
 
     X = np.vstack([Xh, Xc]).astype(float)
