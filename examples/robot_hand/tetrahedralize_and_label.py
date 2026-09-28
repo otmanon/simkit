@@ -25,6 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(HERE, "..", "robot_gripper"))
 from gripper_geometry import read_obj  # noqa: E402
 from materials import MATERIALS, part_material, part_priority  # noqa: E402
+from mesh_checks import make_manifold, is_manifold  # noqa: E402
 
 
 def interior_point(V, F, rng):
@@ -102,6 +103,16 @@ def build(out_dir, finger_edge=2.5e-3, palm_edge=8e-3, cup_edge=3e-3):
     else:
         Xh, Th = mesh_hand_shells(Vh, Fh, out_dir, finger_edge, palm_edge, rng)
         np.savez_compressed(cache, X=Xh, T=Th, key=key)
+    # fTetWild can leave a few pinch points where the CAD has near-touching
+    # sheets (it does on the palm): delete those sliver tets so every shell's
+    # boundary is a closed 2-manifold, then drop orphaned vertices.
+    Th, frac = make_manifold(Xh, Th)
+    used = np.unique(Th)
+    remap = -np.ones(len(Xh), np.int64)
+    remap[used] = np.arange(len(used))
+    Xh, Th = Xh[used], remap[Th]
+    assert is_manifold(Th), "hand boundary is still non-manifold"
+    print(f"  manifold repair removed {frac:.1e} of the hand volume", flush=True)
     Xc, Tc = tetrahedralize_shell(Vc, Fc, cup_edge)
 
     X = np.vstack([Xh, Xc]).astype(float)

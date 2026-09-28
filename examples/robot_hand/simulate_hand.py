@@ -1,10 +1,11 @@
 """Allegro hand closes on the cup and lifts it -- heterogeneous FEM in SimKit.
 
-* **Actuation (joint space)** -- the palm and every steel joint shaft (found by
-  winding number) are driven by forward kinematics of the joint trajectory
-  ``q(t)`` (flat hand -> fitted grasp pose), plus a wrist lift. That is how the
-  Allegro's motors act: through the joint shafts. Aluminium phalanges, rubber
-  tips, silicone palmar pads and the cup are free elastic bodies.
+* **Actuation (SimKit mass springs)** -- only the palm and wrist flange are
+  prescribed (the robot flange, with a lift). The 17 link shells are joined by
+  hinge springs and driven by agonist/antagonist actuator springs
+  (``hand_springs.py``) whose rest lengths follow the joint trajectory ``q(t)``
+  (flat hand -> fitted grasp pose). Phalanges, steel shafts, rubber tips and
+  silicone pads are all free elastic bodies.
 * **Elasticity** -- SimKit stable Neo-Hookean, per-tet ``mu, lam``.
 * **Time integration** -- backward Euler as incremental-potential minimisation
   (Newton + SimKit's backtracking line search) over the free DOFs.
@@ -45,6 +46,7 @@ from hand_geometry import XML, CUP_Y_BOTTOM, CUP_AXIS_XZ, CupParamsTall
 from cup_sdf import CupSDF
 from hand_grasp import body_transforms, vertex_bodies
 from materials import lame
+from hand_springs import HandSprings
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(HERE, "..", "robot_gripper"))
@@ -133,7 +135,7 @@ class RigidCup:
 class HandGraspSim:
     def __init__(self, scene, schedule, h=0.01, k_contact=4e7, k_floor=4e8,
                  friction=1.0, eps_v=1e-3, gravity=-9.81, newton_iters=25, newton_tol=1e-6,
-                 contact_parts=("_tip_rubber", "_pad")):
+                 contact_parts=("_tip_rubber", "_pad"), springs=None):
         self.hand = AllegroHand(XML)
         self.X = scene["X"].astype(float)
         T, part = scene["T"], scene["part"]
@@ -152,7 +154,12 @@ class HandGraspSim:
         verts = lambda mask: np.unique(T[mask])
         # palm, wrist and steel shafts are driven by FK; the cup's FEM vertices
         # are replaced by the rigid body (they only follow its pose for output)
-        driven = verts(is_part(lambda nm: nm in ("palm", "wrist", "cup") or nm.endswith("_shaft")))
+        # the palm + wrist flange follow the robot flange; the joints are driven
+        # by SimKit mass-spring actuators (hand_springs.py) whose rest lengths
+        # follow the joint trajectory. The cup's FEM vertices are replaced by
+        # the rigid body (they only follow its pose for output).
+        self.springs = springs
+        driven = verts(is_part(lambda nm: nm in ("palm", "wrist", "cup")))
         fixed = np.zeros(n, bool)
         fixed[driven] = True
         self.fixed_v = fixed
@@ -217,7 +224,7 @@ class HandGraspSim:
         a Gauss-Newton Hessian over the same vector.
         """
         N = 3 * self.n + 6
-        ic, iw = 3 * self.n, 3 * self.n + 3
+        ic = 3 * self.n
         g = np.zeros(N)
         E, rows, cols, vals = 0.0, [], [], []
         R = rotvec_to_R(w) @ self.cup.R
@@ -296,6 +303,7 @@ class HandGraspSim:
         E = energies.stable_neo_hookean_energy_x(x.reshape(-1, 3), self.J, self.mu, self.lam,
                                                  self.vol) - self.E_rest
         E += self._contact(x, c, w, False)[0] - self.f_g @ x + self._cup_kinetic(c, w)[0]
+        E += self.springs.energy(x, self.l0)
         r = z[:self.nf] - x_tilde
         return E + 0.5 / self.h ** 2 * (self.m[self.free] * r) @ r
 
@@ -304,6 +312,8 @@ class HandGraspSim:
         Xm = x.reshape(-1, 3)
         ge = energies.stable_neo_hookean_gradient_x(Xm, self.J, self.mu, self.lam, self.vol).ravel()
         He = energies.stable_neo_hookean_hessian_x(Xm, self.J, self.mu, self.lam, self.vol, psd=True)
+        ge = ge + self.springs.gradient(x, self.l0)
+        He = He + self.springs.hessian(x, self.l0, psd=True)
         _, gc, Hc = self._contact(x, c, w, True)
         sel = np.concatenate([self.free, 3 * self.n + np.arange(6)])
         mf = self.m[self.free] / self.h ** 2
@@ -328,6 +338,7 @@ class HandGraspSim:
         self.w_tilde = R_to_rotvec(cup.R @ cup.R_prev.T)
         self.I_w = cup.R @ cup.I_body @ cup.R.T
         self._begin_step()
+        self.l0 = self.springs.rest_lengths(self.sched(t1)[0])   # actuation
         # warm start: hand vertices follow their link's FK increment
         x0 = self.x + v
         x0.reshape(-1, 3)[self.vb != self.body_names.index("cup")] = \
@@ -365,7 +376,8 @@ def main():
     scene = dict(np.load(os.path.join(out, "scene_tets.npz")))
     meta = json.load(open(os.path.join(out, "hand_meta.json")))
     parts = ("_tip_rubber",) if args.contact == "tips" else ("_tip_rubber", "_pad")
-    sim = HandGraspSim(scene, HandSchedule(meta["grasp_q"]), contact_parts=parts)
+    sim = HandGraspSim(scene, HandSchedule(meta["grasp_q"]), contact_parts=parts,
+                       springs=HandSprings(scene, meta))
     print(f"free DOFs {len(sim.free)} + 6 (rigid cup, m = {sim.cup.m*1e3:.1f} g), "
           f"active tets {len(sim.T)}, contact vertices {len(sim.contact_v)}", flush=True)
     n_steps = args.steps or int(round(sim.sched.t_end / sim.h))
