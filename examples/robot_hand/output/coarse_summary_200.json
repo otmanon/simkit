@@ -1,0 +1,9 @@
+{
+ "target": 200,
+ "modes": 48,
+ "fine_vertices": 61604,
+ "coarse_vertices": {
+  "mesh4pde": 200,
+  "shortest_edge": 200
+ }
+}
