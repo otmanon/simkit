@@ -13,6 +13,7 @@ Modes are computed in growing batches until at least ``--want`` fingertip modes
 have appeared.
 
     python eigen_modes.py [--want 4] [--start 32]
+    python eigen_modes.py --render-only       # re-render the saved modes
 
 Writes ``output/hand_modes.npz`` and ``output/renders/hand_modes.png``.
 """
@@ -79,7 +80,11 @@ def main():
     ap.add_argument("--want", type=int, default=4, help="stop after this many fingertip modes")
     ap.add_argument("--start", type=int, default=32)
     ap.add_argument("--max", type=int, default=400)
+    ap.add_argument("--render-only", action="store_true",
+                    help="re-render from output/hand_modes.npz without recomputing")
     args = ap.parse_args()
+    if args.render_only:
+        return render_only(args.want)
 
     scene = dict(np.load(os.path.join(OUT, "scene_tets.npz")))
     meta = json.load(open(os.path.join(OUT, "hand_meta.json")))
@@ -124,41 +129,61 @@ def main():
                         keep=keep, tips=np.array(tips))
     json.dump(dict(rows=rows, tips=tips), open(os.path.join(OUT, "hand_modes.json"), "w"), indent=1)
 
-    # ---------------- render: modes 1..first fingertip mode (+ the fingertip ones)
+    render_modes(X, T, B, rows, tips, args.want)
+
+
+def render_modes(X, T, B, rows, tips, want):
+    """Modes 1..first fingertip mode (whole hand), then each fingertip mode as a
+    whole-hand view plus a close-up of the fingertip it lives in."""
     last = tips[0] if tips else len(rows) - 1
-    show = list(range(min(last + 1, 20)))
-    if last >= 20:
-        show = list(range(14)) + [i for i in range(14, last + 1) if i in tips or i == last][:6]
-    show += [i for i in tips[1:args.want] if i not in show]
+    show = list(range(min(last, 15)))
     Xw = X @ WORLD.T
     c = Xw.mean(0)
-    cam = (c + [0.26, 0.22, -0.40], c)
+    cam = (c + [0.30, 0.30, -0.50], c + [0.0, 0.03, 0.0])
+    panels = [(i, cam, False) for i in show]
+    for i in tips[:want]:
+        u = np.linalg.norm(B[:, i].reshape(-1, 3), axis=1)
+        focus = Xw[u >= 0.5 * u.max()].mean(0)
+        panels += [(i, cam, False), (i, (focus + [0.05, 0.05, -0.07], focus), True)]
     ncol = 5
-    nrow = int(np.ceil(len(show) / ncol))
+    nrow = int(np.ceil(len(panels) / ncol))
     fig, axes = plt.subplots(nrow, ncol, figsize=(4.2 * ncol, 4.0 * nrow))
     for ax in axes.ravel():
         ax.axis("off")
-    for ax, i in zip(axes.ravel(), show):
+    for ax, (i, cm, zoom) in zip(axes.ravel(), panels):
         u = (B[:, i].reshape(-1, 3)) @ WORLD.T
         mag = np.linalg.norm(u, axis=1)
-        u *= 0.012 / mag.max()                      # max displacement drawn: 12 mm
+        u *= (0.004 if zoom else 0.012) / mag.max()   # drawn max displacement
         g = tet_grid(Xw + u, T)
         g.point_data["|phi|"] = mag / mag.max()
         surf = g.extract_surface(algorithm="dataset_surface")
         ax.imshow(shot(lambda pl: pl.add_mesh(surf, scalars="|phi|", cmap="magma",
-                                              clim=(0, 1), show_scalar_bar=False), cam,
+                                              clim=(0, 1), show_scalar_bar=False), cm,
                        size=(760, 700)))
         r = rows[i]
         top = sorted(r["share"].items(), key=lambda kv: -kv[1])[:2]
-        ax.set_title(f"mode {i+1}{'  FINGERTIP' if i in tips else ''}\n"
+        ax.set_title(f"mode {i+1}{'  FINGERTIP' if i in tips else ''}{' (close-up)' if zoom else ''}\n"
                      f"f = {r['freq']:.0f} Hz; " + ", ".join(f"{n} {v:.0%}" for n, v in top),
                      fontsize=10, color="#b2182b" if i in tips else "black")
-    fig.suptitle("Eigenmodes of the spring-actuated elastic Allegro hand "
-                 "(colour: |displacement|, exaggerated to 12 mm)", fontsize=14)
+    fig.suptitle("Eigenmodes of the spring-actuated elastic Allegro hand: modes 1-"
+                 f"{show[-1] + 1 if show else 0}, then the first fingertip modes "
+                 "(colour: |displacement|, exaggerated)", fontsize=14)
     fig.tight_layout(rect=(0, 0, 1, 0.97))
     path = os.path.join(OUT, "renders", "hand_modes.png")
     fig.savefig(path, dpi=110)
     print("wrote", os.path.relpath(path))
+
+
+def render_only(want):
+    scene = dict(np.load(os.path.join(OUT, "scene_tets.npz")))
+    d = np.load(os.path.join(OUT, "hand_modes.npz"))
+    info = json.load(open(os.path.join(OUT, "hand_modes.json")))
+    names = [str(n) for n in scene["part_names"]]
+    keep = d["keep"]
+    remap = -np.ones(len(scene["X"]), np.int64)
+    remap[keep] = np.arange(len(keep))
+    T = remap[scene["T"][scene["part"] != names.index("cup")]]
+    render_modes(scene["X"][keep], T, d["B"], info["rows"], info["tips"], want)
 
 
 if __name__ == "__main__":
