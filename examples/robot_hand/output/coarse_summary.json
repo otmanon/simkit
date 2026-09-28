@@ -1,0 +1,72 @@
+{
+ "modes": 118,
+ "fine_vertices": 61603,
+ "runs": [
+  {
+   "target": 200,
+   "method": "mesh4pde",
+   "vertices": 277,
+   "tets": 907,
+   "nonmanifold_vertices": 0,
+   "nonmanifold_edges": 0,
+   "tips_kept": 1,
+   "silicone_shore_20A": 29,
+   "polyurethane_40A": 5
+  },
+  {
+   "target": 200,
+   "method": "shortest_edge",
+   "vertices": 200,
+   "tets": 349,
+   "nonmanifold_vertices": 0,
+   "nonmanifold_edges": 0,
+   "tips_kept": 3,
+   "silicone_shore_20A": 26,
+   "polyurethane_40A": 7
+  },
+  {
+   "target": 1000,
+   "method": "mesh4pde",
+   "vertices": 1000,
+   "tets": 2941,
+   "nonmanifold_vertices": 0,
+   "nonmanifold_edges": 0,
+   "tips_kept": 4,
+   "silicone_shore_20A": 1408,
+   "polyurethane_40A": 235
+  },
+  {
+   "target": 1000,
+   "method": "shortest_edge",
+   "vertices": 1000,
+   "tets": 2904,
+   "nonmanifold_vertices": 0,
+   "nonmanifold_edges": 0,
+   "tips_kept": 4,
+   "silicone_shore_20A": 380,
+   "polyurethane_40A": 82
+  },
+  {
+   "target": 2000,
+   "method": "mesh4pde",
+   "vertices": 2000,
+   "tets": 6316,
+   "nonmanifold_vertices": 0,
+   "nonmanifold_edges": 0,
+   "tips_kept": 4,
+   "silicone_shore_20A": 4099,
+   "polyurethane_40A": 496
+  },
+  {
+   "target": 2000,
+   "method": "shortest_edge",
+   "vertices": 2000,
+   "tets": 6802,
+   "nonmanifold_vertices": 0,
+   "nonmanifold_edges": 0,
+   "tips_kept": 4,
+   "silicone_shore_20A": 811,
+   "polyurethane_40A": 246
+  }
+ ]
+}
