@@ -25,9 +25,13 @@ so moving the cup (`python hand_geometry.py --cup-only`) re-meshes in seconds.
 
 Actuation: joint trajectory `q(t)` (flat → grasp) drives the palm and the
 steel joint shafts through forward kinematics, the way the Allegro's motors
-act on each link. Phalanges, rubber tips, silicone pads and cup are free elastic bodies;
-tips and cup interact through penalty contact with lagged Coulomb friction
-(pad–cup contact is not wired into the simulation yet).
+act on each link. Phalanges, rubber tips and silicone pads are free elastic bodies. The cup is
+a 6-DoF rigid body (mass/inertia from its tets) with an exact analytic SDF
+(`cup_sdf.py`: two capped cones + rim torus, checked against the mesh). Every
+surface vertex of the rubber tips and silicone pads (`--contact tips` for tips
+only) gets a penalty `k/2 min(phi, 0)^2` on the cup SDF, coupled to the cup's
+translation and rotation in the same Newton solve, plus lagged smoothed
+Coulomb friction; the cup's base ring has a penalty against the table.
 
 TetGen could not handle the Allegro CAD surfaces (internal errors or 400k+
 tets per link), hence fTetWild. Extra dependencies:
