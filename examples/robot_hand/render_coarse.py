@@ -24,6 +24,7 @@ from hand_geometry import XML
 from hand_grasp import pose_vertices
 from render_hand import WORLD, tet_grid, shot, views
 from materials import MATERIALS, part_material
+from mesh_checks import nonmanifold_boundary
 
 pv.OFF_SCREEN = True
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -72,7 +73,9 @@ def main():
         surf = g.extract_surface(algorithm="dataset_surface")
         center = Xw[np.unique(T)].mean(0)
         nv = len(np.unique(T))
-        cols.append((f"{label}\n{nv} vertices, {len(T)} tets", surf, center))
+        bv, be = nonmanifold_boundary(T)
+        mf = "manifold" if not bv and not be else f"NON-manifold ({len(bv)} v, {len(be)} e)"
+        cols.append((f"{label}\n{nv} vertices, {len(T)} tets, {mf}", surf, center))
 
     opts = dict(scalars="E", cmap=PALETTE, clim=(-0.5, len(LEVELS) - 0.5),
                 n_colors=len(LEVELS), show_scalar_bar=False, show_edges=True,
