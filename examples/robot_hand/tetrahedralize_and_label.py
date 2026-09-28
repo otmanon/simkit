@@ -46,17 +46,18 @@ def tetrahedralize_shell(V, F, edge):
     """
     import wildmeshing as wm
     diag = np.linalg.norm(V.max(0) - V.min(0))
-    tet = wm.Tetrahedralizer(stop_quality=10, edge_length_r=edge / diag,
-                             epsilon=1e-4 / diag, max_its=40)
     cwd = os.getcwd()
     with tempfile.TemporaryDirectory() as tmp:   # fTetWild drops scratch files in cwd
         os.chdir(tmp)
         try:
+            tet = wm.Tetrahedralizer(stop_quality=10, edge_length_r=edge / diag,
+                                     epsilon=1e-4 / diag, max_its=40)
             tet.set_mesh(V, F)
             tet.tetrahedralize()
+            X, T = tet.get_tet_mesh()[:2]
+            del tet
         finally:
             os.chdir(cwd)
-    X, T = tet.get_tet_mesh()[:2]
     return np.asarray(X, float), np.asarray(T, np.int64)
 
 
