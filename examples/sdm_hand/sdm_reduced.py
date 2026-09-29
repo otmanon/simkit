@@ -223,6 +223,7 @@ def main():
     ap.add_argument("--levels", type=int, nargs="*")
     ap.add_argument("--fine", action="store_true", help="also run the full-space reference (P = I)")
     ap.add_argument("--no-dynamics", action="store_true")
+    ap.add_argument("--n-static", type=int, default=12)
     ap.add_argument("--k-pin", type=float, default=None, help="hinge-pin stiffness in the subspace")
     ap.add_argument("--names", nargs="*", help="level file tags instead of --levels, e.g. 1200_q30")
     args = ap.parse_args()
@@ -237,7 +238,8 @@ def main():
         sysd = build_hand_system(lv, k_pin=args.k_pin)
         print(f"== {'fine (P = I)' if lv is None else f'level {lv}'}: {sysd['n_dof']} DOFs, "
               f"{sysd['n_tets']} integration tets [build {time.time() - t0:.1f} s]", flush=True)
-        res = simulate(sysd, log=lambda s: print(s, flush=True), dynamics=not args.no_dynamics)
+        res = simulate(sysd, n_static=args.n_static, log=lambda s: print(s, flush=True),
+                       dynamics=not args.no_dynamics)
         np.savez_compressed(os.path.join(OUT, f"reduced_sim{tag}.npz"),
                             **{k: (v.astype(np.float32) if k in ("static_x", "dyn_x") else v)
                                for k, v in res.items()})

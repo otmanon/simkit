@@ -120,6 +120,39 @@ def homogenize(sc, fine):
     return dict(sc, E=E, nu=nu, rho=rho)
 
 
+def ritz(hand, V, A=None):
+    """M-orthonormalise the columns of V and Rayleigh-Ritz them against the hand's
+    Hessian A (a = 0): an M-orthonormal basis with a matching energy per column."""
+    if A is None:
+        A = hand.hessian(hand.X.reshape(-1), 0.0)
+    sq = np.sqrt(hand.m)
+    Q, R = np.linalg.qr(sq[:, None] * V)
+    Q = Q[:, np.abs(np.diag(R)) > 1e-10 * np.abs(np.diag(R)).max()]
+    Vq = Q / sq[:, None]
+    Ar = Vq.T @ (A @ Vq)
+    ev, Y = np.linalg.eigh(0.5 * (Ar + Ar.T))
+    keep = ev > 1e-9 * ev.max()
+    return (Vq @ Y)[:, keep], ev[keep]
+
+
+def pca_basis(hand, energy=1 - 1e-6, k_max=30):
+    """PCA of the full-space closing (``reduced_sim_fine.npz``: statics + dynamics),
+    mass-weighted so the components are M-orthonormal. Returns the components and
+    their singular values."""
+    d = np.load(os.path.join(OUT, "reduced_sim_fine.npz"))
+    X = hand.X.reshape(-1)
+    Us = np.vstack([d["static_x"], d["dyn_x"]]).astype(float) - X          # snapshots x 3n
+    sq = np.sqrt(hand.m)
+    W, sig, _ = np.linalg.svd((sq[:, None] * Us.T), full_matrices=False)
+    c = np.cumsum(sig ** 2) / (sig ** 2).sum()
+    k = int(min(k_max, np.searchsorted(c, energy) + 1))
+    Phi = W[:, :k] / sq[:, None]
+    print(f"pca: {Us.shape[0]} snapshots, {k} components hold {100 * c[k - 1]:.5f}% of the variance "
+          f"(sigma ratio {sig[k - 1] / sig[0]:.2e})", flush=True)
+    np.savez_compressed(os.path.join(CO, "pca_basis.npz"), Phi=Phi, sigma=sig[:k], sigma_all=sig)
+    return Phi, sig[:k]
+
+
 def green_basis(hand, B, lam):
     """Add the tendons' linear responses to the modal basis.
 
@@ -147,14 +180,7 @@ def green_basis(hand, B, lam):
     U = np.zeros_like(F)
     for j in range(F.shape[1]):
         U[fr, j] = solve_spd(Aff, F[fr, j])
-    V = np.hstack([B, U])
-    sq = np.sqrt(hand.m)
-    Q, _ = np.linalg.qr(sq[:, None] * V)
-    Vq = Q / sq[:, None]
-    Ar = Vq.T @ (A @ Vq)
-    ev, Y = np.linalg.eigh(0.5 * (Ar + Ar.T))
-    keep = ev > 1e-9 * ev.max()
-    Bn, lamn = (Vq @ Y)[:, keep], ev[keep]
+    Bn, lamn = ritz(hand, np.hstack([B, U]), A)
     print(f"green: {m} tendon Green's functions + actuation response added; Ritz basis "
           f"{Bn.shape[1]} columns, lowest {np.round(np.sqrt(lamn[:6]) / 2 / np.pi, 1)} Hz", flush=True)
     return Bn, lamn
@@ -174,6 +200,10 @@ def main():
     ap.add_argument("--min-quality", type=float, default=0.0,
                     help="mesh4PDE min_quality: refuse collapses leaving a one-ring tet below this "
                          "mean-ratio quality (0 = off)")
+    ap.add_argument("--basis", choices=["elastic", "pca", "mixed"], default="elastic",
+                    help="elastic: Hessian eigenmodes; pca: PCA of the full-space closing only "
+                         "(eigenvalues = 1/sigma, so the cost measures lost snapshot data); mixed: "
+                         "PCA components + eigenmodes, Rayleigh-Ritz'd against the Hessian")
     ap.add_argument("--green", action="store_true",
                     help="add the tendons' Green's functions (linear responses) to the scoring basis")
     ap.add_argument("--suffix", default="", help="appended to the level's file names, e.g. _q30")
@@ -195,6 +225,14 @@ def main():
     else:
         B, lam, pad_idx = fine_basis(hand, args.k_max, args.pad_modes, args.min_modes)
         np.savez_compressed(cache, B=B, eigenvalues=lam, pad_idx=np.array(pad_idx, dtype=object))
+    if args.basis == "pca":
+        B, sig = pca_basis(hand)
+        lam = 1.0 / sig
+    elif args.basis == "mixed":
+        Phi, _ = pca_basis(hand)
+        B, lam = ritz(hand, np.hstack([B, Phi]))
+        print(f"mixed: {B.shape[1]} Ritz columns, lowest {np.round(np.sqrt(lam[:6]) / 2 / np.pi, 1)} Hz",
+              flush=True)
     if args.green:
         B, lam = green_basis(hand, B, lam)
     meshes = [read_obj(os.path.join(OUT, "parts", f"{n}.obj")) for n in names]
