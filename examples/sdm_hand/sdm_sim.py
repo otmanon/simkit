@@ -93,7 +93,7 @@ class Hand:
         self.Mv = simkit.massmatrix(X, T, rho=scene["rho"].reshape(-1, 1)).diagonal()
         self.m = np.repeat(self.Mv, 3)
         self.f_g = (self.Mv[:, None] * GRAVITY[None]).ravel()
-        self.pinned = np.where(X[:, 2] < X[:, 2].min() + 1e-9)[0]
+        self.pinned = np.where(X[:, 2] < X[:, 2].min() + 1e-7)[0]
         fixed = np.zeros(3 * n, bool)
         fixed[(3 * self.pinned[:, None] + np.arange(3)).ravel()] = True
         self.free = np.where(~fixed)[0]
@@ -105,16 +105,20 @@ class Hand:
         self._pins(K_PIN)
 
     def part_vertices(self, name, surface=True):
-        """Vertices whose incident tets all belong to part ``name``."""
+        """Vertices whose incident tets all belong to part ``name``. On a coarse
+        mesh a thin part can have fewer than 4 such vertices; then every vertex
+        of the part's tets is used (dropping the surface filter if needed)."""
         key = (name, surface)
         if key not in self._pv:
             pid = self.names.index(name)
-            inside = np.zeros(self.n, bool)
-            inside[np.unique(self.T[self.part == pid])] = True
+            touch = np.zeros(self.n, bool)
+            touch[np.unique(self.T[self.part == pid])] = True
+            inside = touch.copy()
             inside[np.unique(self.T[self.part != pid])] = False
-            if surface:
-                inside &= self.on_surface
-            self._pv[key] = np.where(inside)[0]
+            cands = [inside & self.on_surface, touch & self.on_surface, touch] if surface \
+                else [inside, touch]
+            v = next((np.where(c)[0] for c in cands if c.sum() >= 4), np.where(cands[-1])[0])
+            self._pv[key] = v
         return self._pv[key]
 
     # -------------------------------------------------------------- tendons
@@ -358,8 +362,11 @@ def summarize_pen(pen):
                 nonadjacent_pairs=[f"{q['pair']} ({q['depth_mm']:.1f} mm)" for q in non])
 
 
-def run(dynamics=True, n_static=12, h=1 / 60, t_ramp=1.2, t_end=2.0):
-    scene = dict(np.load(os.path.join(OUT, "sdm_tets.npz")))
+def run(dynamics=True, n_static=12, h=1 / 60, t_ramp=1.2, t_end=2.0, scene_file="sdm_tets.npz",
+        tag=""):
+    """Statics + dynamics on ``output/<scene_file>``; writes ``sdm_sim<tag>.npz`` and
+    ``sim_report<tag>.json`` (tag "" is the fine hand)."""
+    scene = dict(np.load(os.path.join(OUT, scene_file)))
     hand = Hand(scene)
     print(f"{hand.n} vertices, {len(hand.T)} tets, {len(hand.pinned)} pinned vertices, "
           f"{len(hand.E_t)} tendon springs (k = {K_TENDON:g} N/m)")
@@ -438,8 +445,8 @@ def run(dynamics=True, n_static=12, h=1 / 60, t_ramp=1.2, t_end=2.0):
                     dyn_peak_tip_disp_mm=dict(zip(hand.fingers, (tipd.max(0) * 1e3).round(1).tolist())),
                     dyn_final_joint_deg=hand.joint_angles(frames[-1]).round(1).tolist(),
                     dyn_final_penetration=summarize_pen(hand.interpenetration(frames[-1])))
-    np.savez_compressed(os.path.join(OUT, "sdm_sim.npz"), **out)
-    with open(os.path.join(OUT, "sim_report.json"), "w") as f:
+    np.savez_compressed(os.path.join(OUT, f"sdm_sim{tag}.npz"), **out)
+    with open(os.path.join(OUT, f"sim_report{tag}.json"), "w") as f:
         json.dump(info, f, indent=1, default=float)
     return info
 
