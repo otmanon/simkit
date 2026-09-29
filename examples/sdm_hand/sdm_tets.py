@@ -30,12 +30,12 @@ from sdm_geometry import (OUT, HandParams, build_parts, read_obj, surface_topolo
 # name -> (E [Pa], nu, rho [kg/m^3])
 MATERIALS = {
     "stiff polyurethane (links, palm)": dict(E=1.5e9, nu=0.35, rho=1150.0),
-    "soft elastomer (flexure joints)": dict(E=0.6e6, nu=0.45, rho=1050.0),
+    "stiff elastomer (flexure joints)": dict(E=6.0e6, nu=0.45, rho=1050.0),
     "softer elastomer (pads)": dict(E=0.2e6, nu=0.45, rho=1030.0),
 }
 KIND_MATERIAL = {"palm": "stiff polyurethane (links, palm)",
                  "link": "stiff polyurethane (links, palm)",
-                 "flexure": "soft elastomer (flexure joints)",
+                 "flexure": "stiff elastomer (flexure joints)",
                  "pad": "softer elastomer (pads)"}
 PRIORITY = ("pad", "flexure", "link", "palm")      # first match wins
 

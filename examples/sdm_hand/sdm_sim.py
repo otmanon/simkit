@@ -4,7 +4,7 @@ Model
 -----
 * **Elasticity** -- SimKit stable Neo-Hookean (``stable_neo_hookean_*_x``) with
   per-tet ``mu, lam`` from the winding-number material labels (stiff
-  polyurethane palm/phalanges, soft elastomer flexures, softer pads). Stable NH
+  polyurethane palm/phalanges, 6 MPa elastomer flexures, 0.2 MPa pads). Stable NH
   has a nonzero rest energy; it is subtracted.
 * **Base** -- every vertex on the bottom face of the wrist (``z = -30 mm``) is
   pinned; those DOFs are eliminated (hard Dirichlet).
@@ -57,7 +57,7 @@ except ImportError:  # pragma: no cover
     def solve_spd(A, b):
         return sp.sparse.linalg.spsolve(A.tocsc(), b)
 
-K_TENDON = 1.0e4                     # N/m, every tendon spring
+K_TENDON = 1.0e5                     # N/m, every tendon spring
 # flexion wanted at a = 1 (deg): fingers (base, middle, distal); thumb (0, 1, 2)
 TARGET_DEG = {"finger": (32.0, 34.0, 26.0), "thumb": (30.0, 26.0, 26.0)}
 # Gravity is off by default: the thumb's first flexure is soft in torsion and

@@ -35,7 +35,7 @@ REN = os.path.join(OUT, "renders")
 
 KIND_COL = {"palm": "#8a8d91", "link": "#3b3f45", "flexure": "#f28e2b", "pad": "#76b7e0"}
 KIND_LAB = {"palm": "palm + wrist (stiff polyurethane)", "link": "phalanges (stiff polyurethane)",
-            "flexure": "flexure joints (soft elastomer)", "pad": "fingertip + palm pads (softer elastomer)"}
+            "flexure": "flexure joints (stiff elastomer, 6 MPa)", "pad": "fingertip + palm pads (softer elastomer)"}
 # robot-like appearance: dark urethane blocks, amber flexures, skin-tone pads
 APPEAR = {"palm": "#4a4d52", "link": "#2e3136", "flexure": "#e8a33d", "pad": "#e9c2a6"}
 E_PALETTE = ["#3b4cc0", "#f2b134", "#d7301f"]      # stiff, flexure, pad (by E rank, high->low)

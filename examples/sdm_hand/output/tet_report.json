@@ -54,8 +54,8 @@
    "nu": 0.35,
    "rho": 1150.0
   },
-  "soft elastomer (flexure joints)": {
-   "E": 600000.0,
+  "stiff elastomer (flexure joints)": {
+   "E": 6000000.0,
    "nu": 0.45,
    "rho": 1050.0
   },
