@@ -58,11 +58,16 @@ except ImportError:  # pragma: no cover
         return sp.sparse.linalg.spsolve(A.tocsc(), b)
 
 K_TENDON = 1.0e5                     # N/m, every tendon spring
+# Hinge pins: at both ends of every flexure's bending axis, a zero-length spring
+# ties a point carried by the block below to the same point carried by the block
+# above. Points on the axis stay put under pure flexion, so only flexion is left
+# soft; abduction, twist, shear and stretch of the joint are penalised.
+K_PIN = 1.0e7                        # N/m, per pin (~150x the flexure's shear stiffness)
 # flexion wanted at a = 1 (deg): fingers (base, middle, distal); thumb (0, 1, 2)
 TARGET_DEG = {"finger": (32.0, 34.0, 26.0), "thumb": (30.0, 26.0, 26.0)}
-# Gravity is off by default: the thumb's first flexure is soft in torsion and
-# the 36 g thumb would twist ~1 rad under its own weight (``--gravity`` turns
-# it on, along -z with the hand upright).
+# Gravity is off by default (before the hinge pins, the thumb's first flexure was
+# soft in torsion and the 36 g thumb twisted ~1 rad under its own weight);
+# ``--gravity`` turns it on, along -z with the hand upright.
 GRAVITY = np.array([0.0, 0.0, 0.0])
 
 
@@ -97,6 +102,7 @@ class Hand:
         self.on_surface[np.unique(self.Fb)] = True
         self._pv = {}
         self._tendons(k_tendon, target)
+        self._pins(K_PIN)
 
     def part_vertices(self, name, surface=True):
         """Vertices whose incident tets all belong to part ``name``."""
@@ -114,6 +120,7 @@ class Hand:
     # -------------------------------------------------------------- tendons
     def _tendons(self, k, target):
         edges, info = [], []
+        self._pin_specs = []
         p = HandParams()
         anchors = {j[0]: j for j in tendon_anchors(p)}
         for jt in joints(p):
@@ -141,6 +148,9 @@ class Hand:
             l_rest = np.linalg.norm(b_ - a_)
             th = np.radians(target["thumb" if finger == "thumb" else "finger"][idx])
             c = min(0.85, r * th / l_rest)
+            xs = (self.X[self.part_vertices(name, surface=False)] - hinge) @ axis
+            self._pin_specs.append((jt["below"], jt["above"], hinge + xs.min() * axis,
+                                    hinge + xs.max() * axis))
             edges.append(ids)
             info.append(dict(joint=name, finger=finger, index=idx, below=jt["below"],
                              above=jt["above"], l_rest=l_rest, arm=r, contraction=c,
@@ -153,6 +163,40 @@ class Hand:
         self.ym = np.full((len(edges), 1), float(k))
         self.svol = np.ones((len(edges), 1))
         self.fingers = list(dict.fromkeys(t["finger"] for t in info))
+
+    def _affine_weights(self, part, q, k=64):
+        """Weights w over the k vertices of ``part`` nearest to q with
+        sum w_i [x_i, 1] = [q, 1]: q moves exactly with any affine (so any rigid)
+        motion of the block."""
+        cand = self.part_vertices(part, surface=False)
+        ids = cand[np.argsort(np.linalg.norm(self.X[cand] - q, axis=1))[:k]]
+        c = self.X[ids].mean(0)
+        A = np.vstack([(self.X[ids] - c).T, np.ones(len(ids))])
+        w = A.T @ np.linalg.solve(A @ A.T, np.append(q - c, 1.0))
+        return ids, w
+
+    def _pins(self, k):
+        rows, cols, vals = [], [], []
+        pts = []
+        for below, above, *qs in self._pin_specs:
+            for q in qs:
+                r = len(pts)
+                for part, sgn in ((below, 1.0), (above, -1.0)):
+                    ids, w = self._affine_weights(part, q)
+                    for d in range(3):
+                        rows += [3 * r + d] * len(ids)
+                        cols += list(3 * ids + d)
+                        vals += list(sgn * w)
+                pts.append(q)
+        self.pin_points = np.array(pts)
+        self.G = sp.sparse.csr_matrix((vals, (rows, cols)), shape=(3 * len(pts), 3 * self.n))
+        self.g0 = self.G @ self.X.reshape(-1)
+        self.k_pin = k
+        self.H_pin = (k * (self.G.T @ self.G)).tocsr()
+
+    def pin_gap(self, x):
+        """Per-pin mismatch |p_below - p_above| (m)."""
+        return np.linalg.norm((self.G @ x - self.g0).reshape(-1, 3), axis=1)
 
     def l0(self, a):
         return ((1.0 - self.c * a) * self.l_rest).reshape(-1, 1)
@@ -167,19 +211,22 @@ class Hand:
         Xm = x.reshape(-1, 3)
         e = energies.stable_neo_hookean_energy_x(Xm, self.J, self.mu, self.lam, self.vol) - self.E_rest
         e += energies.mass_springs_energy_x(Xm, self.E_t, self.ym, self.svol, self.l0(a))
+        r = self.G @ x - self.g0
+        e += 0.5 * self.k_pin * (r @ r)
         return float(e - self.f_g @ x)
 
     def gradient(self, x, a):
         Xm = x.reshape(-1, 3)
         g = energies.stable_neo_hookean_gradient_x(Xm, self.J, self.mu, self.lam, self.vol).ravel()
         g = g + energies.mass_springs_gradient_x(Xm, self.E_t, self.ym, self.svol, self.l0(a)).ravel()
+        g = g + self.k_pin * (self.G.T @ (self.G @ x - self.g0))
         return g - self.f_g
 
     def hessian(self, x, a):
         Xm = x.reshape(-1, 3)
         H = energies.stable_neo_hookean_hessian_x(Xm, self.J, self.mu, self.lam, self.vol, psd=True)
         H = H + energies.mass_springs_hessian_x(Xm, self.E_t, self.ym, self.svol, self.l0(a), psd=True)
-        return H.tocsr()
+        return (H + self.H_pin).tocsr()
 
     def minimize(self, x0, a, x_tilde=None, h=None, iters=60, tol=1e-5):
         """Newton over the free DOFs of V(x) [+ inertia when ``x_tilde`` is given],
