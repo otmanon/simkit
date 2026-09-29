@@ -46,5 +46,21 @@
    56.8,
    67.4
   ]
+ },
+ {
+  "case": "cup + friction",
+  "model": "full space (34,008 DOFs)",
+  "dofs": 34008,
+  "build_s": 2.25,
+  "statics_s": 2131.79,
+  "newton_its": 558,
+  "per_newton_ms": 3820.4,
+  "tips_mm": [
+   65.8,
+   83.8,
+   79.3,
+   58.8,
+   68.1
+  ]
  }
 ]
