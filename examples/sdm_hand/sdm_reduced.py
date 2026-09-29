@@ -62,12 +62,15 @@ def load_level(level):
     return d, P
 
 
-def build_hand_system(level=None, k_pin=None):
+def build_hand_system(level=None, k_pin=None, ball=None):
     """Return ``system(x, a) -> (E, g, H)`` plus what the solver and renderer need.
     ``k_pin`` overrides the hinge-pin stiffness (0 drops the pins: in a coarse
     subspace that cannot reproduce an exact hinge rotation they act as a locking
     constraint)."""
     K_PIN_ = K_PIN if k_pin is None else k_pin
+    # ball = (centre, radius, k): a fixed rigid ball, phi(p) = |p - c| - R, in contact with
+    # the FINE surface vertices only (x_s = B_s x, the one term integrated on the fine
+    # mesh); cubic penalty k/3 sum_v a_v max(0, -phi)^3, Gauss-Newton Hessian, pulled back by B_s
     hf = fine_hand()
     if level is None:
         sc, P = _FINE["scene"], sp.sparse.identity(hf.n, format="csc")
@@ -134,8 +137,59 @@ def build_hand_system(level=None, k_pin=None):
         H = (H + Ht + H_quad).tocsr()
         return float(e), g, H
 
+    if ball is not None:
+        import igl
+        bc, bR, bk = np.asarray(ball[0], float), float(ball[1]), float(ball[2])
+        Fb = igl.boundary_facets(hf.T)[0]
+        sv = np.unique(Fb)
+        area = np.zeros(hf.n)
+        A3 = 0.5 * igl.doublearea(hf.X, Fb) / 3
+        for j in range(3):
+            np.add.at(area, Fb[:, j], A3)
+        a_s = area[sv]
+        Bs = prolongation_to_subspace(P=P.tocsr()[sv], dof=3).tocsr()
+        elastic_system = system
+
+        def contact(x, energy_only=False):
+            Ps = (Bs @ x).reshape(-1, 3)
+            r = Ps - bc
+            dist = np.linalg.norm(r, axis=1)
+            d = bR - dist                                        # penetration depth
+            act = d > 0
+            e = bk / 3 * float((a_s[act] * d[act] ** 3).sum())
+            if energy_only:
+                return e, None, None
+            n = r[act] / dist[act, None]
+            gs = np.zeros((len(sv), 3))
+            gs[act] = (-bk * a_s[act] * d[act] ** 2)[:, None] * n
+            g = Bs.T @ gs.ravel()
+            idx = np.nonzero(act)[0]
+            if len(idx) == 0:
+                return e, g, sp.sparse.csr_matrix((len(x), len(x)))
+            rows = (3 * idx[:, None] + np.arange(3)).ravel()
+            Ba = Bs[rows]
+            w = 2 * bk * a_s[act] * d[act]
+            blk = w[:, None, None] * n[:, :, None] * n[:, None, :]
+            Hs = sp.sparse.block_diag(list(blk), format="csr")
+            return e, g, (Ba.T @ Hs @ Ba).tocsr()
+
+        def system(x, a, energy_only=False):
+            e, g, H = elastic_system(x, a, energy_only)
+            ec, gc, Hc = contact(x, energy_only)
+            if energy_only:
+                return e + ec, None, None
+            return e + ec, g + gc, (H + Hc).tocsr()
+
+        def contact_report(x):
+            Ps = (Bs @ x).reshape(-1, 3)
+            dist = np.linalg.norm(Ps - bc, axis=1)
+            d = bR - dist
+            act = d > 0
+            F = bk * a_s[act] * d[act] ** 2
+            return dict(contact_vertices=int(act.sum()), max_pen_mm=float(d.max() * 1e3) if act.any() else 0.0,
+                        force_N=float(F.sum()))
     tips = [hf.tip_vertices(f) for f in hf.fingers]
-    return dict(system=system, x0=x0, M=M_r, P=P, B=B, X=Xc, T=Tc, scene=sc, level=level,
+    return dict(system=system, contact_report=(contact_report if ball is not None else None), ball=ball, x0=x0, M=M_r, P=P, B=B, X=Xc, T=Tc, scene=sc, level=level,
                 n_dof=len(x0), n_tets=len(Tc), tips=tips, fingers=hf.fingers,
                 Gt=Gt, Gp=Gp, Sb=Sb)
 
@@ -189,12 +243,21 @@ def simulate(sysd, n_static=12, h=1 / 60, t_ramp=1.2, t_end=2.0, log=print, dyna
         xs.append(x.copy())
         its.append(it)
     t_static = time.time() - t0
+    if sysd.get("contact_report"):
+        crep = [sysd["contact_report"](xx) for xx in xs]
+        log(f"  contact at a=1: {crep[-1]['contact_vertices']} fine surface vertices, force "
+            f"{crep[-1]['force_N']:.2f} N, max penetration {crep[-1]['max_pen_mm']:.2f} mm")
     log(f"  statics: {len(a_vals)} steps, {sum(its)} Newton its, {t_static:.2f} s; tips at a=1 (mm) "
         + " ".join(f"{f} {v*1e3:.1f}" for f, v in zip(sysd["fingers"], tips(xs[-1]))))
 
     if not dynamics:
-        return dict(static_a=a_vals, static_x=np.array(xs), static_its=np.array(its), t_static=t_static,
-                    static_tip=np.array([tips(xx) for xx in xs]))
+        out = dict(static_a=a_vals, static_x=np.array(xs), static_its=np.array(its), t_static=t_static,
+                   static_tip=np.array([tips(xx) for xx in xs]))
+        if sysd.get("contact_report"):
+            out.update(contact_force=np.array([c["force_N"] for c in crep]),
+                       contact_pen=np.array([c["max_pen_mm"] for c in crep]),
+                       contact_n=np.array([c["contact_vertices"] for c in crep]))
+        return out
     t0 = time.time()
     n_steps = int(round(t_end / h))
     x, v = x0.copy(), np.zeros_like(x0)
@@ -224,18 +287,22 @@ def main():
     ap.add_argument("--fine", action="store_true", help="also run the full-space reference (P = I)")
     ap.add_argument("--no-dynamics", action="store_true")
     ap.add_argument("--n-static", type=int, default=12)
+    ap.add_argument("--ball", type=float, nargs=5, metavar=("CX", "CY", "CZ", "R", "K"),
+                    help="rigid ball in contact with the fine surface (m, N/m^4)")
     ap.add_argument("--k-pin", type=float, default=None, help="hinge-pin stiffness in the subspace")
     ap.add_argument("--names", nargs="*", help="level file tags instead of --levels, e.g. 1200_q30")
     args = ap.parse_args()
     summ = json.load(open(os.path.join(CO, "coarse_summary.json")))
     levels = args.names if args.names else (args.levels if args.levels is not None
                                             else [r["target"] for r in summ["levels"]])
-    pin_tag = "" if args.k_pin is None else f"_kpin{args.k_pin:g}"
-    runs = [(lv, f"_{lv}{pin_tag}") for lv in levels] + ([(None, "_fine")] if args.fine else [])
+    pin_tag = ("" if args.k_pin is None else f"_kpin{args.k_pin:g}") + ("" if args.ball is None else "_ball")
+    runs = [(lv, f"_{lv}{pin_tag}") for lv in levels] + \
+        ([(None, "_fine" + ("" if args.ball is None else "_ball"))] if args.fine else [])
     report = {}
     for lv, tag in runs:
         t0 = time.time()
-        sysd = build_hand_system(lv, k_pin=args.k_pin)
+        ball = None if args.ball is None else (args.ball[:3], args.ball[3], args.ball[4])
+        sysd = build_hand_system(lv, k_pin=args.k_pin if lv is not None else None, ball=ball)
         print(f"== {'fine (P = I)' if lv is None else f'level {lv}'}: {sysd['n_dof']} DOFs, "
               f"{sysd['n_tets']} integration tets [build {time.time() - t0:.1f} s]", flush=True)
         res = simulate(sysd, n_static=args.n_static, log=lambda s: print(s, flush=True),
