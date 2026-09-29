@@ -15,9 +15,9 @@
   "n_tets": 15110
  },
  "tet_boundary_pads": {
-  "V": 3723,
-  "E": 11163,
-  "F": 7442,
+  "V": 6103,
+  "E": 18303,
+  "F": 12202,
   "chi": 2,
   "components": 1,
   "boundary_loops": 0,
@@ -26,28 +26,28 @@
   "oriented": true,
   "genus": 0.0,
   "closed_manifold": true,
-  "n_vertices": 5459,
-  "n_tets": 21480
+  "n_vertices": 11733,
+  "n_tets": 52490
  },
  "label_counts": {
   "palm": {
-   "tets": 6480,
-   "volume_cm3": 212.3543627770475
+   "tets": 6503,
+   "volume_cm3": 212.72082366281728
   },
   "link": {
-   "tets": 8135,
-   "volume_cm3": 138.23913493313998
+   "tets": 15528,
+   "volume_cm3": 137.8096826485028
   },
   "flexure": {
-   "tets": 4484,
-   "volume_cm3": 8.679775175062403
+   "tets": 4521,
+   "volume_cm3": 8.69545343307623
   },
   "pad": {
-   "tets": 2381,
-   "volume_cm3": 22.58064765783028
+   "tets": 25938,
+   "volume_cm3": 27.659961169007875
   }
  },
- "min_tet_volume_mm3": 0.029533619512256703,
+ "min_tet_volume_mm3": 0.017041823988428288,
  "materials": {
   "stiff polyurethane (links, palm)": {
    "E": 1500000000.0,

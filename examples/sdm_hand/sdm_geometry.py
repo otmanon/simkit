@@ -70,7 +70,7 @@ class HandParams:
     flex_inset: float = 2 * mm                # flexure narrower by 2 mm per side
     flex_dorsal_gap: float = 1 * mm           # flexure's dorsal face at y = palm_t - 1 mm
     overlap: float = 0.5 * mm
-    pad_t: float = 4 * mm
+    pad_t: float = 8 * mm                     # fingertip / thumb pad thickness
     # thumb, built along local +z with its palmar side at local -y
     thumb_seg: tuple = ((38 * mm, 24 * mm), (30 * mm, 20 * mm), (24 * mm, 19 * mm))
     thumb_half_t: float = 8 * mm

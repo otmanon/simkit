@@ -40,10 +40,11 @@ KIND_MATERIAL = {"palm": "stiff polyurethane (links, palm)",
 PRIORITY = ("pad", "flexure", "link", "palm")      # first match wins
 
 
-def sizing_field(V, parts, h_flex=0.0022, h_pad=0.0035, h_coarse=0.012, grad=0.6,
+def sizing_field(V, parts, h_flex=0.0022, h_pad=0.0035, h_tip=0.0013, h_coarse=0.012, grad=0.6,
                  spacing=0.0025, h_anchor=0.002):
     """Background tet grid carrying TetGen's ``target_size`` point field:
-    h = min(h_coarse, h_kind + grad * distance to the nearest flexure / pad box)."""
+    h = min(h_coarse, h_kind + grad * distance to the nearest flexure / pad box),
+    with h_kind = h_flex for flexures, h_tip for fingertip pads, h_pad for the palm pad."""
     lo, hi = V.min(0) - 0.005, V.max(0) + 0.005
     g = pv.ImageData(dimensions=tuple(np.ceil((hi - lo) / spacing).astype(int) + 1),
                      spacing=(spacing,) * 3, origin=lo).triangulate()
@@ -57,7 +58,10 @@ def sizing_field(V, parts, h_flex=0.0022, h_pad=0.0035, h_coarse=0.012, grad=0.6
         _, _, Rt = np.linalg.svd(Vb - c)      # its local axes
         half = np.abs((Vb - c) @ Rt.T).max(0)
         d = np.linalg.norm(np.maximum(np.abs((P - c) @ Rt.T) - half, 0), axis=1)
-        h = np.minimum(h, (h_flex if kind == "flexure" else h_pad) + grad * d)
+        # fingertip pads are meshed finely (several tets through their thickness);
+        # the large palm pad keeps the coarser pad size
+        hk = h_flex if kind == "flexure" else (h_pad if n == "palm_pad" else h_tip)
+        h = np.minimum(h, hk + grad * d)
     # fine spots at the tendon anchors so that a surface vertex lies close to
     # every intended attachment point
     for _, _, pa, _, pb in tendon_anchors():

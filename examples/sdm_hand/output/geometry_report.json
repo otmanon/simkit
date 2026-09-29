@@ -61,7 +61,7 @@
   "flex_inset": 0.002,
   "flex_dorsal_gap": 0.001,
   "overlap": 0.0005,
-  "pad_t": 0.004,
+  "pad_t": 0.008,
   "thumb_seg": [
    [
     0.038,
