@@ -1,8 +1,8 @@
 {
  "tet_boundary_nopads": {
-  "V": 1718,
-  "E": 5148,
-  "F": 3432,
+  "V": 2984,
+  "E": 8946,
+  "F": 5964,
   "chi": 2,
   "components": 1,
   "boundary_loops": 0,
@@ -11,13 +11,13 @@
   "oriented": true,
   "genus": 0.0,
   "closed_manifold": true,
-  "n_vertices": 2602,
-  "n_tets": 10335
+  "n_vertices": 4039,
+  "n_tets": 15110
  },
  "tet_boundary_pads": {
-  "V": 2657,
-  "E": 7965,
-  "F": 5310,
+  "V": 3723,
+  "E": 11163,
+  "F": 7442,
   "chi": 2,
   "components": 1,
   "boundary_loops": 0,
@@ -26,28 +26,28 @@
   "oriented": true,
   "genus": 0.0,
   "closed_manifold": true,
-  "n_vertices": 4401,
-  "n_tets": 18460
+  "n_vertices": 5459,
+  "n_tets": 21480
  },
  "label_counts": {
   "palm": {
-   "tets": 3005,
-   "volume_cm3": 239.85138565272277
+   "tets": 6480,
+   "volume_cm3": 212.3543627770475
   },
   "link": {
-   "tets": 8422,
-   "volume_cm3": 169.6897016684418
+   "tets": 8135,
+   "volume_cm3": 138.23913493313998
   },
   "flexure": {
-   "tets": 2621,
-   "volume_cm3": 6.776015951848809
+   "tets": 4484,
+   "volume_cm3": 8.679775175062403
   },
   "pad": {
-   "tets": 4412,
-   "volume_cm3": 12.366910988986362
+   "tets": 2381,
+   "volume_cm3": 22.58064765783028
   }
  },
- "min_tet_volume_mm3": 0.05611844554679168,
+ "min_tet_volume_mm3": 0.029533619512256703,
  "materials": {
   "stiff polyurethane (links, palm)": {
    "E": 1500000000.0,
@@ -59,7 +59,7 @@
    "nu": 0.45,
    "rho": 1050.0
   },
-  "softer elastomer (fingertip pads)": {
+  "softer elastomer (pads)": {
    "E": 200000.0,
    "nu": 0.45,
    "rho": 1030.0

@@ -1,28 +1,39 @@
-"""Simplified box-CSG geometry of the SDM Hand (Dollar & Howe, IJRR 2010).
+"""Box-CSG geometry of an anthropomorphic SDM-style compliant hand.
 
-The SDM Hand is a four-finger, eight-joint, single-actuator underactuated
-hand made by shape deposition manufacturing: stiff polyurethane links joined
-by soft elastomer flexure joints, soft fingertip pads, and one tendon that
-closes all fingers. Two fingers oppose the other two across the palm.
+Construction follows the SDM Hand (Dollar & Howe, "The Highly Adaptive SDM
+Hand", IJRR 2010): stiff polyurethane links joined by thin, soft elastomer
+flexure joints, soft fingertip pads, tendon actuation from a single actuator.
+The layout is anthropomorphic (the hand shape the user approved):
 
-Here every part is a rectangular prism (``manifold3d.Manifold.cube``):
+* palm plate 90 (x) x 95 (z) x 22 (y) mm, wrist block 50 x 18 x 30 mm below it
+* four fingers on the palm's top edge, three phalanges each (lengths in mm)
+    index 40/25/20 (w 19), middle 45/28/22 (w 20), ring 42/26/21 (w 19),
+    little 32/20/18 (w 16); phalanx thickness 17 mm; ~2 mm gaps
+* an opposable thumb off the radial (-x) side near the wrist: metacarpal
+  38 mm + proximal 30 mm + distal 24 mm (widths 24/20/19, thickness 16 mm)
+* between every pair of consecutive blocks a soft flexure slab 6 mm long,
+  5 mm thick (4 mm for the thumb), 4 mm narrower than the phalanx, placed at
+  the DORSAL side so that palmar tendons curl the finger towards the palm
+* soft pads on the palmar face of every distal phalanx, plus a palm pad
 
-* palm                         120 x 100 x 20 mm
-* 4 proximal links             20 x 20 x 62 mm   (joint-to-joint 70 mm)
-* 4 distal links               20 x 20 x 45 mm
-* 4 proximal flexures          5 (thick) x 16 (wide) x 8 (long) mm  (softer)
-* 4 distal flexures            7 (thick) x 16 (wide) x 8 (long) mm  (stiffer)
-* 4 fingertip pads (optional)  4.5 x 18 x 35 mm on the palmar face of the distal link
+Every block is a ``manifold3d.Manifold.cube``; flexures embed 0.5 mm into the
+blocks they join, so the union is ONE solid. It is checked to be a single
+closed, oriented 2-manifold with Euler characteristic 2, i.e. genus 0, with
+and without the pads.
 
-Each flexure overlaps the parts it joins by 0.5 mm so the CSG union is a single
-solid. The union with and without pads is checked to be a single closed,
-oriented 2-manifold of genus 0 (Euler characteristic 2).
+Frame (metres): ``x`` across the hand (thumb at -x), ``z`` up along the
+fingers, ``y`` the thickness with the PALMAR face at ``y = 0`` and the dorsal
+face at ``y = 0.022``. The bottom face of the wrist (``z = -0.030``) is pinned
+in the simulation.
 
-Frame: metres; palm on ``0 <= z <= 0.02``, fingers along ``+z``; fingers at
-``x = +-0.05`` close towards ``x = 0`` (the palmar side of each finger faces
-the palm centre). In the simulation gravity acts along ``+z`` -- the hand is
-mounted facing down, as on the arm it was designed for -- and renders show it
-that way (palm at the top, fingers hanging).
+Changes w.r.t. the quick preview script (``hand_quick.py``): the thumb is
+(1) moved 4 mm further out (3.4 mm clearance) and its first flexure extended
+16 mm into the palm, so that only that flexure joins it to the palm --
+in the preview the metacarpal block overlapped the palm by 481 mm^3, which
+would have welded the thumb's first joint solid; (2) tilted +15 deg (towards
+the palmar side) instead of -15 deg (towards the back of the hand), and
+pronated 50 deg about its own axis so that its pad faces the fingers and it
+flexes across the palm (opposition) rather than straight forward.
 
     python sdm_geometry.py        # -> output/parts/*.obj, output/sdm_hand*.obj
 """
@@ -30,81 +41,203 @@ from __future__ import annotations
 
 import json
 import os
-from collections import Counter
-from dataclasses import dataclass, asdict
+from collections import Counter, defaultdict
+from dataclasses import dataclass, asdict, field
 
 import numpy as np
 import manifold3d as m3d
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "output")
+mm = 1e-3
 
 
 @dataclass
 class HandParams:
-    palm: tuple = (0.120, 0.100, 0.020)      # x, y, z extents
-    finger_x: float = 0.050                   # |x| of the finger centre lines
-    finger_y: tuple = (-0.025, 0.025)         # y of the two fingers per side
-    link_w: float = 0.020                     # square link cross-section
-    prox_len: float = 0.062
-    dist_len: float = 0.045
-    flex_len: float = 0.008                   # visible flexure length
-    flex_w: float = 0.016                     # flexure width (y)
-    flex_t_prox: float = 0.005                # flexure thickness (x): proximal
-    flex_t_dist: float = 0.007                #   distal (thicker -> stiffer)
-    overlap: float = 0.0005                   # flexure embedding into links
-    pad_t: float = 0.0045                     # pad thickness (proud of the face)
-    pad_w: float = 0.018
-    pad_z: tuple = (0.007, 0.042)             # pad span along the distal link
-                                              # (from the distal link's base)
+    palm_t: float = 22 * mm                   # palm thickness (y)
+    palm_x: tuple = (-45 * mm, 45 * mm)
+    palm_z: tuple = (0.0, 95 * mm)
+    wrist: tuple = (-25 * mm, 25 * mm, 2 * mm, 20 * mm, -30 * mm, 0.5 * mm)
+    # finger: (x centre, width, (proximal, middle, distal) lengths)
+    fingers: dict = field(default_factory=lambda: {
+        "index": (-32 * mm, 19 * mm, (40 * mm, 25 * mm, 20 * mm)),
+        "middle": (-10.5 * mm, 20 * mm, (45 * mm, 28 * mm, 22 * mm)),
+        "ring": (11 * mm, 19 * mm, (42 * mm, 26 * mm, 21 * mm)),
+        "little": (31 * mm, 16 * mm, (32 * mm, 20 * mm, 18 * mm))})
+    phal_t: float = 17 * mm                   # phalanx thickness (y)
+    flex_len: float = 6 * mm
+    flex_t: float = 5 * mm
+    flex_inset: float = 2 * mm                # flexure narrower by 2 mm per side
+    flex_dorsal_gap: float = 1 * mm           # flexure's dorsal face at y = palm_t - 1 mm
+    overlap: float = 0.5 * mm
+    pad_t: float = 4 * mm
+    # thumb, built along local +z with its palmar side at local -y
+    thumb_seg: tuple = ((38 * mm, 24 * mm), (30 * mm, 20 * mm), (24 * mm, 19 * mm))
+    thumb_half_t: float = 8 * mm
+    thumb_flex_t: float = 4 * mm
+    thumb_pronation: float = 50.0             # deg about the thumb's own axis
+    thumb_tilt: float = 15.0                  # deg about x (towards the palmar side)
+    thumb_abduction: float = -50.0            # deg about y (outwards)
+    thumb_base: tuple = (-52 * mm, 11 * mm, 18 * mm)
+    thumb_root_embed: float = 16 * mm          # first thumb flexure reaches into the palm
+    palm_pad: tuple = (-38 * mm, 38 * mm, -3 * mm, 0.5 * mm, 20 * mm, 85 * mm)
 
 
-def box(lo, hi):
-    lo, hi = np.asarray(lo, float), np.asarray(hi, float)
+def box(x0, x1, y0, y1, z0, z1):
+    lo = np.array([min(x0, x1), min(y0, y1), min(z0, z1)])
+    hi = np.array([max(x0, x1), max(y0, y1), max(z0, z1)])
     return m3d.Manifold.cube(tuple(hi - lo)).translate(tuple(lo))
 
 
-def finger_names(p=HandParams()):
-    return [f"{side}{j}" for side in ("L", "R") for j in range(len(p.finger_y))]
-
-
-def z_levels(p=HandParams()):
-    """z of: palm top, prox link base/top, distal link base/top."""
-    z0 = p.palm[2]
-    zp0 = z0 + p.flex_len
-    zp1 = zp0 + p.prox_len
-    zd0 = zp1 + p.flex_len
-    zd1 = zd0 + p.dist_len
-    return z0, zp0, zp1, zd0, zd1
+def thumb_transform(p=HandParams()):
+    """4x4 matrix local thumb frame -> hand frame (same order as the CSG ops)."""
+    def rot(axis, deg):
+        c, s = np.cos(np.radians(deg)), np.sin(np.radians(deg))
+        R = np.eye(3)
+        i, j = [(1, 2), (2, 0), (0, 1)][axis]
+        R[i, i], R[i, j], R[j, i], R[j, j] = c, -s, s, c
+        return R
+    R = rot(1, p.thumb_abduction) @ rot(0, p.thumb_tilt) @ rot(2, p.thumb_pronation)
+    A = np.eye(4)
+    A[:3, :3], A[:3, 3] = R, p.thumb_base
+    return A
 
 
 def build_parts(p=HandParams(), pads=True):
-    """Return an ordered dict ``{name: Manifold}``."""
+    """Ordered ``{name: (Manifold, kind)}``; kind in palm / link / flexure / pad."""
     parts = {}
-    px, py, pz = p.palm
-    parts["palm"] = box((-px / 2, -py / 2, 0), (px / 2, py / 2, pz))
-    z0, zp0, zp1, zd0, zd1 = z_levels(p)
-    w, o = p.link_w / 2, p.overlap
-    for side, s in (("L", -1.0), ("R", 1.0)):
-        for j, yc in enumerate(p.finger_y):
-            n = f"{side}{j}"
-            xc = s * p.finger_x
-            parts[f"prox_{n}"] = box((xc - w, yc - w, zp0), (xc + w, yc + w, zp1))
-            parts[f"dist_{n}"] = box((xc - w, yc - w, zd0), (xc + w, yc + w, zd1))
-            for key, t, za, zb in (("flexprox", p.flex_t_prox, z0, zp0),
-                                   ("flexdist", p.flex_t_dist, zp1, zd0)):
-                parts[f"{key}_{n}"] = box((xc - t / 2, yc - p.flex_w / 2, za - o),
-                                          (xc + t / 2, yc + p.flex_w / 2, zb + o))
-            if pads:
-                xin = xc - s * w                    # palmar face of the finger
-                xa, xb = xin - s * p.pad_t, xin + s * o
-                parts[f"pad_{n}"] = box((min(xa, xb), yc - p.pad_w / 2, zd0 + p.pad_z[0]),
-                                        (max(xa, xb), yc + p.pad_w / 2, zd0 + p.pad_z[1]))
+    T = p.palm_t
+    parts["wrist"] = (box(*p.wrist), "palm")
+    parts["palm"] = (box(*p.palm_x, 0, T, *p.palm_z), "palm")
+    ov, fl = p.overlap, p.flex_len
+    y_f1 = T - p.flex_dorsal_gap
+    y_p0 = (T - p.phal_t) / 2                  # palmar face of the phalanges
+    for f, (xc, w, L) in p.fingers.items():
+        z = p.palm_z[1]
+        for i, l in enumerate(L):
+            parts[f"{f}_flex{i}"] = (box(xc - w / 2 + p.flex_inset, xc + w / 2 - p.flex_inset,
+                                         y_f1 - p.flex_t, y_f1, z - ov, z + fl + ov), "flexure")
+            z += fl
+            parts[f"{f}_ph{i}"] = (box(xc - w / 2, xc + w / 2, y_p0, y_p0 + p.phal_t, z, z + l), "link")
+            z += l
+        if pads:
+            parts[f"{f}_pad"] = (box(xc - w / 2 + 1.5 * mm, xc + w / 2 - 1.5 * mm,
+                                     y_p0 - p.pad_t, y_p0 + ov, z - l + 3 * mm, z - 2 * mm), "pad")
+    # thumb in its local frame
+    A = thumb_transform(p)
+    ht = p.thumb_half_t
+    zc = 0.0
+    local = []
+    for i, (l, w) in enumerate(p.thumb_seg):
+        z_lo = zc - (p.thumb_root_embed if i == 0 else ov)
+        local.append((f"thumb_flex{i}", box(-w / 2 + p.flex_inset, w / 2 - p.flex_inset,
+                                            ht - p.thumb_flex_t, ht, z_lo, zc + fl + ov), "flexure"))
+        local.append((f"thumb_ph{i}", box(-w / 2, w / 2, -ht, ht, zc + fl, zc + fl + l), "link"))
+        zc += fl + l
+    if pads:
+        local.append(("thumb_pad", box(-8 * mm, 8 * mm, -ht - p.pad_t, -ht + ov,
+                                       zc - l + 3 * mm, zc - 2 * mm), "pad"))
+    for name, M, kind in local:
+        parts[name] = (M.transform(A[:3, :]), kind)
+    if pads:
+        parts["palm_pad"] = (box(*p.palm_pad), "pad")
     return parts
 
 
+def joints(p=HandParams()):
+    """Every flexure joint: dict(name, below, above, frame A (4x4), z0, z1 local,
+    y_palmar local, x centre local). Tendons are attached from these."""
+    out = []
+    y_p0 = (p.palm_t - p.phal_t) / 2
+    for f, (xc, w, L) in p.fingers.items():
+        z = p.palm_z[1]
+        prev = "palm"
+        for i, l in enumerate(L):
+            A = np.eye(4)
+            A[0, 3] = xc
+            out.append(dict(name=f"{f}_flex{i}", below=prev, above=f"{f}_ph{i}", A=A,
+                            z0=z, z1=z + p.flex_len,
+                            y_below=0.0 if prev == "palm" else y_p0, y_above=y_p0))
+            prev = f"{f}_ph{i}"
+            z += p.flex_len + l
+    A = thumb_transform(p)
+    zc, prev = 0.0, "palm"
+    for i, (l, w) in enumerate(p.thumb_seg):
+        out.append(dict(name=f"thumb_flex{i}", below=prev, above=f"thumb_ph{i}", A=A,
+                        z0=zc, z1=zc + p.flex_len, y_below=-p.thumb_half_t,
+                        y_above=-p.thumb_half_t))
+        prev = f"thumb_ph{i}"
+        zc += p.flex_len + l
+    return out
+
+
+ANCHOR_OFFSET = 4 * mm      # tendon anchors sit 4 mm from the joint on each side
+ANCHOR_OFFSET_PADDED = 1.5 * mm   # ... except on distal blocks (pad starts at 3 mm)
+
+
+def tendon_anchors(p=HandParams()):
+    """[(joint name, block below, point below, block above, point above)] -- the
+    palmar-side attachment points (hand frame) of the tendon across each joint."""
+    out = []
+    parts = build_parts(p, pads=False)
+    for jt in joints(p):
+        A = jt["A"]
+        w = lambda q: A[:3, :3] @ np.asarray(q) + A[:3, 3]
+        off = ANCHOR_OFFSET_PADDED if jt["above"].endswith("ph2") else ANCHOR_OFFSET
+        pa = w((0.0, jt["y_below"], jt["z0"] - ANCHOR_OFFSET))
+        pb = w((0.0, jt["y_above"], jt["z1"] + off))
+        # snap onto the surface of the block it is attached to (the thumb's
+        # palm anchor would otherwise lie inside the palm)
+        pa, pb = (closest_on(parts[n][0], q) for n, q in ((jt["below"], pa), (jt["above"], pb)))
+        out.append((jt["name"], jt["below"], pa, jt["above"], pb))
+    return out
+
+
+def closest_on(M, q):
+    import igl
+    V, F = manifold_to_VF(M)
+    _, _, c = igl.point_mesh_squared_distance(np.atleast_2d(q), V, F)
+    return c[0]
+
+
+def insert_points(V, F, P, snap=2e-4):
+    """Insert surface points P into the triangle mesh (V, F) by 1-to-3 face or
+    1-to-2 edge splits (orientation preserving; topology unchanged) so that the
+    tet mesh has a vertex exactly at every tendon attachment point."""
+    import igl
+    V, F = np.asarray(V, float).copy(), np.asarray(F).copy()
+    for p in P:
+        _, fi, c = igl.point_mesh_squared_distance(np.atleast_2d(p), V, F)
+        fi, c = int(fi[0]), c[0]
+        tri = F[fi]
+        dv = np.linalg.norm(V[tri] - c, axis=1)
+        if dv.min() < snap:
+            continue
+        A_, B_, C_ = V[tri]
+        n = np.cross(B_ - A_, C_ - A_)
+        b = np.array([np.dot(np.cross(C_ - B_, c - B_), n), np.dot(np.cross(A_ - C_, c - C_), n),
+                      np.dot(np.cross(B_ - A_, c - A_), n)]) / np.dot(n, n)
+        m = len(V)
+        V = np.vstack([V, c])
+        k = int(np.argmin(b))
+        if b[k] < 0.02:                              # on edge (i, j) opposite corner k
+            i, j = tri[(k + 1) % 3], tri[(k + 2) % 3]
+            new, drop = [], []
+            for f_id, f in enumerate(F):
+                for r in range(3):
+                    if (f[r], f[(r + 1) % 3]) in ((i, j), (j, i)):
+                        a_, b_, o = f[r], f[(r + 1) % 3], f[(r + 2) % 3]
+                        new += [(a_, m, o), (m, b_, o)]
+                        drop.append(f_id)
+            F = np.vstack([np.delete(F, drop, 0), np.array(new)])
+        else:
+            a_, b_, c_ = tri
+            F = np.vstack([np.delete(F, fi, 0), [(a_, b_, m), (b_, c_, m), (c_, a_, m)]])
+    return V, F
+
+
 def union(parts):
-    return m3d.Manifold.batch_boolean(list(parts.values()), m3d.OpType.Add)
+    return m3d.Manifold.batch_boolean([M for M, _ in parts.values()], m3d.OpType.Add)
 
 
 def manifold_to_VF(M):
@@ -134,17 +267,16 @@ def read_obj(path):
 
 # ------------------------------------------------------------------ topology
 def surface_topology(V, F, merge_tol=1e-10):
-    """Euler characteristic / genus of a triangle mesh.
+    """Euler characteristic and genus of a triangle mesh.
 
-    Coincident vertices are merged first (so a mesh that is only "closed up to
-    duplicated vertices" is still judged on its true connectivity). Returns a
-    dict with V, E, F, chi, components, boundary loops, manifold flags and the
-    genus  g = (2 C - chi - B) / 2  (= (2 - chi)/2 for one closed component).
+    Coincident vertices are merged first (``merge_tol``; 0 = use indices as
+    given). Returns V, E, F, chi, #components C, #boundary loops B, manifold /
+    orientation flags and  genus g = (2C - chi - B)/2  (= (2 - chi)/2 for one
+    closed component).
     """
-    V = np.asarray(V, float)
     F = np.asarray(F, np.int64)
-    key = np.round(V / merge_tol).astype(np.int64) if merge_tol else None
-    if key is not None:
+    if merge_tol:
+        key = np.round(np.asarray(V, float) / merge_tol).astype(np.int64)
         _, inv = np.unique(key, axis=0, return_inverse=True)
         F = inv.ravel()[F]
     used = np.unique(F)
@@ -153,16 +285,11 @@ def surface_topology(V, F, merge_tol=1e-10):
     F = remap[F]
     nV = len(used)
     E_dir = np.concatenate([F[:, [0, 1]], F[:, [1, 2]], F[:, [2, 0]]])
-    E_und = np.sort(E_dir, 1)
-    cnt = Counter(map(tuple, E_und))
-    nE = len(cnt)
+    cnt = Counter(map(tuple, np.sort(E_dir, 1)))
     boundary = [e for e, c in cnt.items() if c == 1]
     nonmanifold_edges = sum(1 for c in cnt.values() if c > 2)
-    # consistent orientation: every directed edge appears at most once
-    dcnt = Counter(map(tuple, E_dir))
-    oriented = all(c == 1 for c in dcnt.values())
-    # connected components (union-find over edges)
-    parent = np.arange(nV)
+    oriented = all(c == 1 for c in Counter(map(tuple, E_dir)).values())
+    parent = list(range(nV))
 
     def find(a):
         while parent[a] != a:
@@ -170,38 +297,29 @@ def surface_topology(V, F, merge_tol=1e-10):
             a = parent[a]
         return a
     for a, b in cnt:
-        ra, rb = find(a), find(b)
-        if ra != rb:
-            parent[ra] = rb
+        parent[find(a)] = find(b)
     C = len({find(v) for v in range(nV)})
-    # boundary loops
     B = 0
     if boundary:
-        bpar = {}
+        bp = {}
 
         def bfind(a):
-            while bpar.setdefault(a, a) != a:
-                a = bpar[a]
+            while bp.setdefault(a, a) != a:
+                a = bp[a]
             return a
         for a, b in boundary:
-            ra, rb = bfind(a), bfind(b)
-            if ra != rb:
-                bpar[ra] = rb
+            bp[bfind(a)] = bfind(b)
         B = len({bfind(v) for e in boundary for v in e})
-    chi = nV - nE + len(F)
-    genus = (2 * C - chi - B) / 2
-    # vertex manifoldness: faces around each vertex form one fan
-    from collections import defaultdict
-    link = defaultdict(list)
+    chi = nV - len(cnt) + len(F)
+    # vertex manifoldness: the faces around a vertex form a single fan
+    link = defaultdict(lambda: defaultdict(set))
     for f in F:
         for k in range(3):
-            link[f[k]].append((f[(k + 1) % 3], f[(k + 2) % 3]))
+            a, b = f[(k + 1) % 3], f[(k + 2) % 3]
+            link[f[k]][a].add(b)
+            link[f[k]][b].add(a)
     bad_v = 0
-    for v, es in link.items():
-        adj = defaultdict(set)
-        for a, b in es:
-            adj[a].add(b)
-            adj[b].add(a)
+    for v, adj in link.items():
         start = next(iter(adj))
         seen, stack = {start}, [start]
         while stack:
@@ -209,11 +327,10 @@ def surface_topology(V, F, merge_tol=1e-10):
                 if y not in seen:
                     seen.add(y)
                     stack.append(y)
-        if len(seen) != len(adj):
-            bad_v += 1
-    return dict(V=nV, E=nE, F=len(F), chi=int(chi), components=C, boundary_loops=B,
+        bad_v += len(seen) != len(adj)
+    return dict(V=nV, E=len(cnt), F=len(F), chi=int(chi), components=C, boundary_loops=B,
                 nonmanifold_edges=nonmanifold_edges, nonmanifold_vertices=bad_v,
-                oriented=oriented, genus=genus,
+                oriented=oriented, genus=(2 * C - chi - B) / 2,
                 closed_manifold=(not boundary and nonmanifold_edges == 0 and bad_v == 0))
 
 
@@ -224,30 +341,45 @@ def fmt_topology(name, t):
             f"genus={t['genus']:g}")
 
 
+def stiff_overlaps(parts):
+    """Volumes (mm^3) where two stiff blocks overlap directly (would weld a joint)."""
+    stiff = [n for n, (_, k) in parts.items() if k in ("palm", "link")]
+    res = {}
+    for i, a in enumerate(stiff):
+        for b in stiff[i + 1:]:
+            v = (parts[a][0] ^ parts[b][0]).volume()
+            if v > 1e-12 and {a, b} != {"palm", "wrist"}:
+                res[f"{a}&{b}"] = v * 1e9
+    return res
+
+
 def export(out_dir=OUT, p=HandParams()):
     os.makedirs(os.path.join(out_dir, "parts"), exist_ok=True)
-    report = {"params": asdict(p)}
+    for f in os.listdir(os.path.join(out_dir, "parts")):
+        os.remove(os.path.join(out_dir, "parts", f))
+    report = {"params": {k: v for k, v in asdict(p).items()}}
     for tag, pads in (("nopads", False), ("pads", True)):
         parts = build_parts(p, pads=pads)
         U = union(parts)
-        n_shells = len(U.decompose())
         V, F = manifold_to_VF(U)
+        if pads:   # vertices at the tendon attachment points
+            V, F = insert_points(V, F, [q for t in tendon_anchors(p) for q in (t[2], t[4])])
         top = surface_topology(V, F)
         top["manifold3d_genus"] = int(U.genus())
-        top["shells"] = n_shells
-        name = "sdm_hand.obj" if pads else "sdm_hand_nopads.obj"
-        write_obj(os.path.join(out_dir, name), V, F)
+        top["shells"] = len(U.decompose())
+        write_obj(os.path.join(out_dir, "sdm_hand.obj" if pads else "sdm_hand_nopads.obj"), V, F)
         report[f"surface_{tag}"] = top
         print(fmt_topology(f"unified surface ({tag})", top),
-              f" [manifold3d genus()={top['manifold3d_genus']}, shells={n_shells}]")
+              f" [manifold3d genus()={top['manifold3d_genus']}, shells={top['shells']}]")
         assert top["closed_manifold"] and top["components"] == 1 and top["genus"] == 0
         if pads:
-            for name, M in parts.items():
-                V, F = manifold_to_VF(M)
-                write_obj(os.path.join(out_dir, "parts", f"{name}.obj"), V, F)
-            report["parts"] = list(parts)
+            ov = stiff_overlaps(parts)
+            assert not ov, f"stiff blocks overlap (joint welded): {ov}"
+            for name, (M, kind) in parts.items():
+                write_obj(os.path.join(out_dir, "parts", f"{name}.obj"), *manifold_to_VF(M))
+            report["parts"] = {n: k for n, (_, k) in parts.items()}
     with open(os.path.join(out_dir, "geometry_report.json"), "w") as f:
-        json.dump(report, f, indent=1)
+        json.dump(report, f, indent=1, default=str)
     return report
 
 

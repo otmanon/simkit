@@ -1,0 +1,910 @@
+{
+ "n_vertices": 5459,
+ "n_tets": 21480,
+ "n_pinned": 12,
+ "n_springs": 15,
+ "k_tendon": 10000.0,
+ "target_deg": {
+  "finger": [
+   32.0,
+   34.0,
+   26.0
+  ],
+  "thumb": [
+   30.0,
+   26.0,
+   26.0
+  ]
+ },
+ "tendons": [
+  {
+   "joint": "index_flex0",
+   "finger": "index",
+   "index": 0,
+   "below": "palm",
+   "above": "index_ph0",
+   "l_rest": 0.01422146265332789,
+   "arm": 0.016981375677521313,
+   "contraction": 0.6668926803170423,
+   "target_deg": 32.0,
+   "anchor_snap_mm": [
+    0.0,
+    5.5879354528972136e-08
+   ]
+  },
+  {
+   "joint": "index_flex1",
+   "finger": "index",
+   "index": 1,
+   "below": "index_ph0",
+   "above": "index_ph1",
+   "l_rest": 0.013999999999999985,
+   "arm": 0.016,
+   "contraction": 0.6781850807749403,
+   "target_deg": 34.0,
+   "anchor_snap_mm": [
+    5.5879354528970415e-08,
+    5.5879354528977304e-08
+   ]
+  },
+  {
+   "joint": "index_flex2",
+   "finger": "index",
+   "index": 2,
+   "below": "index_ph1",
+   "above": "index_ph2",
+   "l_rest": 0.011499999999999982,
+   "arm": 0.016,
+   "contraction": 0.6313538859388194,
+   "target_deg": 26.0,
+   "anchor_snap_mm": [
+    5.5879354528970415e-08,
+    5.5879354528977304e-08
+   ]
+  },
+  {
+   "joint": "middle_flex0",
+   "finger": "middle",
+   "index": 0,
+   "below": "palm",
+   "above": "middle_ph0",
+   "l_rest": 0.01422146265332789,
+   "arm": 0.016981375677521313,
+   "contraction": 0.6668926803170423,
+   "target_deg": 32.0,
+   "anchor_snap_mm": [
+    1.214306433183765e-14,
+    5.5879354528970415e-08
+   ]
+  },
+  {
+   "joint": "middle_flex1",
+   "finger": "middle",
+   "index": 1,
+   "below": "middle_ph0",
+   "above": "middle_ph1",
+   "l_rest": 0.014000000000000012,
+   "arm": 0.016,
+   "contraction": 0.678185080774939,
+   "target_deg": 34.0,
+   "anchor_snap_mm": [
+    5.5879354528970415e-08,
+    5.587935452897044e-08
+   ]
+  },
+  {
+   "joint": "middle_flex2",
+   "finger": "middle",
+   "index": 2,
+   "below": "middle_ph1",
+   "above": "middle_ph2",
+   "l_rest": 0.01150000000000001,
+   "arm": 0.016,
+   "contraction": 0.6313538859388178,
+   "target_deg": 26.0,
+   "anchor_snap_mm": [
+    5.5879354528970415e-08,
+    5.5879354528970415e-08
+   ]
+  },
+  {
+   "joint": "ring_flex0",
+   "finger": "ring",
+   "index": 0,
+   "below": "palm",
+   "above": "ring_ph0",
+   "l_rest": 0.01422146265332789,
+   "arm": 0.016981375677521313,
+   "contraction": 0.6668926803170423,
+   "target_deg": 32.0,
+   "anchor_snap_mm": [
+    3.469446951953614e-15,
+    5.5879354528972136e-08
+   ]
+  },
+  {
+   "joint": "ring_flex1",
+   "finger": "ring",
+   "index": 1,
+   "below": "ring_ph0",
+   "above": "ring_ph1",
+   "l_rest": 0.013999999999999985,
+   "arm": 0.016,
+   "contraction": 0.6781850807749403,
+   "target_deg": 34.0,
+   "anchor_snap_mm": [
+    5.587935452897044e-08,
+    5.5879354528977304e-08
+   ]
+  },
+  {
+   "joint": "ring_flex2",
+   "finger": "ring",
+   "index": 2,
+   "below": "ring_ph1",
+   "above": "ring_ph2",
+   "l_rest": 0.011499999999999982,
+   "arm": 0.016,
+   "contraction": 0.6313538859388194,
+   "target_deg": 26.0,
+   "anchor_snap_mm": [
+    5.587935452897044e-08,
+    5.5879354528977304e-08
+   ]
+  },
+  {
+   "joint": "little_flex0",
+   "finger": "little",
+   "index": 0,
+   "below": "palm",
+   "above": "little_ph0",
+   "l_rest": 0.01422146265332789,
+   "arm": 0.016981375677521313,
+   "contraction": 0.6668926803170423,
+   "target_deg": 32.0,
+   "anchor_snap_mm": [
+    0.0,
+    5.587935452897224e-08
+   ]
+  },
+  {
+   "joint": "little_flex1",
+   "finger": "little",
+   "index": 1,
+   "below": "little_ph0",
+   "above": "little_ph1",
+   "l_rest": 0.013999999999999985,
+   "arm": 0.016,
+   "contraction": 0.6781850807749403,
+   "target_deg": 34.0,
+   "anchor_snap_mm": [
+    5.5879354528970415e-08,
+    5.5879354528977304e-08
+   ]
+  },
+  {
+   "joint": "little_flex2",
+   "finger": "little",
+   "index": 2,
+   "below": "little_ph1",
+   "above": "little_ph2",
+   "l_rest": 0.01150000000000001,
+   "arm": 0.016,
+   "contraction": 0.6313538859388178,
+   "target_deg": 26.0,
+   "anchor_snap_mm": [
+    5.5879354528970415e-08,
+    5.5879354528970415e-08
+   ]
+  },
+  {
+   "joint": "thumb_flex0",
+   "finger": "thumb",
+   "index": 0,
+   "below": "palm",
+   "above": "thumb_ph0",
+   "l_rest": 0.013334649157155204,
+   "arm": 0.013688295061282696,
+   "contraction": 0.5374850473864957,
+   "target_deg": 29.999999999999996,
+   "anchor_snap_mm": [
+    3.379868124913331e-07,
+    6.646196725260701e-07
+   ]
+  },
+  {
+   "joint": "thumb_flex1",
+   "finger": "thumb",
+   "index": 1,
+   "below": "thumb_ph0",
+   "above": "thumb_ph1",
+   "l_rest": 0.014000000609447873,
+   "arm": 0.014000000457381307,
+   "contraction": 0.45378560058955314,
+   "target_deg": 26.0,
+   "anchor_snap_mm": [
+    4.976524249768807e-07,
+    4.796924014341925e-07
+   ]
+  },
+  {
+   "joint": "thumb_flex2",
+   "finger": "thumb",
+   "index": 2,
+   "below": "thumb_ph1",
+   "above": "thumb_ph2",
+   "l_rest": 0.011500000104564784,
+   "arm": 0.014000001504723797,
+   "contraction": 0.5524347045492299,
+   "target_deg": 26.0,
+   "anchor_snap_mm": [
+    4.759212680010762e-07,
+    1.2053611221190474e-06
+   ]
+  }
+ ],
+ "fingers": [
+  "index",
+  "middle",
+  "ring",
+  "little",
+  "thumb"
+ ],
+ "t_static_s": 73.14223265647888,
+ "static_newton_iters": 107,
+ "statics": [
+  {
+   "a": 0.0,
+   "joint_deg": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "tip_disp_mm": {
+    "index": 0.0,
+    "middle": 0.0,
+    "ring": 0.0,
+    "little": 0.0,
+    "thumb": 0.0
+   },
+   "tendon_force_N": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "adjacent_max_mm": 0.0,
+   "nonadjacent_max_mm": 0.0,
+   "nonadjacent_pairs": []
+  },
+  {
+   "a": 0.08333333333333333,
+   "joint_deg": [
+    2.7,
+    2.9,
+    2.2,
+    2.7,
+    2.9,
+    2.2,
+    2.7,
+    2.9,
+    2.2,
+    2.7,
+    2.9,
+    2.2,
+    2.6,
+    2.1,
+    2.1
+   ],
+   "tip_disp_mm": {
+    "index": 8.3,
+    "middle": 9.0,
+    "ring": 8.6,
+    "little": 7.2,
+    "thumb": 8.4
+   },
+   "tendon_force_N": [
+    0.07,
+    0.07,
+    0.05,
+    0.07,
+    0.07,
+    0.05,
+    0.07,
+    0.06,
+    0.05,
+    0.06,
+    0.06,
+    0.05,
+    0.02,
+    0.05,
+    0.05
+   ],
+   "adjacent_max_mm": 0.0,
+   "nonadjacent_max_mm": 0.0,
+   "nonadjacent_pairs": []
+  },
+  {
+   "a": 0.16666666666666666,
+   "joint_deg": [
+    5.4,
+    5.7,
+    4.4,
+    5.3,
+    5.7,
+    4.4,
+    5.3,
+    5.7,
+    4.4,
+    5.4,
+    5.8,
+    4.4,
+    5.2,
+    4.2,
+    4.2
+   ],
+   "tip_disp_mm": {
+    "index": 16.5,
+    "middle": 18.0,
+    "ring": 17.1,
+    "little": 14.3,
+    "thumb": 16.9
+   },
+   "tendon_force_N": [
+    0.15,
+    0.14,
+    0.11,
+    0.15,
+    0.14,
+    0.11,
+    0.15,
+    0.12,
+    0.11,
+    0.11,
+    0.11,
+    0.09,
+    0.04,
+    0.09,
+    0.09
+   ],
+   "adjacent_max_mm": 0.0,
+   "nonadjacent_max_mm": 0.0,
+   "nonadjacent_pairs": []
+  },
+  {
+   "a": 0.25,
+   "joint_deg": [
+    8.0,
+    8.5,
+    6.6,
+    8.0,
+    8.6,
+    6.6,
+    8.0,
+    8.6,
+    6.6,
+    8.1,
+    8.6,
+    6.6,
+    7.8,
+    6.3,
+    6.3
+   ],
+   "tip_disp_mm": {
+    "index": 24.5,
+    "middle": 26.8,
+    "ring": 25.5,
+    "little": 21.4,
+    "thumb": 25.3
+   },
+   "tendon_force_N": [
+    0.22,
+    0.22,
+    0.16,
+    0.23,
+    0.21,
+    0.16,
+    0.23,
+    0.18,
+    0.16,
+    0.17,
+    0.17,
+    0.14,
+    0.07,
+    0.14,
+    0.14
+   ],
+   "adjacent_max_mm": 0.0,
+   "nonadjacent_max_mm": 0.0,
+   "nonadjacent_pairs": []
+  },
+  {
+   "a": 0.3333333333333333,
+   "joint_deg": [
+    10.7,
+    11.4,
+    8.7,
+    10.6,
+    11.4,
+    8.8,
+    10.7,
+    11.4,
+    8.8,
+    10.7,
+    11.5,
+    8.8,
+    10.5,
+    8.4,
+    8.4
+   ],
+   "tip_disp_mm": {
+    "index": 32.5,
+    "middle": 35.5,
+    "ring": 33.8,
+    "little": 28.3,
+    "thumb": 33.7
+   },
+   "tendon_force_N": [
+    0.29,
+    0.29,
+    0.22,
+    0.31,
+    0.28,
+    0.21,
+    0.31,
+    0.24,
+    0.22,
+    0.23,
+    0.23,
+    0.18,
+    0.09,
+    0.18,
+    0.18
+   ],
+   "adjacent_max_mm": 0.0,
+   "nonadjacent_max_mm": 0.0,
+   "nonadjacent_pairs": []
+  },
+  {
+   "a": 0.41666666666666663,
+   "joint_deg": [
+    13.4,
+    14.2,
+    10.9,
+    13.3,
+    14.2,
+    11.0,
+    13.4,
+    14.3,
+    10.9,
+    13.4,
+    14.4,
+    11.0,
+    13.2,
+    10.5,
+    10.5
+   ],
+   "tip_disp_mm": {
+    "index": 40.3,
+    "middle": 44.1,
+    "ring": 41.9,
+    "little": 35.1,
+    "thumb": 42.1
+   },
+   "tendon_force_N": [
+    0.37,
+    0.36,
+    0.27,
+    0.39,
+    0.36,
+    0.27,
+    0.39,
+    0.3,
+    0.27,
+    0.28,
+    0.28,
+    0.23,
+    0.12,
+    0.23,
+    0.23
+   ],
+   "adjacent_max_mm": 0.0,
+   "nonadjacent_max_mm": 0.0,
+   "nonadjacent_pairs": []
+  },
+  {
+   "a": 0.5,
+   "joint_deg": [
+    16.1,
+    17.0,
+    13.1,
+    15.9,
+    17.1,
+    13.2,
+    16.1,
+    17.1,
+    13.1,
+    16.1,
+    17.2,
+    13.3,
+    16.0,
+    12.6,
+    12.6
+   ],
+   "tip_disp_mm": {
+    "index": 47.9,
+    "middle": 52.4,
+    "ring": 49.9,
+    "little": 41.7,
+    "thumb": 50.4
+   },
+   "tendon_force_N": [
+    0.44,
+    0.44,
+    0.33,
+    0.47,
+    0.43,
+    0.33,
+    0.47,
+    0.37,
+    0.33,
+    0.34,
+    0.34,
+    0.27,
+    0.15,
+    0.27,
+    0.27
+   ],
+   "adjacent_max_mm": 0.8273555118457281,
+   "nonadjacent_max_mm": 0.0,
+   "nonadjacent_pairs": []
+  },
+  {
+   "a": 0.5833333333333333,
+   "joint_deg": [
+    18.8,
+    19.9,
+    15.3,
+    18.6,
+    19.9,
+    15.3,
+    18.8,
+    20.0,
+    15.3,
+    18.8,
+    20.1,
+    15.5,
+    18.8,
+    14.7,
+    14.7
+   ],
+   "tip_disp_mm": {
+    "index": 55.4,
+    "middle": 60.6,
+    "ring": 57.6,
+    "little": 48.2,
+    "thumb": 58.5
+   },
+   "tendon_force_N": [
+    0.52,
+    0.52,
+    0.39,
+    0.56,
+    0.5,
+    0.38,
+    0.55,
+    0.43,
+    0.39,
+    0.4,
+    0.39,
+    0.32,
+    0.19,
+    0.32,
+    0.32
+   ],
+   "adjacent_max_mm": 1.4657192986315297,
+   "nonadjacent_max_mm": 0.0,
+   "nonadjacent_pairs": []
+  },
+  {
+   "a": 0.6666666666666666,
+   "joint_deg": [
+    21.5,
+    22.7,
+    17.5,
+    21.3,
+    22.7,
+    17.5,
+    21.5,
+    22.8,
+    17.5,
+    21.6,
+    22.9,
+    17.7,
+    21.7,
+    16.8,
+    16.8
+   ],
+   "tip_disp_mm": {
+    "index": 62.6,
+    "middle": 68.6,
+    "ring": 65.2,
+    "little": 54.4,
+    "thumb": 66.5
+   },
+   "tendon_force_N": [
+    0.6,
+    0.59,
+    0.45,
+    0.66,
+    0.58,
+    0.44,
+    0.64,
+    0.49,
+    0.44,
+    0.46,
+    0.45,
+    0.37,
+    0.23,
+    0.36,
+    0.37
+   ],
+   "adjacent_max_mm": 2.068388007403672,
+   "nonadjacent_max_mm": 0.0,
+   "nonadjacent_pairs": []
+  },
+  {
+   "a": 0.75,
+   "joint_deg": [
+    24.2,
+    25.5,
+    19.7,
+    24.0,
+    25.6,
+    19.7,
+    24.2,
+    25.6,
+    19.7,
+    24.3,
+    25.8,
+    19.9,
+    24.5,
+    18.9,
+    18.9
+   ],
+   "tip_disp_mm": {
+    "index": 69.6,
+    "middle": 76.3,
+    "ring": 72.5,
+    "little": 60.5,
+    "thumb": 74.1
+   },
+   "tendon_force_N": [
+    0.68,
+    0.67,
+    0.51,
+    0.75,
+    0.65,
+    0.5,
+    0.73,
+    0.56,
+    0.5,
+    0.52,
+    0.5,
+    0.42,
+    0.27,
+    0.41,
+    0.41
+   ],
+   "adjacent_max_mm": 2.6139859238180194,
+   "nonadjacent_max_mm": 0.0,
+   "nonadjacent_pairs": []
+  },
+  {
+   "a": 0.8333333333333333,
+   "joint_deg": [
+    27.0,
+    28.4,
+    21.9,
+    26.8,
+    28.4,
+    22.0,
+    27.0,
+    28.5,
+    22.0,
+    27.1,
+    28.7,
+    22.2,
+    27.4,
+    21.0,
+    21.0
+   ],
+   "tip_disp_mm": {
+    "index": 76.4,
+    "middle": 83.7,
+    "ring": 79.6,
+    "little": 66.3,
+    "thumb": 81.5
+   },
+   "tendon_force_N": [
+    0.77,
+    0.74,
+    0.58,
+    0.86,
+    0.73,
+    0.56,
+    0.83,
+    0.63,
+    0.56,
+    0.59,
+    0.55,
+    0.46,
+    0.32,
+    0.45,
+    0.46
+   ],
+   "adjacent_max_mm": 3.0955473748019995,
+   "nonadjacent_max_mm": 0.0,
+   "nonadjacent_pairs": []
+  },
+  {
+   "a": 0.9166666666666666,
+   "joint_deg": [
+    29.8,
+    31.2,
+    24.1,
+    29.5,
+    31.3,
+    24.2,
+    29.8,
+    31.3,
+    24.2,
+    29.9,
+    31.5,
+    24.4,
+    30.1,
+    23.0,
+    23.1
+   ],
+   "tip_disp_mm": {
+    "index": 83.0,
+    "middle": 90.9,
+    "ring": 86.4,
+    "little": 71.9,
+    "thumb": 88.4
+   },
+   "tendon_force_N": [
+    0.87,
+    0.82,
+    0.64,
+    0.97,
+    0.8,
+    0.62,
+    0.94,
+    0.69,
+    0.62,
+    0.66,
+    0.6,
+    0.51,
+    0.38,
+    0.49,
+    0.51
+   ],
+   "adjacent_max_mm": 3.500625364249006,
+   "nonadjacent_max_mm": 0.0,
+   "nonadjacent_pairs": []
+  },
+  {
+   "a": 1.0,
+   "joint_deg": [
+    32.7,
+    34.1,
+    26.4,
+    32.3,
+    34.1,
+    26.4,
+    32.6,
+    34.2,
+    26.4,
+    32.7,
+    34.4,
+    26.7,
+    32.7,
+    25.1,
+    25.2
+   ],
+   "tip_disp_mm": {
+    "index": 89.3,
+    "middle": 97.8,
+    "ring": 92.9,
+    "little": 77.3,
+    "thumb": 94.8
+   },
+   "tendon_force_N": [
+    0.99,
+    0.89,
+    0.71,
+    1.11,
+    0.87,
+    0.69,
+    1.06,
+    0.76,
+    0.69,
+    0.74,
+    0.65,
+    0.56,
+    0.44,
+    0.54,
+    0.55
+   ],
+   "adjacent_max_mm": 3.80861675923662,
+   "nonadjacent_max_mm": 0.0,
+   "nonadjacent_pairs": []
+  }
+ ],
+ "t_dynamic_s": 218.97653365135193,
+ "dyn_steps": 120,
+ "h": 0.016666666666666666,
+ "t_ramp": 1.2,
+ "t_end": 2.0,
+ "dyn_newton_iters": 322,
+ "dyn_final_tip_disp_mm": {
+  "index": 89.3,
+  "middle": 97.9,
+  "ring": 92.9,
+  "little": 77.3,
+  "thumb": 94.9
+ },
+ "dyn_peak_tip_disp_mm": {
+  "index": 89.4,
+  "middle": 97.9,
+  "ring": 93.0,
+  "little": 77.4,
+  "thumb": 95.7
+ },
+ "dyn_final_joint_deg": [
+  32.7,
+  34.1,
+  26.4,
+  32.3,
+  34.1,
+  26.4,
+  32.6,
+  34.2,
+  26.4,
+  32.7,
+  34.4,
+  26.7,
+  32.8,
+  25.1,
+  25.2
+ ],
+ "dyn_final_penetration": {
+  "adjacent_max_mm": 3.8263735131169847,
+  "nonadjacent_max_mm": 0.0,
+  "nonadjacent_pairs": []
+ }
+}

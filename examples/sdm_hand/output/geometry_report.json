@@ -1,34 +1,105 @@
 {
  "params": {
-  "palm": [
-   0.12,
-   0.1,
-   0.02
+  "palm_t": 0.022,
+  "palm_x": [
+   -0.045,
+   0.045
   ],
-  "finger_x": 0.05,
-  "finger_y": [
+  "palm_z": [
+   0.0,
+   0.095
+  ],
+  "wrist": [
    -0.025,
-   0.025
+   0.025,
+   0.002,
+   0.02,
+   -0.03,
+   0.0005
   ],
-  "link_w": 0.02,
-  "prox_len": 0.062,
-  "dist_len": 0.045,
-  "flex_len": 0.008,
-  "flex_w": 0.016,
-  "flex_t_prox": 0.005,
-  "flex_t_dist": 0.007,
+  "fingers": {
+   "index": [
+    -0.032,
+    0.019,
+    [
+     0.04,
+     0.025,
+     0.02
+    ]
+   ],
+   "middle": [
+    -0.0105,
+    0.02,
+    [
+     0.045,
+     0.028,
+     0.022
+    ]
+   ],
+   "ring": [
+    0.011,
+    0.019,
+    [
+     0.042,
+     0.026000000000000002,
+     0.021
+    ]
+   ],
+   "little": [
+    0.031,
+    0.016,
+    [
+     0.032,
+     0.02,
+     0.018000000000000002
+    ]
+   ]
+  },
+  "phal_t": 0.017,
+  "flex_len": 0.006,
+  "flex_t": 0.005,
+  "flex_inset": 0.002,
+  "flex_dorsal_gap": 0.001,
   "overlap": 0.0005,
-  "pad_t": 0.0045,
-  "pad_w": 0.018,
-  "pad_z": [
-   0.007,
-   0.042
+  "pad_t": 0.004,
+  "thumb_seg": [
+   [
+    0.038,
+    0.024
+   ],
+   [
+    0.03,
+    0.02
+   ],
+   [
+    0.024,
+    0.019
+   ]
+  ],
+  "thumb_half_t": 0.008,
+  "thumb_flex_t": 0.004,
+  "thumb_pronation": 50.0,
+  "thumb_tilt": 15.0,
+  "thumb_abduction": -50.0,
+  "thumb_base": [
+   -0.052000000000000005,
+   0.011,
+   0.018000000000000002
+  ],
+  "thumb_root_embed": 0.016,
+  "palm_pad": [
+   -0.038,
+   0.038,
+   -0.003,
+   0.0005,
+   0.02,
+   0.085
   ]
  },
  "surface_nopads": {
-  "V": 136,
-  "E": 402,
-  "F": 268,
+  "V": 349,
+  "E": 1041,
+  "F": 694,
   "chi": 2,
   "components": 1,
   "boundary_loops": 0,
@@ -41,9 +112,9 @@
   "shells": 1
  },
  "surface_pads": {
-  "V": 168,
-  "E": 498,
-  "F": 332,
+  "V": 427,
+  "E": 1275,
+  "F": 850,
   "chi": 2,
   "components": 1,
   "boundary_loops": 0,
@@ -55,27 +126,44 @@
   "manifold3d_genus": 0,
   "shells": 1
  },
- "parts": [
-  "palm",
-  "prox_L0",
-  "dist_L0",
-  "flexprox_L0",
-  "flexdist_L0",
-  "pad_L0",
-  "prox_L1",
-  "dist_L1",
-  "flexprox_L1",
-  "flexdist_L1",
-  "pad_L1",
-  "prox_R0",
-  "dist_R0",
-  "flexprox_R0",
-  "flexdist_R0",
-  "pad_R0",
-  "prox_R1",
-  "dist_R1",
-  "flexprox_R1",
-  "flexdist_R1",
-  "pad_R1"
- ]
+ "parts": {
+  "wrist": "palm",
+  "palm": "palm",
+  "index_flex0": "flexure",
+  "index_ph0": "link",
+  "index_flex1": "flexure",
+  "index_ph1": "link",
+  "index_flex2": "flexure",
+  "index_ph2": "link",
+  "index_pad": "pad",
+  "middle_flex0": "flexure",
+  "middle_ph0": "link",
+  "middle_flex1": "flexure",
+  "middle_ph1": "link",
+  "middle_flex2": "flexure",
+  "middle_ph2": "link",
+  "middle_pad": "pad",
+  "ring_flex0": "flexure",
+  "ring_ph0": "link",
+  "ring_flex1": "flexure",
+  "ring_ph1": "link",
+  "ring_flex2": "flexure",
+  "ring_ph2": "link",
+  "ring_pad": "pad",
+  "little_flex0": "flexure",
+  "little_ph0": "link",
+  "little_flex1": "flexure",
+  "little_ph1": "link",
+  "little_flex2": "flexure",
+  "little_ph2": "link",
+  "little_pad": "pad",
+  "thumb_flex0": "flexure",
+  "thumb_ph0": "link",
+  "thumb_flex1": "flexure",
+  "thumb_ph1": "link",
+  "thumb_flex2": "flexure",
+  "thumb_ph2": "link",
+  "thumb_pad": "pad",
+  "palm_pad": "pad"
+ }
 }
