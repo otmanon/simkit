@@ -180,19 +180,35 @@ def load_runs():
 
 def fig_statics(F, runs, name="20_reduced_statics.png", labels=None):
     ks = [0, 4, 8, 12]
-    fig, ax = plt.subplots(len(runs), len(ks), figsize=(4.0 * len(ks), 4.3 * len(runs)))
+    rows = []                                  # (run, "coarse" | "fine")
+    for r in runs:
+        if r[0] is not None:
+            rows.append((r, "coarse"))
+        rows.append((r, "fine"))
+    fig, ax = plt.subplots(len(rows), len(ks), figsize=(4.0 * len(ks), 4.3 * len(rows)))
     ax = np.atleast_2d(ax)
-    for i, (L, d, P) in enumerate(runs):
+    for i, ((L, d, P), what) in enumerate(rows):
+        if what == "coarse":
+            sc, _ = R.load_level(L)
         for j, k in enumerate(ks):
-            s = F.at(P @ d["static_x"][k].reshape(-1, 3).astype(float))
-            ax[i, j].imshow(shot(lambda pl, s=s: pl.add_mesh(s, **kind_opts(0.0) | dict(show_edges=False)),
-                                 VIEW, size=(620, 680), bounds_mesh=F.surf))
+            xk = d["static_x"][k].reshape(-1, 3).astype(float)
+            if what == "coarse":
+                s = kind_surface(xk, sc["T"], sc["part"], F.kinds)
+                opts = kind_opts(0.6)
+            else:
+                s = F.at(P @ xk)
+                opts = kind_opts(0.0) | dict(show_edges=False)
+            ax[i, j].imshow(shot(lambda pl, s=s, o=opts: pl.add_mesh(s, **o), VIEW, size=(620, 680),
+                                 bounds_mesh=F.surf))
             ax[i, j].axis("off")
             if i == 0:
                 ax[i, j].set_title(f"a = {d['static_a'][k]:.2f}", fontsize=13)
         lab = (labels or {}).get(L) or ("full space\n(P = I)" if L is None else f"level {L}\n{3 * P.shape[1]:,} DOFs")
-        ax[i, 0].text(-0.05, 0.5, lab + f"\nstatics {d['t_static']:.1f} s", transform=ax[i, 0].transAxes,
-                      ha="right", va="center", fontsize=12)
+        if what == "coarse":
+            lab = f"coarse mesh\n{len(sc['X']):,} v, {len(sc['T']):,} tets\n(the integration mesh)"
+        else:
+            lab += f"\nstatics {d['t_static']:.1f} s" + ("" if L is None else "\n(fine hand, x_f = B x)")
+        ax[i, 0].text(-0.05, 0.5, lab, transform=ax[i, 0].transAxes, ha="right", va="center", fontsize=12)
     fig.legend(handles=[Patch(color=KIND_COL[k], label=KIND_LAB[k]) for k in ORDER], loc="lower center",
                ncol=4, frameon=False, fontsize=11)
     fig.suptitle("Actuation sweep in each subspace (quasi-static Newton per a), drawn on the fine hand "
@@ -258,6 +274,20 @@ def video(F, runs, fps=30, name="reduced_closing.mp4", labels=None):
     import imageio.v2 as imageio
     pls = []
     for L, d, P in runs:
+        if L is not None:                     # the coarse integration mesh itself, at state x
+            sc, _ = R.load_level(L)
+            cs = kind_surface(sc["X"], sc["T"], sc["part"], F.kinds)
+            cpid = cs.point_data["vtkOriginalPointIds"]
+            pl = pv.Plotter(window_size=(460, 540), off_screen=True)
+            pl.set_background("white")
+            pl.add_mesh(cs, **kind_opts(0.6))
+            dd = np.array([0.75, -1.0, 0.35]); dd /= np.linalg.norm(dd)
+            c = np.array(F.bounds).reshape(3, 2).mean(1)
+            pl.camera_position = [tuple(c + dd), tuple(c), (0, 0, 1)]
+            pl.reset_camera(bounds=F.bounds)
+            pl.camera.zoom(1.25)
+            pl.add_text(f"coarse mesh ({len(sc['X']):,} v)", position="upper_left", font_size=11, color="black")
+            pls.append((pl, cs, d, ("coarse", cpid)))
         pl = pv.Plotter(window_size=(460, 540), off_screen=True)
         pl.set_background("white")
         s = F.at(F.X)
@@ -276,7 +306,10 @@ def video(F, runs, fps=30, name="reduced_closing.mp4", labels=None):
     for k in range(len(runs[0][1]["dyn_x"])):
         imgs = []
         for pl, s, d, P in pls:
-            s.points = (P @ d["dyn_x"][k].reshape(-1, 3).astype(float))[F.pid]
+            if isinstance(P, tuple):
+                s.points = d["dyn_x"][k].reshape(-1, 3).astype(float)[P[1]]
+            else:
+                s.points = (P @ d["dyn_x"][k].reshape(-1, 3).astype(float))[F.pid]
             pl.render()
             imgs.append(pl.screenshot(return_img=True))
         w.append_data(np.hstack(imgs))
