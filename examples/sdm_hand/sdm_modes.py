@@ -56,8 +56,7 @@ def main():
         J.resize((J.shape[0], 3 * hand.n))
         parts[k] = energies.stable_neo_hookean_hessian_x(X, J, hand.mu[sel], hand.lam[sel],
                                                           hand.vol[sel], psd=True)
-    parts["tendons"] = energies.mass_springs_hessian_x(X, hand.E_t, hand.ym, hand.svol,
-                                                       hand.l0(0.0), psd=True)
+    parts["tendons"] = hand.tendon_hessian(X.reshape(-1), 0.0)
     label = {"palm": "palm", "link": "blocks", "flexure": "flexures", "pad": "pads",
              "tendons": "tendons"}
     rows = []

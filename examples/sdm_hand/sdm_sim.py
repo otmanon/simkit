@@ -10,12 +10,14 @@ Model
   pinned; those DOFs are eliminated (hard Dirichlet).
 * **Gravity** -- off by default (``--gravity``: ``-z``, hand upright); the
   soft thumb root flexure twists a lot under the thumb's own weight.
-* **Tendons** -- SimKit mass springs (``mass_springs_*_x``, energy
+* **Tendons** -- mass springs (energy
   ``0.5 k (|d| - l0)^2``, vol = 1): one spring on the PALMAR side across every
   one of the 15 flexure joints (4 fingers x 3 + thumb x 3), from the palmar
   face of the block below the joint to the palmar face of the block above it
   (4 mm from the joint on each side; stiff vertices only). The flexures sit at
-  the dorsal side, so shortening a palmar spring flexes its joint.
+  the dorsal side, so shortening a palmar spring flexes its joint. Each end is
+  embedded at its exact anchor point as an affine combination of its block's
+  vertices, so coarse meshes keep the same tendon geometry.
 * **One actuator** -- a single parameter ``a in [0, 1]`` sets every rest
   length ``l0_j = (1 - c_j a) l_rest_j``. The per-joint contraction ratio
   ``c_j = r_j theta_j / l_rest_j`` is a fixed routing constant (like the pulley
@@ -62,6 +64,7 @@ K_TENDON = 1.0e5                     # N/m, every tendon spring
 # ties a point carried by the block below to the same point carried by the block
 # above. Points on the axis stay put under pure flexion, so only flexion is left
 # soft; abduction, twist, shear and stretch of the joint are penalised.
+MAX_STEP_CONTACT = 1e-3              # m, largest vertex move per Newton iteration with contact on
 K_PIN = 1.0e7                        # N/m, per pin (~150x the flexure's shear stiffness)
 # flexion wanted at a = 1 (deg): fingers (base, middle, distal); thumb (0, 1, 2)
 TARGET_DEG = {"finger": (32.0, 34.0, 26.0), "thumb": (30.0, 26.0, 26.0)}
@@ -103,6 +106,7 @@ class Hand:
         self._pv = {}
         self._tendons(k_tendon, target)
         self._pins(K_PIN)
+        self.contact = None                  # optional sdm_cup.Contact (rigid obstacle)
 
     def part_vertices(self, name, surface=True):
         """Vertices whose incident tets all belong to part ``name``. On a coarse
@@ -123,7 +127,7 @@ class Hand:
 
     # -------------------------------------------------------------- tendons
     def _tendons(self, k, target):
-        edges, info = [], []
+        edges, info, ends = [], [], []
         self._pin_specs = []
         p = HandParams()
         anchors = {j[0]: j for j in tendon_anchors(p)}
@@ -146,16 +150,20 @@ class Hand:
                      else p.palm_t - p.flex_dorsal_gap - p.flex_t / 2)
             hinge = to_world(np.array([0.0, y_mid, 0.5 * (jt["z0"] + jt["z1"])]))
             axis = A[:3, 0]
-            a_, b_ = self.X[ids[0]], self.X[ids[1]]
+            a_, b_ = pa, pb                   # the exact anchor points (embedded below)
             u = (b_ - a_) / np.linalg.norm(b_ - a_)
             r = abs(np.dot(np.cross(u, axis), hinge - a_)) / np.linalg.norm(np.cross(u, axis))
             l_rest = np.linalg.norm(b_ - a_)
             th = np.radians(target["thumb" if finger == "thumb" else "finger"][idx])
             c = min(0.85, r * th / l_rest)
-            xs = (self.X[self.part_vertices(name, surface=False)] - hinge) @ axis
+            fv = self.part_vertices(name, surface=False)
+            if len(fv) == 0:                    # flexure lost on a coarse mesh: span the block above
+                fv = self.part_vertices(jt["above"], surface=False)
+            xs = (self.X[fv] - hinge) @ axis
             self._pin_specs.append((jt["below"], jt["above"], hinge + xs.min() * axis,
                                     hinge + xs.max() * axis))
             edges.append(ids)
+            ends.append(((below, pa), (above, pb)))
             info.append(dict(joint=name, finger=finger, index=idx, below=jt["below"],
                              above=jt["above"], l_rest=l_rest, arm=r, contraction=c,
                              target_deg=float(np.degrees(th)),
@@ -166,6 +174,18 @@ class Hand:
         self.c = np.array([t["contraction"] for t in info])
         self.ym = np.full((len(edges), 1), float(k))
         self.svol = np.ones((len(edges), 1))
+        # each tendon end is embedded at its exact anchor point: an affine
+        # combination of its block's vertices (``_affine_weights``), so a coarse
+        # mesh without a vertex at the anchor keeps the same moment arm
+        rows, cols, vals = [], [], []
+        for t, ((pa_, qa), (pb_, qb)) in enumerate(ends):
+            for part, q, sgn in ((pb_, qb, 1.0), (pa_, qa, -1.0)):
+                vid, w = self._affine_weights(part, q)
+                for dd in range(3):
+                    rows += [3 * t + dd] * len(vid)
+                    cols += list(3 * vid + dd)
+                    vals += list(sgn * w)
+        self.Gt = sp.sparse.csr_matrix((vals, (rows, cols)), shape=(3 * len(ends), 3 * self.n))
         self.fingers = list(dict.fromkeys(t["finger"] for t in info))
 
     def _affine_weights(self, part, q, k=64):
@@ -205,32 +225,63 @@ class Hand:
     def l0(self, a):
         return ((1.0 - self.c * a) * self.l_rest).reshape(-1, 1)
 
+    def _tendon_d(self, x):
+        d = (self.Gt @ x).reshape(-1, 3)
+        return d, np.linalg.norm(d, axis=1)
+
     def tendon_forces(self, x, a):
-        Xm = x.reshape(-1, 3)
-        l = np.linalg.norm(Xm[self.E_t[:, 0]] - Xm[self.E_t[:, 1]], axis=1)
+        _, l = self._tendon_d(x)
         return self.ym.ravel() * (l - self.l0(a).ravel())
+
+    def tendon_energy(self, x, a):
+        _, l = self._tendon_d(x)
+        return 0.5 * float((self.ym.ravel() * (l - self.l0(a).ravel()) ** 2).sum())
+
+    def tendon_gradient(self, x, a):
+        d, l = self._tendon_d(x)
+        f = (self.ym.ravel() * (l - self.l0(a).ravel()) / l)[:, None] * d
+        return self.Gt.T @ f.ravel()
+
+    def tendon_hessian(self, x, a):
+        """k [ (1 - l0/l)_+ I + (l0/l) u u^T ] per tendon (PSD), pulled back through Gt."""
+        d, l = self._tendon_d(x)
+        u = d / l[:, None]
+        r = self.l0(a).ravel() / l
+        k = self.ym.ravel()
+        blk = (k * np.maximum(1 - r, 0))[:, None, None] * np.eye(3) + (k * r)[:, None, None] * \
+            u[:, :, None] * u[:, None, :]
+        m = len(l)
+        Hb = sp.sparse.block_diag(list(blk), format="csr") if m else sp.sparse.csr_matrix((0, 0))
+        return (self.Gt.T @ Hb @ self.Gt).tocsr()
 
     # -------------------------------------------------------------- energy (flat x)
     def energy(self, x, a):
         Xm = x.reshape(-1, 3)
         e = energies.stable_neo_hookean_energy_x(Xm, self.J, self.mu, self.lam, self.vol) - self.E_rest
-        e += energies.mass_springs_energy_x(Xm, self.E_t, self.ym, self.svol, self.l0(a))
+        e += self.tendon_energy(x, a)
         r = self.G @ x - self.g0
         e += 0.5 * self.k_pin * (r @ r)
+        if self.contact is not None:
+            e += self.contact.energy(x)
         return float(e - self.f_g @ x)
 
     def gradient(self, x, a):
         Xm = x.reshape(-1, 3)
         g = energies.stable_neo_hookean_gradient_x(Xm, self.J, self.mu, self.lam, self.vol).ravel()
-        g = g + energies.mass_springs_gradient_x(Xm, self.E_t, self.ym, self.svol, self.l0(a)).ravel()
+        g = g + self.tendon_gradient(x, a)
         g = g + self.k_pin * (self.G.T @ (self.G @ x - self.g0))
+        if self.contact is not None:
+            g = g + self.contact.gradient(x)
         return g - self.f_g
 
     def hessian(self, x, a):
         Xm = x.reshape(-1, 3)
         H = energies.stable_neo_hookean_hessian_x(Xm, self.J, self.mu, self.lam, self.vol, psd=True)
-        H = H + energies.mass_springs_hessian_x(Xm, self.E_t, self.ym, self.svol, self.l0(a), psd=True)
-        return (H + self.H_pin).tocsr()
+        H = H + self.tendon_hessian(x, a)
+        H = H + self.H_pin
+        if self.contact is not None:
+            H = H + self.contact.hessian(x)
+        return H.tocsr()
 
     def minimize(self, x0, a, x_tilde=None, h=None, iters=60, tol=1e-5):
         """Newton over the free DOFs of V(x) [+ inertia when ``x_tilde`` is given],
@@ -263,6 +314,12 @@ class Hand:
             dx = solve_spd(H[fr][:, fr], -gf)
             if np.abs(dx).max() < tol:
                 break
+            if self.contact is not None:        # no tunnelling through the cup wall in one step
+                step = np.zeros_like(x)
+                step[fr] = dx
+                m = np.linalg.norm(step.reshape(-1, 3), axis=1).max()
+                if m > MAX_STEP_CONTACT:
+                    dx = dx * (MAX_STEP_CONTACT / m)
             alpha, xf, _ = backtracking_line_search(f, x[fr], gf, dx)
             x[fr] = xf
             if alpha == 0:
@@ -363,11 +420,16 @@ def summarize_pen(pen):
 
 
 def run(dynamics=True, n_static=12, h=1 / 60, t_ramp=1.2, t_end=2.0, scene_file="sdm_tets.npz",
-        tag=""):
+        tag="", cup=None):
     """Statics + dynamics on ``output/<scene_file>``; writes ``sdm_sim<tag>.npz`` and
     ``sim_report<tag>.json`` (tag "" is the fine hand)."""
     scene = dict(np.load(os.path.join(OUT, scene_file)))
     hand = Hand(scene)
+    if cup is not None:
+        from sdm_cup import Contact
+        hand.contact = Contact(hand, cup)
+        print(f"rigid cup: R {cup.R*1e3:.0f} mm, centre {np.round(cup.c*1e3, 1)} mm, cubic penalty "
+              f"k = {cup.k:g}, {len(hand.contact.v)} contact vertices")
     print(f"{hand.n} vertices, {len(hand.T)} tets, {len(hand.pinned)} pinned vertices, "
           f"{len(hand.E_t)} tendon springs (k = {K_TENDON:g} N/m)")
     for t in hand.tendon_info:
@@ -417,6 +479,7 @@ def run(dynamics=True, n_static=12, h=1 / 60, t_ramp=1.2, t_end=2.0, scene_file=
         n_steps = int(round(t_end / h))
         x, v = x0.copy(), np.zeros_like(x0)
         frames, a_t, times, its = [x.copy()], [0.0], [0.0], []
+        contact_t = []
         for k in range(1, n_steps + 1):
             t = k * h
             a = float(smoothstep(t / t_ramp))
@@ -427,9 +490,14 @@ def run(dynamics=True, n_static=12, h=1 / 60, t_ramp=1.2, t_end=2.0, scene_file=
             a_t.append(a)
             times.append(t)
             its.append(it)
+            if hand.contact is not None:
+                contact_t.append(hand.contact.report(x))
             if k % 10 == 0:
                 d = np.linalg.norm(hand.fingertips(x) - tips0, axis=1).mean()
-                print(f"  t={t:.3f}s a={a:.3f} newton={it} mean tip disp {d*1e3:.1f} mm "
+                c = "" if hand.contact is None else (f" contact {contact_t[-1]['contact_vertices']} v, "
+                                                     f"pen {contact_t[-1]['max_penetration_mm']:.2f} mm, "
+                                                     f"F {contact_t[-1]['contact_force_N']:.2f} N")
+                print(f"  t={t:.3f}s a={a:.3f} newton={it} mean tip disp {d*1e3:.1f} mm{c} "
                       f"({time.time() - t0:.0f}s)")
         t_dyn = time.time() - t0
         frames = np.array(frames)
@@ -445,6 +513,12 @@ def run(dynamics=True, n_static=12, h=1 / 60, t_ramp=1.2, t_end=2.0, scene_file=
                     dyn_peak_tip_disp_mm=dict(zip(hand.fingers, (tipd.max(0) * 1e3).round(1).tolist())),
                     dyn_final_joint_deg=hand.joint_angles(frames[-1]).round(1).tolist(),
                     dyn_final_penetration=summarize_pen(hand.interpenetration(frames[-1])))
+        if hand.contact is not None:
+            info.update(cup=dict(center=hand.contact.cup.c.tolist(), R=hand.contact.cup.R,
+                                 wall=hand.contact.cup.w, base=hand.contact.cup.b, length=hand.contact.cup.L,
+                                 k=hand.contact.cup.k), contact=contact_t)
+            out.update(dyn_contact_force=np.array([c["contact_force_N"] for c in contact_t]),
+                       dyn_contact_pen=np.array([c["max_penetration_mm"] for c in contact_t]))
     np.savez_compressed(os.path.join(OUT, f"sdm_sim{tag}.npz"), **out)
     with open(os.path.join(OUT, f"sim_report{tag}.json"), "w") as f:
         json.dump(info, f, indent=1, default=float)

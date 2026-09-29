@@ -60,8 +60,9 @@ def fig_meshes():
     s, targets = levels()
     fine = load()
     kinds = [str(k) for k in fine["part_kind"]]
-    tips = fine["X"][np.isin(fine["part"], [list(fine["part_names"]).index(n)
-                                            for n in ("index_pad", "middle_pad", "ring_pad")])]
+    sel = np.isin(fine["part"], [list(fine["part_names"]).index(n)
+                                 for n in ("index_pad", "middle_pad", "ring_pad")])
+    tips = fine["X"][np.unique(fine["T"][sel])]
     c = tips.mean(0) + [0.012, 0, -0.012]
     box = pv.Box(bounds=(c[0] - 0.035, c[0] + 0.035, c[1] - 0.035, c[1] + 0.035,
                          c[2] - 0.035, c[2] + 0.035))
