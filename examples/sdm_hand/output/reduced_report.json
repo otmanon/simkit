@@ -374,5 +374,19 @@
    44.94,
    78.58
   ]
+ },
+ "_1200_palmar_mixw3_kpin100000_cup_yaw-15_fric1e+10": {
+  "level": "1200_palmar_mixw3",
+  "dofs": 3600,
+  "tets": 4379,
+  "t_static": 42.692970275878906,
+  "static_newton": 307,
+  "static_tip_mm": [
+   66.84,
+   85.54,
+   79.2,
+   56.81,
+   67.36
+  ]
  }
 }

@@ -19,15 +19,16 @@ from sdm_finger_zoom import sdf_obj, finger_surface, finger_focus, hinge_axis, T
 
 pv.OFF_SCREEN = True
 REN = os.path.join(R.OUT, "renders")
-FTAG = f"{TAG}_kpin100000_cup_fric1e+10"
+CUP = os.environ.get("CUP", "cup_yaw")
+FTAG = f"{TAG}_kpin100000_cup_yaw-15_fric1e+10" if CUP == "cup_yaw" else f"{TAG}_kpin100000_cup_fric1e+10"
 
 
 def main(finger="index"):
     F = Fine()
     _, P = R.load_level(TAG)
     d = dict(np.load(os.path.join(R.OUT, f"reduced_sim_{FTAG}.npz")))
-    obj = sdf_obj("cup")
-    bm = object_mesh("cup")
+    obj = sdf_obj(CUP)
+    bm = object_mesh(CUP)
     A = np.concatenate([np.linspace(0, 1, 121), np.ones(36)])
     xfs = [P @ interp(d, a) for a in A]
     force = [np.interp(a, d["static_a"], d["contact_force"]) for a in A]
@@ -48,7 +49,7 @@ def main(finger="index"):
     pl.camera_position = [tuple(c + dv), tuple(c), (0, 0, 1)]
     pl.reset_camera(bounds=b)
     pl.camera.zoom(1.15)
-    w = imageio.get_writer(os.path.join(REN, "cup_grasp_full.mp4"), fps=30, codec="libx264", macro_block_size=1,
+    w = imageio.get_writer(os.path.join(REN, f"{CUP}_grasp_full.mp4"), fps=30, codec="libx264", macro_block_size=1,
                            quality=8)
     for a, xf, f in zip(A, xfs, force):
         s.points = xf[F.pid]
@@ -60,7 +61,7 @@ def main(finger="index"):
         w.append_data(pl.screenshot(return_img=True))
     w.close()
     pl.close()
-    print("wrote renders/cup_grasp_full.mp4")
+    print(f"wrote renders/{CUP}_grasp_full.mp4")
 
     # 2) profile close-up of one finger
     pl = pv.Plotter(window_size=(1000, 1000), off_screen=True)
@@ -90,7 +91,7 @@ def main(finger="index"):
     pl.reset_camera(bounds=(lo[0], hi[0], lo[1], hi[1], lo[2], hi[2]))
     pl.camera.zoom(1.05)
     fv = np.unique(F.sc["T"][np.isin(F.sc["part"], [names.index(n) for n in names if n.startswith(finger + "_")])])
-    w = imageio.get_writer(os.path.join(REN, f"cup_grasp_profile_{finger}.mp4"), fps=30, codec="libx264",
+    w = imageio.get_writer(os.path.join(REN, f"{CUP}_grasp_profile_{finger}.mp4"), fps=30, codec="libx264",
                            macro_block_size=1, quality=8)
     for a, xf in zip(A, xfs):
         s.points = xf[F.pid]
@@ -103,7 +104,7 @@ def main(finger="index"):
         w.append_data(pl.screenshot(return_img=True))
     w.close()
     pl.close()
-    print(f"wrote renders/cup_grasp_profile_{finger}.mp4")
+    print(f"wrote renders/{CUP}_grasp_profile_{finger}.mp4")
 
 
 if __name__ == "__main__":

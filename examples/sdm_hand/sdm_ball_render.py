@@ -27,7 +27,8 @@ BALL_COL = "#c9b99a"
 
 
 OBJECTS = {"ball": dict(center=(-0.010, -0.036, 0.128), R=0.030),
-           "cup": dict(center=(-0.005, -0.040, 0.125), R=0.035)}
+           "cup": dict(center=(-0.005, -0.040, 0.125), R=0.035),
+           "cup_yaw": dict(center=(-0.015, -0.044, 0.120), R=0.035, yaw=-15.0)}
 
 
 def object_mesh(kind):
@@ -35,7 +36,7 @@ def object_mesh(kind):
     if kind == "ball":
         return pv.Sphere(radius=o["R"], center=o["center"], theta_resolution=64, phi_resolution=64)
     from sdm_cup import Cup
-    return Cup(center=o["center"], R=o["R"]).mesh()
+    return Cup(center=o["center"], R=o["R"], yaw=o.get("yaw", 0.0)).mesh()
 
 
 def main(tag, ftag, kind="ball"):

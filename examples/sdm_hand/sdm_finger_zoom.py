@@ -29,7 +29,7 @@ FINGERS = ["index", "middle", "ring", "little", "thumb"]
 
 def sdf_obj(kind):
     o = OBJECTS[kind]
-    return R.Ball(o["center"], o["R"]) if kind == "ball" else Cup(center=o["center"], R=o["R"])
+    return R.Ball(o["center"], o["R"]) if kind == "ball" else Cup(center=o["center"], R=o["R"], yaw=o.get("yaw", 0.0))
 
 
 def state(F, kind, ftag):

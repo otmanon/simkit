@@ -347,6 +347,8 @@ def main():
     ap.add_argument("--n-static", type=int, default=12)
     ap.add_argument("--ball", type=float, nargs=5, metavar=("CX", "CY", "CZ", "R", "K"),
                     help="rigid ball in contact with the fine surface (m, N/m^4)")
+    ap.add_argument("--cup-yaw", type=float, default=0.0, help="cup axis turn about z (deg)")
+    ap.add_argument("--cup-pitch", type=float, default=0.0, help="cup axis turn about y (deg)")
     ap.add_argument("--friction", type=float, default=0.0,
                     help="lagged viscous friction k_f (N/m^3) on the fine surface vertices inside the object")
     ap.add_argument("--cup", type=float, nargs=5, metavar=("CX", "CY", "CZ", "R", "K"),
@@ -358,6 +360,7 @@ def main():
     levels = args.names if args.names else (args.levels if args.levels is not None
                                             else [r["target"] for r in summ["levels"]])
     obj_tag = ("_ball" if args.ball is not None else ("_cup" if args.cup is not None else "")) + \
+        (f"_yaw{args.cup_yaw:g}" if args.cup is not None and args.cup_yaw else "") + \
         (f"_fric{args.friction:g}" if args.friction > 0 else "")
     pin_tag = ("" if args.k_pin is None else f"_kpin{args.k_pin:g}") + obj_tag
     runs = [(lv, f"_{lv}{pin_tag}") for lv in levels] + \
@@ -370,7 +373,7 @@ def main():
             obj = Ball(args.ball[:3], args.ball[3], args.ball[4])
         elif args.cup is not None:
             from sdm_cup import Cup
-            obj = Cup(center=args.cup[:3], R=args.cup[3], k=args.cup[4])
+            obj = Cup(center=args.cup[:3], R=args.cup[3], k=args.cup[4], yaw=args.cup_yaw, pitch=args.cup_pitch)
         sysd = build_hand_system(lv, k_pin=args.k_pin if lv is not None else None, obj=obj,
                                  friction=args.friction)
         print(f"== {'fine (P = I)' if lv is None else f'level {lv}'}: {sysd['n_dof']} DOFs, "

@@ -29,9 +29,17 @@ mm = 1e-3
 
 class Cup:
     def __init__(self, center=(-5 * mm, -40 * mm, 125 * mm), R=35 * mm, wall=3 * mm,
-                 base=4 * mm, length=100 * mm, k=1e12):
+                 base=4 * mm, length=100 * mm, k=1e12, yaw=0.0, pitch=0.0):
         self.c = np.asarray(center, float)
         self.R, self.w, self.b, self.L, self.k = R, wall, base, length, k
+        # orientation: the local axis is x, turned by `yaw` (deg, about z) then `pitch`
+        # (deg, about y); world = Rm @ local
+        cy, sy = np.cos(np.radians(yaw)), np.sin(np.radians(yaw))
+        cp, sp_ = np.cos(np.radians(pitch)), np.sin(np.radians(pitch))
+        Rz = np.array([[cy, -sy, 0], [sy, cy, 0], [0, 0, 1.0]])
+        Ry = np.array([[cp, 0, sp_], [0, 1.0, 0], [-sp_, 0, cp]])
+        self.Rm = Ry @ Rz
+        self.yaw, self.pitch = yaw, pitch
 
     @staticmethod
     def _capped(p, r, h0, h1):
@@ -40,7 +48,7 @@ class Cup:
         return np.minimum(q.max(1), 0.0) + np.linalg.norm(np.maximum(q, 0.0), axis=1)
 
     def sdf(self, P):
-        p = np.atleast_2d(P) - self.c
+        p = (np.atleast_2d(P) - self.c) @ self.Rm           # local coordinates
         h0, h1 = -self.L / 2, self.L / 2               # base at -x, open end at +x
         outer = self._capped(p, self.R, h0, h1)
         cavity = self._capped(p, self.R - self.w, h0 + self.b, h1 + 1.0)
@@ -58,9 +66,10 @@ class Cup:
     def mesh(self, n=96):
         """Triangle mesh of the cup for rendering (outer wall, rim, inner wall, base)."""
         import pyvista as pv
-        outer = pv.Cylinder(center=self.c, direction=(1, 0, 0), radius=self.R, height=self.L,
+        ax = self.Rm[:, 0]
+        outer = pv.Cylinder(center=self.c, direction=ax, radius=self.R, height=self.L,
                             resolution=n, capping=True).triangulate()
-        cav = pv.Cylinder(center=self.c + [self.b / 2 + 0.5 * mm, 0, 0], direction=(1, 0, 0),
+        cav = pv.Cylinder(center=self.c + ax * (self.b / 2 + 0.5 * mm), direction=ax,
                           radius=self.R - self.w, height=self.L - self.b + 1 * mm, resolution=n,
                           capping=True).triangulate()
         try:
