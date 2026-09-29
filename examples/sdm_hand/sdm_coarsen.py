@@ -200,7 +200,9 @@ def main():
     ap.add_argument("--min-quality", type=float, default=0.0,
                     help="mesh4PDE min_quality: refuse collapses leaving a one-ring tet below this "
                          "mean-ratio quality (0 = off)")
-    ap.add_argument("--basis", choices=["elastic", "pca", "mixed"], default="elastic",
+    ap.add_argument("--mix-ratio", type=float, default=1.0,
+                    help="mixw: total weight of the PCA half relative to the elastic half")
+    ap.add_argument("--basis", choices=["elastic", "pca", "mixed", "mixw"], default="elastic",
                     help="elastic: Hessian eigenmodes; pca: PCA of the full-space closing only "
                          "(eigenvalues = 1/sigma, so the cost measures lost snapshot data); mixed: "
                          "PCA components + eigenmodes, Rayleigh-Ritz'd against the Hessian")
@@ -228,6 +230,17 @@ def main():
     if args.basis == "pca":
         B, sig = pca_basis(hand)
         lam = 1.0 / sig
+    elif args.basis == "mixw":
+        # side by side, each set keeping its own weighting: the eigenmodes enter mesh4PDE's
+        # cost as Phi/lambda, the PCA components as Phi_pca * sigma * c, with c chosen so
+        # the PCA half has mix_ratio times the elastic half's Frobenius weight
+        Phi, sig = pca_basis(hand)
+        w_el = np.linalg.norm(1.0 / lam)
+        c = args.mix_ratio * w_el / np.linalg.norm(sig)
+        B = np.hstack([Phi, B])
+        lam = np.concatenate([1.0 / (c * sig), lam])
+        print(f"mixw: {Phi.shape[1]} PCA + {len(lam) - Phi.shape[1]} eigenmodes, PCA weight x{args.mix_ratio}",
+              flush=True)
     elif args.basis == "mixed":
         Phi, _ = pca_basis(hand)
         B, lam = ritz(hand, np.hstack([B, Phi]))

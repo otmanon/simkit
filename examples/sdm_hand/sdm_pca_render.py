@@ -38,7 +38,7 @@ def tip_err(F, P, x):
     return np.linalg.norm(xf - ref) / np.linalg.norm(ref - hf.X)
 
 
-def fig_modes_meshes(F):
+def fig_modes_meshes(F, name="25_pca_coarsening.png", note=None, suptitle=None):
     pb = np.load(os.path.join(R.CO, "pca_basis.npz"))
     Phi, sig, sall = pb["Phi"], pb["sigma"], pb["sigma_all"]
     fig = plt.figure(figsize=(20, 12.5))
@@ -82,7 +82,7 @@ def fig_modes_meshes(F):
         a.axis("off")
     a = fig.add_subplot(gs[1:, 3])
     a.axis("off")
-    a.text(0.02, 0.95, "What each basis asks the coarsener to keep\n\n"
+    a.text(0.02, 0.95, note if note else "What each basis asks the coarsener to keep\n\n"
            "elastic: small vibrations about rest,\n  dominated by the pads (87 of 92 modes)\n\n"
            "PCA only: exactly the observed closing;\n  blocks rotate rigidly (free to collapse),\n"
            "  joints bend (kept); pads never deform\n  in the data, so 4 of 5 lose all pad tets\n\n"
@@ -90,11 +90,11 @@ def fig_modes_meshes(F):
            va="top", fontsize=12, color=INK)
     fig.legend(handles=[Patch(color=KIND_COL[k], label=KIND_LAB[k]) for k in ORDER], loc="lower center",
                ncol=4, frameon=False, fontsize=11)
-    fig.suptitle("Coarsening from data: PCA of the full-space closing, and PCA mixed with Hessian eigenmodes "
-                 "(1,200 vertices, tet quality >= 0.3)", fontsize=14)
+    fig.suptitle(suptitle or ("Coarsening from data: PCA of the full-space closing, and PCA mixed with Hessian "
+                           "eigenmodes (1,200 vertices, tet quality >= 0.3)"), fontsize=14)
     fig.tight_layout(rect=(0, 0.03, 1, 0.96))
-    fig.savefig(os.path.join(REN, "25_pca_coarsening.png"), dpi=85)
-    print("wrote renders/25_pca_coarsening.png")
+    fig.savefig(os.path.join(REN, name), dpi=85)
+    print("wrote renders/" + name)
 
 
 def load_runs(F):
@@ -202,6 +202,20 @@ def video(F, runs, ref, n=73, fps=24, name="pca_closing.mp4"):
 
 if __name__ == "__main__":
     F = Fine()
+    if "--mixw" in sys.argv:
+        RUNS[:] = [("1200_q30pcaE1", "PCA only (3)", "1200_q30pcaE1_kpin100000"),
+                   ("1200_mixw1", "PCA x1 + 92 eigenmodes", "1200_mixw1_kpin100000"),
+                   ("1200_mixw3", "PCA x3 + 92 eigenmodes", "1200_mixw3_kpin100000")]
+        fig_modes_meshes(F, name="28_mixw_coarsening.png",
+                         suptitle="PCA of the closing mixed side by side with Hessian eigenmodes (each keeps its own "
+                               "weighting; 1,200 v, quality >= 0.3, extrapolation <= 1)",
+                         note="Mixed side by side\n\nmesh4PDE cost through\n  [ Phi_pca * c * sigma ,  Phi_eig / lambda ]\n"
+                              "c sets the PCA half to rho x the elastic\nhalf's weight (rho = 1, 3)\n\n"
+                              "PCA keeps the joints (closing motion),\neigenmodes keep the pads (soft tissue)")
+        runs, ref = load_runs(F)
+        fig_statics(F, runs, ref, name="29_mixw_statics.png")
+        video(F, runs, ref, name="mixw_closing.mp4")
+        raise SystemExit
     if "--bounded" in sys.argv:
         RUNS[:] = [("1200_q30pca", "PCA, extrapolation unbounded", "1200_q30pca_kpin100000"),
                    ("1200_q30pcaE1", "PCA, extrapolation <= 1", "1200_q30pcaE1_kpin100000")]
