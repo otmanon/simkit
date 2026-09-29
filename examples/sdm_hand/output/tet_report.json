@@ -1,0 +1,68 @@
+{
+ "tet_boundary_nopads": {
+  "V": 1718,
+  "E": 5148,
+  "F": 3432,
+  "chi": 2,
+  "components": 1,
+  "boundary_loops": 0,
+  "nonmanifold_edges": 0,
+  "nonmanifold_vertices": 0,
+  "oriented": true,
+  "genus": 0.0,
+  "closed_manifold": true,
+  "n_vertices": 2602,
+  "n_tets": 10335
+ },
+ "tet_boundary_pads": {
+  "V": 2657,
+  "E": 7965,
+  "F": 5310,
+  "chi": 2,
+  "components": 1,
+  "boundary_loops": 0,
+  "nonmanifold_edges": 0,
+  "nonmanifold_vertices": 0,
+  "oriented": true,
+  "genus": 0.0,
+  "closed_manifold": true,
+  "n_vertices": 4401,
+  "n_tets": 18460
+ },
+ "label_counts": {
+  "palm": {
+   "tets": 3005,
+   "volume_cm3": 239.85138565272277
+  },
+  "link": {
+   "tets": 8422,
+   "volume_cm3": 169.6897016684418
+  },
+  "flexure": {
+   "tets": 2621,
+   "volume_cm3": 6.776015951848809
+  },
+  "pad": {
+   "tets": 4412,
+   "volume_cm3": 12.366910988986362
+  }
+ },
+ "min_tet_volume_mm3": 0.05611844554679168,
+ "materials": {
+  "stiff polyurethane (links, palm)": {
+   "E": 1500000000.0,
+   "nu": 0.35,
+   "rho": 1150.0
+  },
+  "soft elastomer (flexure joints)": {
+   "E": 600000.0,
+   "nu": 0.45,
+   "rho": 1050.0
+  },
+  "softer elastomer (fingertip pads)": {
+   "E": 200000.0,
+   "nu": 0.45,
+   "rho": 1030.0
+  }
+ }
+}

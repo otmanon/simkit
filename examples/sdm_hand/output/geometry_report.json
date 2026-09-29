@@ -1,0 +1,81 @@
+{
+ "params": {
+  "palm": [
+   0.12,
+   0.1,
+   0.02
+  ],
+  "finger_x": 0.05,
+  "finger_y": [
+   -0.025,
+   0.025
+  ],
+  "link_w": 0.02,
+  "prox_len": 0.062,
+  "dist_len": 0.045,
+  "flex_len": 0.008,
+  "flex_w": 0.016,
+  "flex_t_prox": 0.005,
+  "flex_t_dist": 0.007,
+  "overlap": 0.0005,
+  "pad_t": 0.0045,
+  "pad_w": 0.018,
+  "pad_z": [
+   0.007,
+   0.042
+  ]
+ },
+ "surface_nopads": {
+  "V": 136,
+  "E": 402,
+  "F": 268,
+  "chi": 2,
+  "components": 1,
+  "boundary_loops": 0,
+  "nonmanifold_edges": 0,
+  "nonmanifold_vertices": 0,
+  "oriented": true,
+  "genus": 0.0,
+  "closed_manifold": true,
+  "manifold3d_genus": 0,
+  "shells": 1
+ },
+ "surface_pads": {
+  "V": 168,
+  "E": 498,
+  "F": 332,
+  "chi": 2,
+  "components": 1,
+  "boundary_loops": 0,
+  "nonmanifold_edges": 0,
+  "nonmanifold_vertices": 0,
+  "oriented": true,
+  "genus": 0.0,
+  "closed_manifold": true,
+  "manifold3d_genus": 0,
+  "shells": 1
+ },
+ "parts": [
+  "palm",
+  "prox_L0",
+  "dist_L0",
+  "flexprox_L0",
+  "flexdist_L0",
+  "pad_L0",
+  "prox_L1",
+  "dist_L1",
+  "flexprox_L1",
+  "flexdist_L1",
+  "pad_L1",
+  "prox_R0",
+  "dist_R0",
+  "flexprox_R0",
+  "flexdist_R0",
+  "pad_R0",
+  "prox_R1",
+  "dist_R1",
+  "flexprox_R1",
+  "flexdist_R1",
+  "pad_R1"
+ ]
+}
