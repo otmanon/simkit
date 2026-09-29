@@ -10,7 +10,9 @@ The layout is anthropomorphic (the hand shape the user approved):
     index 40/25/20 (w 19), middle 45/28/22 (w 20), ring 42/26/21 (w 19),
     little 32/20/18 (w 16); phalanx thickness 17 mm; ~2 mm gaps
 * an opposable thumb off the radial (-x) side near the wrist: metacarpal
-  38 mm + proximal 30 mm + distal 24 mm (widths 24/20/19, thickness 16 mm)
+  26 mm + proximal 30 mm + distal 24 mm (widths 24/20/19, thickness 16 mm),
+  carried by a stiff tapered thenar mound (convex hull of the palm's radial
+  edge and the thumb's base cross-section) merged into the palm
 * between every pair of consecutive blocks a soft flexure slab 6 mm long,
   5 mm thick (4 mm for the thumb), 4 mm narrower than the phalanx, placed at
   the DORSAL side so that palmar tendons curl the finger towards the palm
@@ -27,10 +29,11 @@ face at ``y = 0.022``. The bottom face of the wrist (``z = -0.030``) is pinned
 in the simulation.
 
 Changes w.r.t. the quick preview script (``hand_quick.py``): the thumb is
-(1) moved 4 mm further out (3.4 mm clearance) and its first flexure extended
-16 mm into the palm, so that only that flexure joins it to the palm --
-in the preview the metacarpal block overlapped the palm by 481 mm^3, which
-would have welded the thumb's first joint solid; (2) tilted +15 deg (towards
+(1) moved 12 mm out along its own axis onto a tapered thenar mound, with an
+ordinary 6 mm first flexure between the mound and the metacarpal (in the
+preview the metacarpal block overlapped the palm by 481 mm^3, which would have
+welded the thumb's first joint solid; a later version bridged the gap with a
+flexure strip reaching 16 mm into the palm, which looked bolted on); (2) tilted +15 deg (towards
 the palmar side) instead of -15 deg (towards the back of the hand), and
 pronated 50 deg about its own axis so that its pad faces the fingers and it
 flexes across the palm (opposition) rather than straight forward.
@@ -72,14 +75,18 @@ class HandParams:
     overlap: float = 0.5 * mm
     pad_t: float = 8 * mm                     # fingertip / thumb pad thickness
     # thumb, built along local +z with its palmar side at local -y
-    thumb_seg: tuple = ((38 * mm, 24 * mm), (30 * mm, 20 * mm), (24 * mm, 19 * mm))
+    thumb_seg: tuple = ((26 * mm, 24 * mm), (30 * mm, 20 * mm), (24 * mm, 19 * mm))
     thumb_half_t: float = 8 * mm
     thumb_flex_t: float = 4 * mm
     thumb_pronation: float = 50.0             # deg about the thumb's own axis
     thumb_tilt: float = 15.0                  # deg about x (towards the palmar side)
     thumb_abduction: float = -50.0            # deg about y (outwards)
-    thumb_base: tuple = (-52 * mm, 11 * mm, 18 * mm)
-    thumb_root_embed: float = 16 * mm          # first thumb flexure reaches into the palm
+    thumb_base: tuple = (-61 * mm, 8 * mm, 25.5 * mm)   # 12 mm out along the thumb axis: room for the thenar neck
+    thumb_root_embed: float = 0.5 * mm         # first thumb flexure embeds into the thenar mound
+    # thenar mound: hull of a patch on the palm's radial side (z range) and the
+    # thumb's base cross-section, clipped to the palm side of the thumb's base plane
+    thenar_z: tuple = (0.0, 60 * mm)
+    thenar_depth: float = 12 * mm              # how far the patch reaches into the palm (x)
     palm_pad: tuple = (-38 * mm, 38 * mm, -3 * mm, 0.5 * mm, 20 * mm, 85 * mm)
 
 
@@ -103,12 +110,28 @@ def thumb_transform(p=HandParams()):
     return A
 
 
+def thenar(p=HandParams()):
+    """Tapered stiff mound that carries the thumb: convex hull of a slab on the
+    palm's radial side and the thumb's first-segment cross-section at the thumb's
+    base plane (local z = 0), cut back to local z <= 0 so the first thumb flexure
+    (local z in [0, flex_len]) spans a free gap like every finger joint."""
+    A = thumb_transform(p)
+    w0 = p.thumb_seg[0][1]
+    ht = p.thumb_half_t
+    plate = box(-w0 / 2, w0 / 2, -ht, ht, -1 * mm, 0.0).transform(A[:3, :])
+    x0 = p.palm_x[0]
+    slab = box(x0, x0 + p.thenar_depth, 0.0, p.palm_t, *p.thenar_z)
+    hull = m3d.Manifold.batch_hull([plate, slab])
+    half = box(-0.2, 0.2, -0.2, 0.2, -0.4, 0.0).transform(A[:3, :])   # local z <= 0
+    return hull ^ half
+
+
 def build_parts(p=HandParams(), pads=True):
     """Ordered ``{name: (Manifold, kind)}``; kind in palm / link / flexure / pad."""
     parts = {}
     T = p.palm_t
     parts["wrist"] = (box(*p.wrist), "palm")
-    parts["palm"] = (box(*p.palm_x, 0, T, *p.palm_z), "palm")
+    parts["palm"] = (box(*p.palm_x, 0, T, *p.palm_z) + thenar(p), "palm")
     ov, fl = p.overlap, p.flex_len
     y_f1 = T - p.flex_dorsal_gap
     y_p0 = (T - p.phal_t) / 2                  # palmar face of the phalanges
