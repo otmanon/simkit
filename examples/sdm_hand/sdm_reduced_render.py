@@ -178,7 +178,7 @@ def load_runs():
     return out
 
 
-def fig_statics(F, runs):
+def fig_statics(F, runs, name="20_reduced_statics.png", labels=None):
     ks = [0, 4, 8, 12]
     fig, ax = plt.subplots(len(runs), len(ks), figsize=(4.0 * len(ks), 4.3 * len(runs)))
     ax = np.atleast_2d(ax)
@@ -190,7 +190,7 @@ def fig_statics(F, runs):
             ax[i, j].axis("off")
             if i == 0:
                 ax[i, j].set_title(f"a = {d['static_a'][k]:.2f}", fontsize=13)
-        lab = "full space\n(P = I)" if L is None else f"level {L}\n{3 * P.shape[1]:,} DOFs"
+        lab = (labels or {}).get(L) or ("full space\n(P = I)" if L is None else f"level {L}\n{3 * P.shape[1]:,} DOFs")
         ax[i, 0].text(-0.05, 0.5, lab + f"\nstatics {d['t_static']:.1f} s", transform=ax[i, 0].transAxes,
                       ha="right", va="center", fontsize=12)
     fig.legend(handles=[Patch(color=KIND_COL[k], label=KIND_LAB[k]) for k in ORDER], loc="lower center",
@@ -198,8 +198,8 @@ def fig_statics(F, runs):
     fig.suptitle("Actuation sweep in each subspace (quasi-static Newton per a), drawn on the fine hand "
                  "x_fine = B x", fontsize=14)
     fig.tight_layout(rect=(0.06, 0.03, 1, 0.97))
-    fig.savefig(os.path.join(REN, "20_reduced_statics.png"), dpi=85)
-    print("wrote renders/20_reduced_statics.png")
+    fig.savefig(os.path.join(REN, name), dpi=85)
+    print("wrote renders/" + name)
 
 
 def fig_compare(runs):
@@ -254,7 +254,7 @@ def fig_compare(runs):
     print("wrote renders/21_reduced_compare.png")
 
 
-def video(F, runs, fps=30):
+def video(F, runs, fps=30, name="reduced_closing.mp4", labels=None):
     import imageio.v2 as imageio
     pls = []
     for L, d, P in runs:
@@ -268,10 +268,10 @@ def video(F, runs, fps=30):
         pl.camera_position = [tuple(c + dd), tuple(c), up]
         pl.reset_camera(bounds=F.bounds)
         pl.camera.zoom(1.25)
-        pl.add_text("full space" if L is None else f"{3 * P.shape[1]:,} DOFs", position="upper_left",
+        pl.add_text((labels or {}).get(L) or ("full space" if L is None else f"{3 * P.shape[1]:,} DOFs"), position="upper_left",
                     font_size=11, color="black")
         pls.append((pl, s, d, P))
-    w = imageio.get_writer(os.path.join(REN, "reduced_closing.mp4"), fps=fps, codec="libx264",
+    w = imageio.get_writer(os.path.join(REN, name), fps=fps, codec="libx264",
                            macro_block_size=1, quality=8)
     for k in range(len(runs[0][1]["dyn_x"])):
         imgs = []
@@ -283,10 +283,27 @@ def video(F, runs, fps=30):
     w.close()
     for p in pls:
         p[0].close()
-    print("wrote renders/reduced_closing.mp4")
+    print("wrote renders/" + name)
+
+
+def one_level(tag, file_tag, title):
+    """``tag`` (e.g. 1200_q30) run from reduced_sim_<file_tag>.npz next to the full space."""
+    F = Fine()
+    _, P = R.load_level(tag)
+    d = dict(np.load(os.path.join(OUT, f"reduced_sim_{file_tag}.npz")))
+    ref = dict(np.load(os.path.join(OUT, "reduced_sim_fine.npz")))
+    Pf = sp.sparse.identity(len(F.X), format="csc")
+    runs = [(tag, d, P), (None, ref, Pf)]
+    labels = {tag: title}
+    fig_statics(F, runs, name=f"23_reduced_statics_{file_tag}.png", labels={tag: title.replace(", ", "\n")})
+    video(F, runs, name=f"reduced_closing_{file_tag}.mp4", labels=labels)
 
 
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "--one":
+        one_level(sys.argv[2], sys.argv[3], sys.argv[4])
+        raise SystemExit
     ap = argparse.ArgumentParser()
     for f in ("setup", "modes", "statics", "compare", "video"):
         ap.add_argument(f"--{f}", action="store_true")

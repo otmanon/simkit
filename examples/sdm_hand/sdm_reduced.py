@@ -62,8 +62,12 @@ def load_level(level):
     return d, P
 
 
-def build_hand_system(level=None):
-    """Return ``system(x, a) -> (E, g, H)`` plus what the solver and renderer need."""
+def build_hand_system(level=None, k_pin=None):
+    """Return ``system(x, a) -> (E, g, H)`` plus what the solver and renderer need.
+    ``k_pin`` overrides the hinge-pin stiffness (0 drops the pins: in a coarse
+    subspace that cannot reproduce an exact hinge rotation they act as a locking
+    constraint)."""
+    K_PIN_ = K_PIN if k_pin is None else k_pin
     hf = fine_hand()
     if level is None:
         sc, P = _FINE["scene"], sp.sparse.identity(hf.n, format="csc")
@@ -91,7 +95,7 @@ def build_hand_system(level=None):
                               (3 * base[:, None] + np.arange(3)).ravel())), shape=(3 * len(base), 3 * hf.n))
     Sb = (S @ B).tocsr()
     xb0 = hf.X[base].reshape(-1)
-    H_quad = (K_PIN * (Gp.T @ Gp) + K_BASE * (Sb.T @ Sb)).tocsr()  # constant Hessian part
+    H_quad = (K_PIN_ * (Gp.T @ Gp) + K_BASE * (Sb.T @ Sb)).tocsr()  # constant Hessian part
     M_r = (B.T @ sp.sparse.diags(hf.m) @ B).tocsc()
     k_t = hf.ym.ravel()
     l_rest, c = hf.l_rest, hf.c
@@ -119,14 +123,14 @@ def build_hand_system(level=None):
         if energy_only:
             rp = Gp @ x - gp0
             rb = Sb @ x - xb0
-            return float(e + tendons(x, a, True)[0] + 0.5 * K_PIN * (rp @ rp) + 0.5 * K_BASE * (rb @ rb)), None, None
+            return float(e + tendons(x, a, True)[0] + 0.5 * K_PIN_ * (rp @ rp) + 0.5 * K_BASE * (rb @ rb)), None, None
         g = energies.stable_neo_hookean_gradient_x(Xm, J, mu, lam, vol).ravel()
         H = energies.stable_neo_hookean_hessian_x(Xm, J, mu, lam, vol, psd=True)
         et, gt, Ht = tendons(x, a)
         rp = Gp @ x - gp0
         rb = Sb @ x - xb0
-        e += et + 0.5 * K_PIN * (rp @ rp) + 0.5 * K_BASE * (rb @ rb)
-        g = g + gt + K_PIN * (Gp.T @ rp) + K_BASE * (Sb.T @ rb)
+        e += et + 0.5 * K_PIN_ * (rp @ rp) + 0.5 * K_BASE * (rb @ rb)
+        g = g + gt + K_PIN_ * (Gp.T @ rp) + K_BASE * (Sb.T @ rb)
         H = (H + Ht + H_quad).tocsr()
         return float(e), g, H
 
@@ -215,14 +219,18 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--levels", type=int, nargs="*")
     ap.add_argument("--fine", action="store_true", help="also run the full-space reference (P = I)")
+    ap.add_argument("--k-pin", type=float, default=None, help="hinge-pin stiffness in the subspace")
+    ap.add_argument("--names", nargs="*", help="level file tags instead of --levels, e.g. 1200_q30")
     args = ap.parse_args()
     summ = json.load(open(os.path.join(CO, "coarse_summary.json")))
-    levels = args.levels if args.levels is not None else [r["target"] for r in summ["levels"]]
-    runs = [(lv, f"_{lv}") for lv in levels] + ([(None, "_fine")] if args.fine else [])
+    levels = args.names if args.names else (args.levels if args.levels is not None
+                                            else [r["target"] for r in summ["levels"]])
+    pin_tag = "" if args.k_pin is None else f"_kpin{args.k_pin:g}"
+    runs = [(lv, f"_{lv}{pin_tag}") for lv in levels] + ([(None, "_fine")] if args.fine else [])
     report = {}
     for lv, tag in runs:
         t0 = time.time()
-        sysd = build_hand_system(lv)
+        sysd = build_hand_system(lv, k_pin=args.k_pin)
         print(f"== {'fine (P = I)' if lv is None else f'level {lv}'}: {sysd['n_dof']} DOFs, "
               f"{sysd['n_tets']} integration tets [build {time.time() - t0:.1f} s]", flush=True)
         res = simulate(sysd, log=lambda s: print(s, flush=True))

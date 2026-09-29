@@ -131,6 +131,10 @@ def main():
                          "barycentric units) outside its coarse tet; without it (inf) the stiff "
                          "blocks, which move rigidly in every mode and so cost nothing to "
                          "collapse, shrink to slivers (22-28%% of the volume kept)")
+    ap.add_argument("--min-quality", type=float, default=0.0,
+                    help="mesh4PDE min_quality: refuse collapses leaving a one-ring tet below this "
+                         "mean-ratio quality (0 = off)")
+    ap.add_argument("--suffix", default="", help="appended to the level's file names, e.g. _q30")
     ap.add_argument("--homogenize", action="store_true",
                     help="Reuss-average the fine moduli into each coarse tet (default: the coarse "
                          "tet's winding-number material, as for the fine mesh)")
@@ -187,7 +191,8 @@ def main():
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", UserWarning)    # the shortfall is handled below
                 Xc, Tc, P = coarsen(X=Xs, T=Ts, B=Bs, eigenvalues=lams, target_vertices=int(target),
-                                    max_extrapolation=schedule[bi])
+                                    max_extrapolation=schedule[bi],
+                                    **({"min_quality": args.min_quality} if args.min_quality else {}))
             Tc = oriented(Xc, Tc)
             Ptot = P if Ptot is None else (Ptot @ P).tocsc()
             stages.append(dict(bound=schedule[bi], vertices=int(len(Xc)), modes=int(Bs.shape[1])))
@@ -213,11 +218,11 @@ def main():
         kind_t = kinds[sc["part"]]
         counts = {k: int((kind_t == k).sum()) for k in ("palm", "link", "flexure", "pad")}
         missing = [n for i, n in enumerate(names) if not (sc["part"] == i).any()]
-        np.savez_compressed(os.path.join(CO, f"sdm_tets_{target}.npz"), **sc, pinned=coarse_pinned(P, X),
+        np.savez_compressed(os.path.join(CO, f"sdm_tets_{target}{args.suffix}.npz"), **sc, pinned=coarse_pinned(P, X),
                             P_data=P.data, P_indices=P.indices, P_indptr=P.indptr,
                             P_shape=np.array(P.shape))
-        write_obj(os.path.join(CO, f"sdm_hand_{target}.obj"), Xc, igl.boundary_facets(Tc)[0])
-        row = dict(target=int(target), vertices=int(len(Xc)), tets=int(len(Tc)), stages=stages,
+        write_obj(os.path.join(CO, f"sdm_hand_{target}{args.suffix}.obj"), Xc, igl.boundary_facets(Tc)[0])
+        row = dict(target=int(target), min_quality=args.min_quality, suffix=args.suffix, vertices=int(len(Xc)), tets=int(len(Tc)), stages=stages,
                    genus=top["genus"], closed_manifold=bool(top["closed_manifold"]),
                    components=int(top["components"]), min_tet_volume_mm3=float(vol.min() * 1e9),
                    inverted_tets=int((vol <= 0).sum()), tets_by_kind=counts,
@@ -228,7 +233,7 @@ def main():
         print(f"target {target:5d}: {len(Xc)} v, {len(Tc)} tets, genus {top['genus']:.0f}, "
               f"manifold {top['closed_manifold']}, volume {row['volume_ratio']:.3f}, tets {counts}, "
               f"parts lost {missing}, min P {P.data.min():.2f} [{row['seconds']:.0f}s]", flush=True)
-    with open(os.path.join(CO, "coarse_summary.json"), "w") as f:
+    with open(os.path.join(CO, f"coarse_summary{args.suffix}.json"), "w") as f:
         json.dump(summary, f, indent=1, default=float)
 
 
