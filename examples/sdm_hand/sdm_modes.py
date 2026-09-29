@@ -7,6 +7,7 @@ lumped mass matrix: ``A phi = lambda M phi``. Each mode's energy
 
     python sdm_modes.py            (after sdm_geometry.py, sdm_tets.py)
     python sdm_modes.py --until-soft   # keep going until soft deformation takes over
+    python sdm_modes.py --fingertips   # the fingertip-pad modes, one row per fingertip
 
 Writes ``output/sdm_modes.npz`` and ``output/renders/10_eigenfunctions.png``.
 """
@@ -246,6 +247,67 @@ def render_until_soft(X, T, B, lam, soft_kin, pad_E):
     print("wrote renders 11_soft_takeover.png, 12_modes_until_soft.png")
 
 
+def fingertip_modes(per_tip=3, share=0.5):
+    """For each fingertip pad, the first modes with > ``share`` of their elastic
+    energy in that pad, rendered as close-ups (from sdm_modes_long.npz)."""
+    scene = dict(np.load(os.path.join(OUT, "sdm_tets.npz")))
+    hand = Hand(scene)
+    X, T = hand.X, hand.T
+    d = np.load(os.path.join(OUT, "sdm_modes_long.npz"))
+    B, lam = d["B"], d["eigenvalues"]
+    tot = np.einsum("ij,ij->j", B, hand.hessian(X.reshape(-1), 0.0) @ B)
+    tips = ["index", "middle", "ring", "little", "thumb"]
+    picks, first = {}, {}
+    for f in tips:
+        i = hand.names.index(f"{f}_pad")
+        sel = hand.part == i
+        J = simkit.deformation_jacobian(X, T[sel]).tocsc()
+        J.resize((J.shape[0], 3 * hand.n))
+        H = energies.stable_neo_hookean_hessian_x(X, J, hand.mu[sel], hand.lam[sel], hand.vol[sel], psd=True)
+        sh = np.einsum("ij,ij->j", B, H @ B) / tot
+        m = np.where(sh > share)[0][:per_tip]
+        picks[f] = [(int(k), float(sh[k])) for k in m]
+        first[f] = int(m[0]) if len(m) else None
+        pad_c = X[np.unique(T[sel])].mean(0)
+        picks[f] = [(k, s_, pad_c) for k, s_ in picks[f]]
+    fh = lambda k: np.sqrt(lam[k]) / (2 * np.pi)
+    for f in tips:
+        print(f"{f:7s} pad: modes {[k + 1 for k, _, _ in picks[f]]}  "
+              f"(first at {fh(first[f]):.0f} Hz)" if first[f] is not None else f"{f}: none")
+
+    surf0 = tet_grid(X, T).extract_surface(algorithm="dataset_surface")
+    view = ((0.55, -1.4, 0.55), (0, 0, 1))          # palm side, looking at the pads
+    fig, axes = plt.subplots(len(tips), per_tip, figsize=(4.0 * per_tip, 4.1 * len(tips)))
+    for r, f in enumerate(tips):
+        for c in range(per_tip):
+            ax = axes[r, c]
+            ax.axis("off")
+            if c >= len(picks[f]):
+                continue
+            k, s_, pc = picks[f][c]
+            u = B[:, k].reshape(-1, 3)
+            mag = np.linalg.norm(u, axis=1)
+            g = tet_grid(X + (0.004 / mag.max()) * u, T)
+            g.point_data["phi"] = mag / mag.max()
+            surf = g.extract_surface(algorithm="dataset_surface")
+            rr = 0.036
+            pc = pc + np.array([0.0, 0.0, 0.006])
+            box = pv.Box(bounds=(pc[0] - rr, pc[0] + rr, pc[1] - rr, pc[1] + rr, pc[2] - rr, pc[2] + rr))
+
+            def add(pl, surf=surf):
+                pl.add_mesh(surf0, color="#d9d9d4", opacity=0.15)
+                pl.add_mesh(surf, scalars="phi", cmap="magma", clim=(0, 1), show_scalar_bar=False,
+                            smooth_shading=False)
+            ax.imshow(shot(add, view, size=(700, 700), zoom=1.0, focus=pc, bounds_mesh=box))
+            ax.set_title(f"{f} fingertip: mode {k + 1}, {fh(k):.0f} Hz\n"
+                         f"{s_:.0%} of the energy in the {f} pad", fontsize=10)
+    fig.suptitle("Fingertip pad modes of the compliant hand (close-ups from the palm side; "
+                 "deformation exaggerated to 4 mm, grey = rest shape)", fontsize=13)
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
+    fig.savefig(os.path.join(REN, "13_fingertip_pad_modes.png"), dpi=110)
+    print("wrote renders/13_fingertip_pad_modes.png")
+
+
 if __name__ == "__main__":
     import sys
     if "--until-soft" in sys.argv and "--render-only" in sys.argv:
@@ -253,6 +315,8 @@ if __name__ == "__main__":
         sc = np.load(os.path.join(OUT, "sdm_tets.npz"))
         render_until_soft(sc["X"].astype(float), sc["T"].astype(np.int64), d["B"],
                           d["eigenvalues"], d["soft_kin"], d["pad_E"])
+    elif "--fingertips" in sys.argv:
+        fingertip_modes()
     elif "--until-soft" in sys.argv:
         until_soft()
     else:
