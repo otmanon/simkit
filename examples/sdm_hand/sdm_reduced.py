@@ -170,7 +170,7 @@ def newton(system, x0, a, x_tilde=None, M=None, h=None, tol=1e-9, max_iters=60):
     return x, it
 
 
-def simulate(sysd, n_static=12, h=1 / 60, t_ramp=1.2, t_end=2.0, log=print):
+def simulate(sysd, n_static=12, h=1 / 60, t_ramp=1.2, t_end=2.0, log=print, dynamics=True):
     system, x0, M = sysd["system"], sysd["x0"], sysd["M"]
     P = sysd["P"]
     X_f = fine_hand().X
@@ -192,6 +192,9 @@ def simulate(sysd, n_static=12, h=1 / 60, t_ramp=1.2, t_end=2.0, log=print):
     log(f"  statics: {len(a_vals)} steps, {sum(its)} Newton its, {t_static:.2f} s; tips at a=1 (mm) "
         + " ".join(f"{f} {v*1e3:.1f}" for f, v in zip(sysd["fingers"], tips(xs[-1]))))
 
+    if not dynamics:
+        return dict(static_a=a_vals, static_x=np.array(xs), static_its=np.array(its), t_static=t_static,
+                    static_tip=np.array([tips(xx) for xx in xs]))
     t0 = time.time()
     n_steps = int(round(t_end / h))
     x, v = x0.copy(), np.zeros_like(x0)
@@ -219,6 +222,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--levels", type=int, nargs="*")
     ap.add_argument("--fine", action="store_true", help="also run the full-space reference (P = I)")
+    ap.add_argument("--no-dynamics", action="store_true")
     ap.add_argument("--k-pin", type=float, default=None, help="hinge-pin stiffness in the subspace")
     ap.add_argument("--names", nargs="*", help="level file tags instead of --levels, e.g. 1200_q30")
     args = ap.parse_args()
@@ -233,15 +237,16 @@ def main():
         sysd = build_hand_system(lv, k_pin=args.k_pin)
         print(f"== {'fine (P = I)' if lv is None else f'level {lv}'}: {sysd['n_dof']} DOFs, "
               f"{sysd['n_tets']} integration tets [build {time.time() - t0:.1f} s]", flush=True)
-        res = simulate(sysd, log=lambda s: print(s, flush=True))
+        res = simulate(sysd, log=lambda s: print(s, flush=True), dynamics=not args.no_dynamics)
         np.savez_compressed(os.path.join(OUT, f"reduced_sim{tag}.npz"),
                             **{k: (v.astype(np.float32) if k in ("static_x", "dyn_x") else v)
                                for k, v in res.items()})
         report[tag] = dict(level=lv, dofs=int(sysd["n_dof"]), tets=int(sysd["n_tets"]),
-                           t_static=res["t_static"], t_dynamic=res["t_dynamic"],
-                           static_newton=int(res["static_its"].sum()), dyn_newton=int(res["dyn_its"].sum()),
-                           static_tip_mm=(res["static_tip"][-1] * 1e3).round(2).tolist(),
-                           dyn_tip_mm=(res["dyn_tip"][-1] * 1e3).round(2).tolist())
+                           t_static=res["t_static"], static_newton=int(res["static_its"].sum()),
+                           static_tip_mm=(res["static_tip"][-1] * 1e3).round(2).tolist())
+        if "dyn_x" in res:
+            report[tag].update(t_dynamic=res["t_dynamic"], dyn_newton=int(res["dyn_its"].sum()),
+                               dyn_tip_mm=(res["dyn_tip"][-1] * 1e3).round(2).tolist())
         prev = os.path.join(OUT, "reduced_report.json")
         old = json.load(open(prev)) if os.path.exists(prev) else {}
         old.update(report)

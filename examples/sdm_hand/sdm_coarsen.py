@@ -120,6 +120,46 @@ def homogenize(sc, fine):
     return dict(sc, E=E, nu=nu, rho=rho)
 
 
+def green_basis(hand, B, lam):
+    """Add the tendons' linear responses to the modal basis.
+
+    For every tendon j, f_j is a unit pull along the tendon at its two embedded
+    anchors (``hand.Gt``), and u_j = A^{-1} f_j its static response (the Green's
+    function of that load); one more column is the response to the actuation
+    itself, u_a = A^{-1} (-dg/da). The modes and the Green's functions are then
+    M-orthonormalised together and Rayleigh-Ritz'd against A, so what mesh4PDE
+    receives is again an M-orthonormal basis with a matching energy per column
+    (for a Green's function, f^T A^{-1} f scaled by its norm)."""
+    fr = hand.free
+    x0 = hand.X.reshape(-1)
+    A = hand.hessian(x0, 0.0)
+    Aff = A[fr][:, fr].tocsc()
+    d = (hand.Gt @ x0).reshape(-1, 3)
+    u = d / np.linalg.norm(d, axis=1)[:, None]
+    m = len(d)
+    F = np.zeros((3 * hand.n, m + 1))
+    for j in range(m):
+        e = np.zeros((m, 3))
+        e[j] = u[j]
+        F[:, j] = -(hand.Gt.T @ e.ravel())                  # contracting pull on both anchors
+    F[:, m] = -(hand.tendon_gradient(x0, 1e-6) - hand.tendon_gradient(x0, 0.0)) / 1e-6
+    from sdm_sim import solve_spd
+    U = np.zeros_like(F)
+    for j in range(F.shape[1]):
+        U[fr, j] = solve_spd(Aff, F[fr, j])
+    V = np.hstack([B, U])
+    sq = np.sqrt(hand.m)
+    Q, _ = np.linalg.qr(sq[:, None] * V)
+    Vq = Q / sq[:, None]
+    Ar = Vq.T @ (A @ Vq)
+    ev, Y = np.linalg.eigh(0.5 * (Ar + Ar.T))
+    keep = ev > 1e-9 * ev.max()
+    Bn, lamn = (Vq @ Y)[:, keep], ev[keep]
+    print(f"green: {m} tendon Green's functions + actuation response added; Ritz basis "
+          f"{Bn.shape[1]} columns, lowest {np.round(np.sqrt(lamn[:6]) / 2 / np.pi, 1)} Hz", flush=True)
+    return Bn, lamn
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--targets", type=int, nargs="+", default=[300, 600, 1200, 2500, 5000])
@@ -134,6 +174,8 @@ def main():
     ap.add_argument("--min-quality", type=float, default=0.0,
                     help="mesh4PDE min_quality: refuse collapses leaving a one-ring tet below this "
                          "mean-ratio quality (0 = off)")
+    ap.add_argument("--green", action="store_true",
+                    help="add the tendons' Green's functions (linear responses) to the scoring basis")
     ap.add_argument("--suffix", default="", help="appended to the level's file names, e.g. _q30")
     ap.add_argument("--homogenize", action="store_true",
                     help="Reuss-average the fine moduli into each coarse tet (default: the coarse "
@@ -153,6 +195,8 @@ def main():
     else:
         B, lam, pad_idx = fine_basis(hand, args.k_max, args.pad_modes, args.min_modes)
         np.savez_compressed(cache, B=B, eigenvalues=lam, pad_idx=np.array(pad_idx, dtype=object))
+    if args.green:
+        B, lam = green_basis(hand, B, lam)
     meshes = [read_obj(os.path.join(OUT, "parts", f"{n}.obj")) for n in names]
     mat_of_kind = {k: scene["mat"][scene["part"] == i][0] for i, k in enumerate(kinds)
                    if (scene["part"] == i).any()}
