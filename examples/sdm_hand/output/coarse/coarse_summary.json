@@ -1,5 +1,5 @@
 {
- "max_extrapolation": 0.1,
+ "max_extrapolation": Infinity,
  "fine_vertices": 11592,
  "fine_tets": 52312,
  "modes": 92,
@@ -89,40 +89,10 @@
   {
    "target": 300,
    "vertices": 300,
-   "tets": 562,
+   "tets": 824,
    "stages": [
     {
-     "bound": 0.1,
-     "vertices": 971,
-     "modes": 92
-    },
-    {
-     "bound": 0.1,
-     "vertices": 859,
-     "modes": 92
-    },
-    {
-     "bound": 0.1,
-     "vertices": 780,
-     "modes": 92
-    },
-    {
-     "bound": 0.1,
-     "vertices": 739,
-     "modes": 92
-    },
-    {
-     "bound": 0.1,
-     "vertices": 726,
-     "modes": 92
-    },
-    {
-     "bound": 0.3,
-     "vertices": 438,
-     "modes": 92
-    },
-    {
-     "bound": 0.3,
+     "bound": Infinity,
      "vertices": 300,
      "modes": 92
     }
@@ -130,56 +100,39 @@
    "genus": 0.0,
    "closed_manifold": true,
    "components": 1,
-   "min_tet_volume_mm3": 3.9761788674502544e-05,
+   "min_tet_volume_mm3": 1.0368196126372419e-08,
    "inverted_tets": 0,
    "tets_by_kind": {
-    "palm": 54,
-    "link": 380,
-    "flexure": 75,
-    "pad": 53
+    "palm": 23,
+    "link": 194,
+    "flexure": 14,
+    "pad": 593
    },
-   "volume_ratio": 0.8743507119955021,
+   "volume_ratio": 0.2223426227581708,
    "parts_without_tets": [
+    "wrist",
     "index_flex0",
-    "index_flex2",
-    "little_flex0",
-    "thumb_flex1"
+    "index_flex1",
+    "middle_flex2",
+    "ring_flex0",
+    "ring_flex1",
+    "ring_flex2",
+    "little_flex1",
+    "little_flex2",
+    "thumb_flex0",
+    "thumb_flex1",
+    "thumb_flex2"
    ],
-   "P_min": -0.544329221820951,
-   "seconds": 63.362420082092285
+   "P_min": -2520.493270373112,
+   "seconds": 41.20574164390564
   },
   {
    "target": 600,
    "vertices": 600,
-   "tets": 1237,
+   "tets": 1926,
    "stages": [
     {
-     "bound": 0.1,
-     "vertices": 971,
-     "modes": 92
-    },
-    {
-     "bound": 0.1,
-     "vertices": 859,
-     "modes": 92
-    },
-    {
-     "bound": 0.1,
-     "vertices": 780,
-     "modes": 92
-    },
-    {
-     "bound": 0.1,
-     "vertices": 739,
-     "modes": 92
-    },
-    {
-     "bound": 0.1,
-     "vertices": 726,
-     "modes": 92
-    },
-    {
-     "bound": 0.3,
+     "bound": Infinity,
      "vertices": 600,
      "modes": 92
     }
@@ -187,28 +140,33 @@
    "genus": 0.0,
    "closed_manifold": true,
    "components": 1,
-   "min_tet_volume_mm3": 3.198687646993936e-06,
+   "min_tet_volume_mm3": 1.0368196126372419e-08,
    "inverted_tets": 0,
    "tets_by_kind": {
-    "palm": 91,
-    "link": 750,
-    "flexure": 223,
-    "pad": 173
+    "palm": 64,
+    "link": 278,
+    "flexure": 42,
+    "pad": 1542
    },
-   "volume_ratio": 0.925265191802335,
+   "volume_ratio": 0.2834897884502623,
    "parts_without_tets": [
-    "index_flex0"
+    "wrist",
+    "middle_flex2",
+    "ring_flex2",
+    "little_flex0",
+    "little_flex2",
+    "thumb_flex2"
    ],
-   "P_min": -0.3274163291755388,
-   "seconds": 79.24925255775452
+   "P_min": -1023.2429169604907,
+   "seconds": 39.316039085388184
   },
   {
    "target": 1200,
    "vertices": 1200,
-   "tets": 3182,
+   "tets": 4507,
    "stages": [
     {
-     "bound": 0.1,
+     "bound": Infinity,
      "vertices": 1200,
      "modes": 92
     }
@@ -216,26 +174,30 @@
    "genus": 0.0,
    "closed_manifold": true,
    "components": 1,
-   "min_tet_volume_mm3": 1.800987811940947e-08,
+   "min_tet_volume_mm3": 2.553485768038306e-09,
    "inverted_tets": 0,
    "tets_by_kind": {
-    "palm": 198,
-    "link": 1318,
-    "flexure": 505,
-    "pad": 1161
+    "palm": 129,
+    "link": 434,
+    "flexure": 96,
+    "pad": 3848
    },
-   "volume_ratio": 1.0287887048055675,
-   "parts_without_tets": [],
-   "P_min": -0.09907128056036346,
-   "seconds": 49.936583280563354
+   "volume_ratio": 0.42569816305862074,
+   "parts_without_tets": [
+    "middle_flex2",
+    "ring_flex2",
+    "thumb_flex2"
+   ],
+   "P_min": -1023.2429169604907,
+   "seconds": 36.91495656967163
   },
   {
    "target": 2500,
    "vertices": 2500,
-   "tets": 9057,
+   "tets": 10476,
    "stages": [
     {
-     "bound": 0.1,
+     "bound": Infinity,
      "vertices": 2500,
      "modes": 92
     }
@@ -243,26 +205,26 @@
    "genus": 0.0,
    "closed_manifold": true,
    "components": 1,
-   "min_tet_volume_mm3": 3.517970331730023e-09,
+   "min_tet_volume_mm3": 1.685199265214501e-10,
    "inverted_tets": 0,
    "tets_by_kind": {
-    "palm": 282,
-    "link": 1590,
-    "flexure": 527,
-    "pad": 6658
+    "palm": 213,
+    "link": 717,
+    "flexure": 184,
+    "pad": 9362
    },
-   "volume_ratio": 1.027905412258334,
+   "volume_ratio": 0.4705384180160265,
    "parts_without_tets": [],
-   "P_min": -0.09907128056036346,
-   "seconds": 52.840039014816284
+   "P_min": -1023.2429169604907,
+   "seconds": 30.825785875320435
   },
   {
    "target": 5000,
    "vertices": 5000,
-   "tets": 21563,
+   "tets": 23249,
    "stages": [
     {
-     "bound": 0.1,
+     "bound": Infinity,
      "vertices": 5000,
      "modes": 92
     }
@@ -270,18 +232,18 @@
    "genus": 0.0,
    "closed_manifold": true,
    "components": 1,
-   "min_tet_volume_mm3": 3.198687646993936e-06,
+   "min_tet_volume_mm3": 4.5294225207952305e-10,
    "inverted_tets": 0,
    "tets_by_kind": {
-    "palm": 310,
-    "link": 2004,
-    "flexure": 532,
-    "pad": 18717
+    "palm": 272,
+    "link": 1014,
+    "flexure": 245,
+    "pad": 21718
    },
-   "volume_ratio": 1.0270014937567757,
+   "volume_ratio": 0.5153552269798228,
    "parts_without_tets": [],
-   "P_min": -0.09907128056036346,
-   "seconds": 40.783321380615234
+   "P_min": -1023.2429169604907,
+   "seconds": 21.844754934310913
   }
  ]
 }

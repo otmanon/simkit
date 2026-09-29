@@ -96,7 +96,10 @@ class Hand:
         self.Mv = simkit.massmatrix(X, T, rho=scene["rho"].reshape(-1, 1)).diagonal()
         self.m = np.repeat(self.Mv, 3)
         self.f_g = (self.Mv[:, None] * GRAVITY[None]).ravel()
-        self.pinned = np.where(X[:, 2] < X[:, 2].min() + 1e-7)[0]
+        # pinned: the wrist's base plane; a coarse scene carries its own list (the coarse
+        # vertices the fine base vertices are interpolated from, via mesh4PDE's P)
+        self.pinned = (np.asarray(scene["pinned"], np.int64) if "pinned" in scene
+                       else np.where(X[:, 2] < X[:, 2].min() + 1e-7)[0])
         fixed = np.zeros(3 * n, bool)
         fixed[(3 * self.pinned[:, None] + np.arange(3)).ravel()] = True
         self.free = np.where(~fixed)[0]

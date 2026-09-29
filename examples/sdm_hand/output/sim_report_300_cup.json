@@ -1,6 +1,6 @@
 {
  "n_vertices": 300,
- "n_tets": 562,
+ "n_tets": 824,
  "n_pinned": 4,
  "n_springs": 15,
  "k_tendon": 100000.0,
@@ -28,8 +28,8 @@
    "contraction": 0.6668926823184759,
    "target_deg": 32.0,
    "anchor_snap_mm": [
-    12.725084030775077,
-    10.30776159018131
+    6.429529347033069,
+    9.561882737895466
    ]
   },
   {
@@ -43,8 +43,8 @@
    "contraction": 0.6781850831434729,
    "target_deg": 34.0,
    "anchor_snap_mm": [
-    4.000003000000003,
-    4.000000000000031
+    17.4090535426869,
+    11.016412062387483
    ]
   },
   {
@@ -58,8 +58,8 @@
    "contraction": 0.6313538881437958,
    "target_deg": 26.0,
    "anchor_snap_mm": [
-    5.495545358433835,
-    10.502276309006257
+    16.398693875010775,
+    1.5452160367782544
    ]
   },
   {
@@ -73,8 +73,8 @@
    "contraction": 0.6668926823184765,
    "target_deg": 32.0,
    "anchor_snap_mm": [
-    18.832504706427073,
-    4.718570908257287
+    9.290527551548754,
+    4.4152640916088455
    ]
   },
   {
@@ -88,8 +88,8 @@
    "contraction": 0.6781850831434729,
    "target_deg": 34.0,
    "anchor_snap_mm": [
-    3.9999980000000055,
-    4.000005000000001
+    12.901104525875715,
+    19.186248402916082
    ]
   },
   {
@@ -103,8 +103,8 @@
    "contraction": 0.6313538881437958,
    "target_deg": 26.0,
    "anchor_snap_mm": [
-    3.5926502669667695,
-    3.589169880637897
+    9.566259752952629,
+    2.7519247199734087
    ]
   },
   {
@@ -118,8 +118,8 @@
    "contraction": 0.6668926823184759,
    "target_deg": 32.0,
    "anchor_snap_mm": [
-    22.997621927331988,
-    3.9999960000000057
+    18.705106303939175,
+    17.490255103860346
    ]
   },
   {
@@ -133,8 +133,8 @@
    "contraction": 0.6781850831434729,
    "target_deg": 34.0,
    "anchor_snap_mm": [
-    3.8221169900174785,
-    3.999996000000034
+    17.54282574547575,
+    12.63377245381923
    ]
   },
   {
@@ -148,8 +148,8 @@
    "contraction": 0.6313538881437958,
    "target_deg": 26.0,
    "anchor_snap_mm": [
-    4.363559778427234,
-    9.617692966612942
+    12.828492087897654,
+    3.0455766771147026
    ]
   },
   {
@@ -163,8 +163,8 @@
    "contraction": 0.6668926823184759,
    "target_deg": 32.0,
    "anchor_snap_mm": [
-    26.38181282626357,
-    15.75349047315898
+    16.58252735483599,
+    9.320054040663184
    ]
   },
   {
@@ -178,8 +178,8 @@
    "contraction": 0.6781850831434729,
    "target_deg": 34.0,
    "anchor_snap_mm": [
-    8.944272357212801,
-    0.6643844895844834
+    17.617664399464363,
+    8.94323741585877
    ]
   },
   {
@@ -193,8 +193,8 @@
    "contraction": 0.6313538881437958,
    "target_deg": 26.0,
    "anchor_snap_mm": [
-    2.061549932698461,
-    8.139409008033015
+    11.19212553140985,
+    1.9449439919222835
    ]
   },
   {
@@ -208,8 +208,8 @@
    "contraction": 0.7330383755476892,
    "target_deg": 29.999999999999996,
    "anchor_snap_mm": [
-    19.999999924278992,
-    3.8627022791234618
+    15.056878641835528,
+    15.845576943862
    ]
   },
   {
@@ -223,8 +223,8 @@
    "contraction": 0.4537856125023444,
    "target_deg": 26.0,
    "anchor_snap_mm": [
-    7.358486249676496,
-    1.0745082156510266
+    8.557981105350356,
+    14.335629338344566
    ]
   },
   {
@@ -238,8 +238,8 @@
    "contraction": 0.5524346206179688,
    "target_deg": 26.0,
    "anchor_snap_mm": [
-    5.179338479850657,
-    9.617692436866976
+    8.982833372070136,
+    1.5289567709536143
    ]
   }
  ],
@@ -250,8 +250,8 @@
   "little",
   "thumb"
  ],
- "t_static_s": 0.7987275123596191,
- "static_newton_iters": 49,
+ "t_static_s": 0.6682045459747314,
+ "static_newton_iters": 28,
  "statics": [
   {
    "a": 0.0,
@@ -280,630 +280,630 @@
     "thumb": 0.0
    },
    "tendon_force_N": [
+    -0.0,
     0.0,
-    0.0,
+    -0.0,
     0.0,
     0.0,
     -0.0,
     -0.0,
+    0.0,
     -0.0,
     0.0,
     -0.0,
     -0.0,
     -0.0,
-    0.0,
-    0.0,
     0.0,
     -0.0
    ],
-   "adjacent_max_mm": 1.0415632951533804,
+   "adjacent_max_mm": 0.0,
    "nonadjacent_max_mm": 0.0,
    "nonadjacent_pairs": []
   },
   {
    "a": 0.08333333333333333,
    "joint_deg": [
-    0.1,
-    0.8,
-    0.8,
-    1.0,
     0.2,
-    0.9,
     0.3,
-    2.1,
-    2.1,
-    0.5,
-    1.4,
-    2.0,
+    0.7,
+    1.2,
     0.1,
-    0.6,
-    1.1
+    0.0,
+    0.1,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.2,
+    0.3,
+    0.1
    ],
    "tip_disp_mm": {
-    "index": 1.1,
-    "middle": 2.3,
-    "ring": 3.4,
-    "little": 2.6,
-    "thumb": 0.9
+    "index": 1.0,
+    "middle": 2.5,
+    "ring": 0.4,
+    "little": 0.1,
+    "thumb": 0.8
    },
    "tendon_force_N": [
-    74.48,
+    75.74,
+    70.92,
+    37.87,
+    43.39,
+    74.1,
     59.44,
-    39.33,
-    49.98,
-    73.17,
-    18.87,
-    68.23,
-    21.99,
-    2.87,
-    61.31,
-    43.42,
-    19.18,
-    58.33,
-    37.91,
-    5.13
+    73.83,
+    75.57,
+    59.51,
+    78.49,
+    76.45,
+    59.96,
+    52.33,
+    45.04,
+    50.91
    ],
-   "adjacent_max_mm": 1.1029788344266076,
+   "adjacent_max_mm": 0.0,
    "nonadjacent_max_mm": 0.0,
    "nonadjacent_pairs": []
   },
   {
    "a": 0.16666666666666666,
    "joint_deg": [
+    0.3,
+    0.7,
+    1.4,
+    2.4,
     0.1,
-    1.6,
-    1.6,
-    2.1,
-    0.4,
-    1.8,
+    0.1,
+    0.3,
+    0.1,
+    0.1,
+    0.0,
+    0.1,
+    0.1,
+    0.5,
     0.6,
-    4.1,
-    4.2,
-    1.1,
-    2.8,
-    4.0,
-    0.2,
-    1.2,
-    2.2
+    0.2
    ],
    "tip_disp_mm": {
-    "index": 2.2,
-    "middle": 4.7,
-    "ring": 6.8,
-    "little": 5.2,
-    "thumb": 1.9
+    "index": 1.9,
+    "middle": 5.0,
+    "ring": 0.7,
+    "little": 0.2,
+    "thumb": 1.6
    },
    "tendon_force_N": [
-    148.96,
-    118.77,
-    78.65,
-    99.72,
-    146.33,
-    37.9,
-    136.37,
-    43.65,
-    5.77,
-    122.62,
-    86.46,
-    37.97,
-    116.67,
-    75.89,
-    10.44
+    151.49,
+    142.08,
+    76.12,
+    86.76,
+    148.13,
+    118.88,
+    147.66,
+    151.13,
+    119.02,
+    156.99,
+    152.91,
+    119.92,
+    104.69,
+    90.07,
+    101.82
    ],
-   "adjacent_max_mm": 1.163824436642432,
+   "adjacent_max_mm": 0.0,
    "nonadjacent_max_mm": 0.0,
    "nonadjacent_pairs": []
   },
   {
    "a": 0.25,
    "joint_deg": [
+    0.5,
+    1.0,
+    2.0,
+    3.6,
     0.2,
-    2.4,
-    2.4,
-    3.1,
+    0.1,
+    0.4,
+    0.1,
+    0.1,
+    0.0,
+    0.1,
+    0.1,
     0.7,
-    2.7,
     0.9,
-    6.2,
-    6.2,
-    1.6,
-    4.2,
-    6.1,
-    0.3,
-    1.8,
-    3.3
+    0.3
    ],
    "tip_disp_mm": {
-    "index": 3.2,
-    "middle": 7.1,
-    "ring": 10.1,
-    "little": 7.8,
-    "thumb": 2.8
+    "index": 2.8,
+    "middle": 7.5,
+    "ring": 1.1,
+    "little": 0.3,
+    "thumb": 2.3
    },
    "tendon_force_N": [
-    223.42,
-    178.0,
-    117.99,
-    149.25,
-    219.49,
-    57.15,
-    204.42,
-    64.97,
-    8.68,
-    183.94,
-    129.11,
-    56.34,
-    175.02,
-    113.96,
-    15.94
+    227.23,
+    213.48,
+    114.82,
+    130.16,
+    222.11,
+    178.31,
+    221.49,
+    226.69,
+    178.53,
+    235.49,
+    229.37,
+    179.88,
+    157.07,
+    135.08,
+    152.72
    ],
-   "adjacent_max_mm": 1.2240948156214766,
+   "adjacent_max_mm": 0.0,
    "nonadjacent_max_mm": 0.0,
    "nonadjacent_pairs": []
   },
   {
    "a": 0.3333333333333333,
    "joint_deg": [
+    0.6,
+    1.3,
+    2.7,
+    4.8,
     0.3,
-    3.2,
-    3.2,
-    4.2,
-    0.9,
-    3.6,
-    1.2,
-    8.2,
-    8.3,
-    2.2,
-    5.6,
-    8.2,
-    0.4,
-    2.3,
-    4.3
+    0.2,
+    0.6,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    1.0,
+    1.3,
+    0.4
    ],
    "tip_disp_mm": {
-    "index": 4.3,
-    "middle": 9.4,
-    "ring": 13.5,
-    "little": 10.4,
-    "thumb": 3.7
+    "index": 3.7,
+    "middle": 9.9,
+    "ring": 1.4,
+    "little": 0.4,
+    "thumb": 3.1
    },
    "tendon_force_N": [
-    297.88,
-    237.14,
-    157.36,
-    198.58,
-    292.66,
-    76.68,
-    272.37,
-    85.9,
-    11.59,
-    245.27,
-    171.35,
-    74.3,
-    233.36,
-    152.12,
-    21.66
+    302.99,
+    285.1,
+    153.96,
+    173.62,
+    296.04,
+    237.74,
+    295.31,
+    302.25,
+    238.04,
+    313.99,
+    305.82,
+    239.83,
+    209.48,
+    180.09,
+    203.62
    ],
-   "adjacent_max_mm": 1.283790256219326,
+   "adjacent_max_mm": 0.0,
    "nonadjacent_max_mm": 0.0,
    "nonadjacent_pairs": []
   },
   {
    "a": 0.41666666666666663,
    "joint_deg": [
+    0.8,
+    1.7,
+    3.4,
+    6.0,
     0.3,
-    4.0,
-    4.0,
-    5.2,
-    1.1,
-    4.4,
+    0.2,
+    0.7,
+    0.2,
+    0.2,
+    0.1,
+    0.1,
+    0.1,
+    1.2,
     1.6,
-    10.3,
-    10.4,
-    2.7,
-    7.0,
-    10.2,
-    0.5,
-    2.9,
-    5.4
+    0.5
    ],
    "tip_disp_mm": {
-    "index": 5.4,
-    "middle": 11.8,
-    "ring": 16.9,
-    "little": 13.1,
-    "thumb": 4.6
+    "index": 4.7,
+    "middle": 12.4,
+    "ring": 1.8,
+    "little": 0.6,
+    "thumb": 3.9
    },
    "tendon_force_N": [
-    372.33,
-    296.17,
-    196.77,
-    247.74,
-    365.82,
-    96.49,
-    340.22,
-    106.44,
-    14.48,
-    306.61,
-    213.18,
-    91.86,
-    291.72,
-    190.38,
-    27.62
+    378.75,
+    356.94,
+    193.5,
+    217.12,
+    369.91,
+    297.16,
+    369.12,
+    377.8,
+    297.54,
+    392.5,
+    382.28,
+    299.79,
+    261.91,
+    225.09,
+    254.52
    ],
-   "adjacent_max_mm": 1.3429123768502018,
+   "adjacent_max_mm": 0.0,
    "nonadjacent_max_mm": 0.0,
    "nonadjacent_pairs": []
   },
   {
    "a": 0.5,
    "joint_deg": [
+    1.0,
+    2.0,
+    4.0,
+    7.2,
     0.4,
-    4.8,
-    4.7,
-    6.3,
+    0.2,
+    0.9,
+    0.2,
+    0.2,
+    0.1,
+    0.2,
+    0.2,
     1.4,
-    5.3,
     1.9,
-    12.4,
-    12.5,
-    3.3,
-    8.4,
-    12.3,
-    0.6,
-    3.5,
-    6.4
+    0.6
    ],
    "tip_disp_mm": {
-    "index": 6.5,
-    "middle": 14.2,
-    "ring": 20.2,
-    "little": 15.8,
-    "thumb": 5.5
+    "index": 5.6,
+    "middle": 14.8,
+    "ring": 2.2,
+    "little": 0.7,
+    "thumb": 4.7
    },
    "tendon_force_N": [
-    446.78,
-    355.09,
-    236.24,
-    296.73,
-    438.98,
-    116.61,
-    407.97,
-    126.61,
-    17.34,
-    367.98,
-    254.61,
-    109.02,
-    350.07,
-    228.74,
-    33.84
+    454.51,
+    428.98,
+    233.46,
+    260.66,
+    443.73,
+    356.59,
+    442.94,
+    453.36,
+    357.05,
+    471.01,
+    458.74,
+    359.75,
+    314.36,
+    270.07,
+    305.41
    ],
-   "adjacent_max_mm": 1.4014665277078437,
+   "adjacent_max_mm": 0.0,
    "nonadjacent_max_mm": 0.0,
    "nonadjacent_pairs": []
   },
   {
    "a": 0.5833333333333333,
    "joint_deg": [
-    0.4,
-    5.6,
-    5.5,
-    7.3,
-    1.6,
-    6.2,
+    1.1,
+    2.3,
+    4.6,
+    8.4,
+    0.5,
+    0.3,
+    1.0,
+    0.2,
+    0.2,
+    0.1,
+    0.2,
+    0.2,
+    1.7,
     2.2,
-    14.4,
-    14.6,
-    3.8,
-    9.9,
-    14.4,
-    0.7,
-    4.0,
-    7.3
+    0.7
    ],
    "tip_disp_mm": {
-    "index": 7.5,
-    "middle": 16.6,
-    "ring": 23.5,
-    "little": 18.4,
-    "thumb": 6.4
+    "index": 6.4,
+    "middle": 17.2,
+    "ring": 2.5,
+    "little": 0.8,
+    "thumb": 5.4
    },
    "tendon_force_N": [
-    521.21,
-    413.92,
-    275.79,
-    345.57,
-    512.15,
-    137.02,
-    475.61,
-    146.38,
-    20.13,
-    429.34,
-    295.52,
-    125.69,
-    408.43,
-    267.19,
-    40.33
+    530.27,
+    501.21,
+    273.82,
+    304.26,
+    517.49,
+    416.0,
+    516.75,
+    528.91,
+    416.56,
+    549.53,
+    535.2,
+    419.71,
+    366.84,
+    315.05,
+    356.31
    ],
-   "adjacent_max_mm": 1.4595823944015291,
+   "adjacent_max_mm": 0.0,
    "nonadjacent_max_mm": 0.0,
    "nonadjacent_pairs": []
   },
   {
    "a": 0.6666666666666666,
    "joint_deg": [
+    1.3,
+    2.6,
+    5.2,
+    9.6,
     0.5,
-    6.4,
-    6.3,
-    8.4,
-    1.8,
-    7.0,
+    0.3,
+    1.2,
+    0.2,
+    0.3,
+    0.1,
+    0.2,
+    0.2,
+    1.9,
     2.5,
-    16.5,
-    16.6,
-    4.3,
-    11.3,
-    16.6,
-    0.8,
-    4.6,
-    8.2
+    0.7
    ],
    "tip_disp_mm": {
-    "index": 8.6,
-    "middle": 19.0,
-    "ring": 26.8,
-    "little": 21.1,
-    "thumb": 7.3
+    "index": 7.3,
+    "middle": 19.7,
+    "ring": 2.9,
+    "little": 0.9,
+    "thumb": 6.2
    },
    "tendon_force_N": [
-    595.63,
-    472.63,
-    315.44,
-    394.31,
-    585.33,
-    157.71,
-    543.15,
-    165.9,
-    22.92,
-    490.75,
-    336.1,
-    142.14,
-    466.79,
-    305.74,
-    47.09
+    606.04,
+    573.63,
+    314.59,
+    347.91,
+    591.19,
+    475.42,
+    590.55,
+    604.46,
+    476.06,
+    628.05,
+    611.66,
+    479.67,
+    419.34,
+    360.02,
+    407.2
    ],
-   "adjacent_max_mm": 1.5170385293524897,
+   "adjacent_max_mm": 0.0,
    "nonadjacent_max_mm": 0.0,
    "nonadjacent_pairs": []
   },
   {
    "a": 0.75,
    "joint_deg": [
+    1.5,
+    2.9,
+    5.8,
+    10.8,
     0.6,
-    7.2,
-    7.0,
-    9.4,
-    2.0,
-    7.9,
+    0.4,
+    1.3,
+    0.3,
+    0.3,
+    0.1,
+    0.3,
+    0.3,
+    2.1,
     2.8,
-    18.5,
-    18.7,
-    4.9,
-    12.8,
-    18.7,
-    0.9,
-    5.2,
-    9.1
+    0.8
    ],
    "tip_disp_mm": {
-    "index": 9.7,
-    "middle": 21.3,
-    "ring": 30.1,
-    "little": 23.8,
-    "thumb": 8.1
+    "index": 8.2,
+    "middle": 22.1,
+    "ring": 3.3,
+    "little": 1.0,
+    "thumb": 7.0
    },
    "tendon_force_N": [
-    670.05,
-    531.24,
-    355.19,
-    442.95,
-    658.51,
-    178.68,
-    610.59,
-    185.12,
-    25.66,
-    552.21,
-    376.31,
-    158.29,
-    525.15,
-    344.39,
-    54.14
+    681.81,
+    646.22,
+    355.75,
+    391.64,
+    664.84,
+    534.83,
+    664.36,
+    680.01,
+    535.57,
+    706.57,
+    688.12,
+    539.63,
+    471.87,
+    404.97,
+    458.08
    ],
-   "adjacent_max_mm": 1.5738883616643298,
+   "adjacent_max_mm": 0.0,
    "nonadjacent_max_mm": 0.0,
    "nonadjacent_pairs": []
   },
   {
    "a": 0.8333333333333333,
    "joint_deg": [
-    0.6,
-    8.1,
-    7.8,
-    10.5,
-    2.3,
-    8.7,
-    3.2,
-    20.6,
-    20.8,
-    5.4,
-    14.2,
-    20.8,
-    1.0,
-    5.7,
-    9.8
+    1.6,
+    3.1,
+    6.4,
+    12.0,
+    0.7,
+    0.4,
+    1.5,
+    0.3,
+    0.3,
+    0.1,
+    0.3,
+    0.3,
+    2.4,
+    3.1,
+    0.9
    ],
    "tip_disp_mm": {
-    "index": 10.7,
-    "middle": 23.7,
-    "ring": 33.3,
-    "little": 26.4,
-    "thumb": 9.0
+    "index": 9.0,
+    "middle": 24.5,
+    "ring": 3.6,
+    "little": 1.1,
+    "thumb": 7.8
    },
    "tendon_force_N": [
-    744.45,
-    589.75,
-    395.08,
-    491.53,
-    731.69,
-    199.92,
-    677.92,
-    204.02,
-    28.34,
-    613.71,
-    416.09,
-    174.11,
-    583.51,
-    383.13,
-    61.48
+    757.59,
+    718.97,
+    397.29,
+    435.46,
+    738.43,
+    594.23,
+    738.17,
+    755.56,
+    595.07,
+    785.1,
+    764.58,
+    599.59,
+    524.41,
+    449.92,
+    508.96
    ],
-   "adjacent_max_mm": 1.6302260873391534,
+   "adjacent_max_mm": 0.0,
    "nonadjacent_max_mm": 0.0,
    "nonadjacent_pairs": []
   },
   {
    "a": 0.9166666666666666,
    "joint_deg": [
-    0.7,
-    8.9,
-    8.5,
-    11.6,
-    2.5,
-    9.6,
+    1.8,
+    3.4,
+    7.0,
+    13.2,
+    0.8,
+    0.4,
+    1.6,
+    0.3,
+    0.4,
+    0.1,
+    0.3,
+    0.3,
+    2.6,
     3.5,
-    22.7,
-    22.9,
-    5.9,
-    15.7,
-    22.9,
-    1.1,
-    6.3,
-    10.6
+    1.0
    ],
    "tip_disp_mm": {
-    "index": 11.8,
-    "middle": 26.1,
-    "ring": 36.5,
-    "little": 29.0,
-    "thumb": 9.8
+    "index": 9.9,
+    "middle": 26.9,
+    "ring": 4.0,
+    "little": 1.2,
+    "thumb": 8.5
    },
    "tendon_force_N": [
-    818.84,
-    648.16,
-    435.12,
-    540.04,
-    804.88,
-    221.42,
-    745.12,
-    222.5,
-    30.94,
-    675.91,
-    456.29,
-    189.55,
-    641.87,
-    421.96,
-    69.1
+    833.37,
+    791.88,
+    439.22,
+    479.37,
+    811.97,
+    653.63,
+    811.97,
+    831.1,
+    654.58,
+    863.63,
+    841.04,
+    659.55,
+    576.99,
+    494.86,
+    559.85
    ],
-   "adjacent_max_mm": 1.6833982187160468,
+   "adjacent_max_mm": 0.0,
    "nonadjacent_max_mm": 0.0,
    "nonadjacent_pairs": []
   },
   {
    "a": 1.0,
    "joint_deg": [
+    2.0,
+    3.7,
+    7.6,
+    14.3,
     0.8,
-    9.7,
-    9.3,
-    12.6,
-    2.7,
-    10.4,
-    3.9,
-    24.7,
-    25.0,
-    6.3,
-    16.9,
-    24.8,
-    1.2,
-    6.8,
-    11.2
+    0.5,
+    1.8,
+    0.4,
+    0.4,
+    0.2,
+    0.3,
+    0.3,
+    2.9,
+    3.8,
+    1.1
    ],
    "tip_disp_mm": {
-    "index": 12.7,
-    "middle": 28.3,
-    "ring": 39.6,
-    "little": 31.1,
-    "thumb": 10.6
+    "index": 10.7,
+    "middle": 29.2,
+    "ring": 4.3,
+    "little": 1.3,
+    "thumb": 9.3
    },
    "tendon_force_N": [
-    893.2,
-    706.45,
-    475.33,
-    588.55,
-    878.08,
-    243.18,
-    812.26,
-    240.82,
-    33.55,
-    740.99,
-    501.0,
-    206.76,
-    700.23,
-    460.86,
-    76.98
+    909.15,
+    864.94,
+    481.53,
+    523.39,
+    885.44,
+    713.03,
+    885.78,
+    906.65,
+    714.08,
+    942.17,
+    917.5,
+    719.51,
+    629.58,
+    539.79,
+    610.72
    ],
-   "adjacent_max_mm": 1.725444547815287,
+   "adjacent_max_mm": 0.0,
    "nonadjacent_max_mm": 0.0,
    "nonadjacent_pairs": []
   }
  ],
- "t_dynamic_s": 3.652252674102783,
+ "t_dynamic_s": 4.639256238937378,
  "dyn_steps": 120,
  "h": 0.016666666666666666,
  "t_ramp": 1.2,
  "t_end": 2.0,
- "dyn_newton_iters": 228,
+ "dyn_newton_iters": 198,
  "dyn_final_tip_disp_mm": {
-  "index": 12.7,
-  "middle": 28.3,
-  "ring": 39.6,
-  "little": 31.1,
-  "thumb": 10.6
+  "index": 10.7,
+  "middle": 29.2,
+  "ring": 4.3,
+  "little": 1.3,
+  "thumb": 9.3
  },
  "dyn_peak_tip_disp_mm": {
-  "index": 12.7,
-  "middle": 28.4,
-  "ring": 39.6,
-  "little": 31.1,
-  "thumb": 10.6
+  "index": 10.7,
+  "middle": 29.3,
+  "ring": 4.3,
+  "little": 1.3,
+  "thumb": 9.3
  },
  "dyn_final_joint_deg": [
+  2.0,
+  3.7,
+  7.6,
+  14.3,
   0.8,
-  9.7,
-  9.3,
-  12.6,
-  2.7,
-  10.4,
-  3.9,
-  24.7,
-  25.0,
-  6.3,
-  16.9,
-  24.8,
-  1.2,
-  6.8,
-  11.2
+  0.5,
+  1.8,
+  0.4,
+  0.4,
+  0.2,
+  0.3,
+  0.3,
+  2.8,
+  3.8,
+  1.1
  ],
  "dyn_final_penetration": {
-  "adjacent_max_mm": 1.7253074613198476,
+  "adjacent_max_mm": 0.0,
   "nonadjacent_max_mm": 0.0,
   "nonadjacent_pairs": []
  },
@@ -1191,334 +1191,334 @@
    "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 1,
-   "max_penetration_mm": 0.04076107338376461,
-   "contact_force_N": 0.08561310447199419
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 1,
-   "max_penetration_mm": 0.08457392983923784,
-   "contact_force_N": 0.3685717492607827
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 1,
-   "max_penetration_mm": 0.1129143713563957,
-   "contact_force_N": 0.656972912309555
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 1,
-   "max_penetration_mm": 0.13308836838372973,
-   "contact_force_N": 0.9127024643631403
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 1,
-   "max_penetration_mm": 0.14981527567384245,
-   "contact_force_N": 1.1565414893231813
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 1,
-   "max_penetration_mm": 0.16283803500598965,
-   "contact_force_N": 1.3663461192578863
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 1,
-   "max_penetration_mm": 0.1735709029443075,
-   "contact_force_N": 1.552397258302832
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 1,
-   "max_penetration_mm": 0.1820227692110668,
-   "contact_force_N": 1.7072631088388293
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 2,
-   "max_penetration_mm": 0.1882774934527931,
-   "contact_force_N": 1.8907413334843943
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 3,
-   "max_penetration_mm": 0.19177970752305012,
-   "contact_force_N": 2.651189841581364
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 3,
-   "max_penetration_mm": 0.19476565591795836,
-   "contact_force_N": 3.4362310977146917
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 3,
-   "max_penetration_mm": 0.19724278166696058,
-   "contact_force_N": 4.194540293070827
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 3,
-   "max_penetration_mm": 0.1990046153384356,
-   "contact_force_N": 4.794150793984069
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20050640727941466,
-   "contact_force_N": 5.312586388777604
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20186695415020522,
-   "contact_force_N": 5.841933610975794
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20313360942712105,
-   "contact_force_N": 6.117637805789661
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20381737576850162,
-   "contact_force_N": 6.295319761278565
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20402006033324455,
-   "contact_force_N": 6.356898538470597
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20406024045257348,
-   "contact_force_N": 6.368375637411024
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20410040871538665,
-   "contact_force_N": 6.379873521999971
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20414056512163548,
-   "contact_force_N": 6.391392189945379
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20402258516992455,
-   "contact_force_N": 6.358964726307873
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20390452786518687,
-   "contact_force_N": 6.326699989802792
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20378639320820652,
-   "contact_force_N": 6.294598020616572
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20375605843140493,
-   "contact_force_N": 6.281293056826974
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.2037257182794655,
-   "contact_force_N": 6.268009073268076
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20369537275240907,
-   "contact_force_N": 6.254746087806032
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.2036650218502356,
-   "contact_force_N": 6.241504118340548
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20374962880656544,
-   "contact_force_N": 6.272227634494015
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20383421843059996,
-   "contact_force_N": 6.30306894945903
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20391879072219343,
-   "contact_force_N": 6.334027884963412
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20390732135707607,
-   "contact_force_N": 6.329599533778348
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20389581156655956,
-   "contact_force_N": 6.3251595362186155
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.2038842613506786,
-   "contact_force_N": 6.320707914498135
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20389996362434742,
-   "contact_force_N": 6.321329525438362
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20391551197327523,
-   "contact_force_N": 6.321927820503699
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20386092948062456,
-   "contact_force_N": 6.308971665578065
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20380632340137594,
-   "contact_force_N": 6.296023102662121
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.2038147452260372,
-   "contact_force_N": 6.2980448739585135
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20382314645885774,
-   "contact_force_N": 6.300061834381392
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20383152709981672,
-   "contact_force_N": 6.3020739794042555
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20384120191951904,
-   "contact_force_N": 6.302999436288936
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.2038507922968516,
-   "contact_force_N": 6.30390717650651
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20385469119026806,
-   "contact_force_N": 6.3108454225210995
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20385855347841014,
-   "contact_force_N": 6.317771503657454
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.2038672914524281,
-   "contact_force_N": 6.311757172952241
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.2038760053065039,
-   "contact_force_N": 6.305734317834478
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20385566037228742,
-   "contact_force_N": 6.308890021576903
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20383529291557317,
-   "contact_force_N": 6.31203754862835
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20384996829781593,
-   "contact_force_N": 6.306891535361733
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20386463117224446,
-   "contact_force_N": 6.301741399517098
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20387928153885182,
-   "contact_force_N": 6.296587155668103
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20384620473608284,
-   "contact_force_N": 6.306606187563383
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20381308842331441,
-   "contact_force_N": 6.3166140239445205
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20385377100988478,
-   "contact_force_N": 6.308291458569851
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.2038944190775535,
-   "contact_force_N": 6.299959784265267
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20385439357173407,
-   "contact_force_N": 6.308867766618446
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20381434301910278,
-   "contact_force_N": 6.317772088416497
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20385603720728118,
-   "contact_force_N": 6.308689211024502
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20389771335835305,
-   "contact_force_N": 6.299606938026224
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20385133907106778,
-   "contact_force_N": 6.307901342943806
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20380494996848075,
-   "contact_force_N": 6.316197971595418
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.2038530186458526,
-   "contact_force_N": 6.307949989822996
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.2039010756786433,
-   "contact_force_N": 6.299706297287274
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.2038510477654562,
-   "contact_force_N": 6.307954960431495
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   },
   {
-   "contact_vertices": 4,
-   "max_penetration_mm": 0.20380101097823566,
-   "contact_force_N": 6.3162097734121225
+   "contact_vertices": 0,
+   "max_penetration_mm": 0.0,
+   "contact_force_N": 0.0
   }
  ]
 }

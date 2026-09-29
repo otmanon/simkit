@@ -131,6 +131,9 @@ def main():
                          "barycentric units) outside its coarse tet; without it (inf) the stiff "
                          "blocks, which move rigidly in every mode and so cost nothing to "
                          "collapse, shrink to slivers (22-28%% of the volume kept)")
+    ap.add_argument("--homogenize", action="store_true",
+                    help="Reuss-average the fine moduli into each coarse tet (default: the coarse "
+                         "tet's winding-number material, as for the fine mesh)")
     args = ap.parse_args()
     os.makedirs(CO, exist_ok=True)
 
@@ -204,13 +207,13 @@ def main():
             Bs[fr] = Bf[:, o]
             Xs, Ts = Xc, Tc
         P = Ptot
-        sc = homogenize(make_scene(Xc, Tc), scene)
+        sc = homogenize(make_scene(Xc, Tc), scene) if args.homogenize else make_scene(Xc, Tc)
         vol = signed_volumes(Xc, Tc)
         top = tet_boundary_topology(Tc)
         kind_t = kinds[sc["part"]]
         counts = {k: int((kind_t == k).sum()) for k in ("palm", "link", "flexure", "pad")}
         missing = [n for i, n in enumerate(names) if not (sc["part"] == i).any()]
-        np.savez_compressed(os.path.join(CO, f"sdm_tets_{target}.npz"), **sc,
+        np.savez_compressed(os.path.join(CO, f"sdm_tets_{target}.npz"), **sc, pinned=coarse_pinned(P, X),
                             P_data=P.data, P_indices=P.indices, P_indptr=P.indptr,
                             P_shape=np.array(P.shape))
         write_obj(os.path.join(CO, f"sdm_hand_{target}.obj"), Xc, igl.boundary_facets(Tc)[0])
@@ -229,6 +232,25 @@ def main():
         json.dump(summary, f, indent=1, default=float)
 
 
+def coarse_pinned(P, X_fine):
+    """Coarse vertices that the fine pinned vertices (wrist base plane) interpolate from."""
+    pin = np.where(X_fine[:, 2] < X_fine[:, 2].min() + 1e-7)[0]
+    sub = P.tocsr()[pin]
+    return np.unique(sub.indices[np.abs(sub.data) > 1e-12])
+
+
+def add_pinned():
+    """Store ``pinned`` (from P) in every saved level."""
+    Xf = np.load(os.path.join(OUT, "sdm_tets.npz"))["X"]
+    for f in sorted(os.listdir(CO)):
+        if f.startswith("sdm_tets_") and f.endswith(".npz"):
+            d = dict(np.load(os.path.join(CO, f)))
+            P = sp.sparse.csc_matrix((d["P_data"], d["P_indices"], d["P_indptr"]), shape=tuple(d["P_shape"]))
+            d["pinned"] = coarse_pinned(P, Xf)
+            np.savez_compressed(os.path.join(CO, f), **d)
+            print(f, "pinned", len(d["pinned"]))
+
+
 def rehomogenize():
     """Re-apply ``homogenize`` to the saved levels (keeps the meshes and P)."""
     fine = dict(np.load(os.path.join(OUT, "sdm_tets.npz")))
@@ -240,7 +262,9 @@ def rehomogenize():
 
 
 if __name__ == "__main__":
-    if "--rehomogenize" in sys.argv:
+    if "--add-pinned" in sys.argv:
+        add_pinned()
+    elif "--rehomogenize" in sys.argv:
         rehomogenize()
     else:
         main()
