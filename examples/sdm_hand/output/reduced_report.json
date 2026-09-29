@@ -318,5 +318,47 @@
    45.99,
    79.46
   ]
+ },
+ "_fine_ball": {
+  "level": null,
+  "dofs": 34008,
+  "tets": 51755,
+  "t_static": 941.8318955898285,
+  "static_newton": 235,
+  "static_tip_mm": [
+   68.9,
+   74.8,
+   72.77,
+   78.84,
+   89.11
+  ]
+ },
+ "_1200_palmar_mixw3_kpin100000_ball_fric1e+09": {
+  "level": "1200_palmar_mixw3",
+  "dofs": 3600,
+  "tets": 4379,
+  "t_static": 47.2886700630188,
+  "static_newton": 325,
+  "static_tip_mm": [
+   74.13,
+   76.35,
+   74.0,
+   80.99,
+   85.63
+  ]
+ },
+ "_1200_palmar_mixw3_kpin100000_ball_fric1e+10": {
+  "level": "1200_palmar_mixw3",
+  "dofs": 3600,
+  "tets": 4379,
+  "t_static": 46.354493618011475,
+  "static_newton": 324,
+  "static_tip_mm": [
+   72.26,
+   75.84,
+   73.0,
+   80.83,
+   85.64
+  ]
  }
 }

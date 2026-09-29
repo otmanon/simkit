@@ -76,7 +76,7 @@ def load_level(level):
     return d, P
 
 
-def build_hand_system(level=None, k_pin=None, ball=None, obj=None):
+def build_hand_system(level=None, k_pin=None, ball=None, obj=None, friction=0.0):
     """Return ``system(x, a) -> (E, g, H)`` plus what the solver and renderer need.
     ``k_pin`` overrides the hinge-pin stiffness (0 drops the pins: in a coarse
     subspace that cannot reproduce an exact hinge rotation they act as a locking
@@ -189,11 +189,45 @@ def build_hand_system(level=None, k_pin=None, ball=None, obj=None):
             Hs = sp.sparse.block_diag(list(blk), format="csr")
             return e, g, (Ba.T @ Hs @ Ba).tocsr()
 
+        # Lagged viscous friction (per quasi-static load step): the fine surface vertices
+        # inside the object at the step's start get anchored there with their normal n;
+        # moving tangentially away from the anchor costs
+        #   E_f = k_f/2 sum_v a_v |(I - n n^T)(x_v - x_v0)|^2
+        # (active set and normals frozen for the step, so E_f is exactly quadratic in x).
+        fric = dict(rows=None, Ba=None, x0=None, T=None, w=None)
+
+        def set_anchor(x):
+            if friction <= 0:
+                return
+            Ps = (Bs @ x).reshape(-1, 3)
+            act = np.nonzero(obj.sdf(Ps) < 0)[0]
+            if len(act) == 0:
+                fric["rows"] = None
+                return
+            n = obj.grad(Ps[act])
+            T = np.eye(3)[None] - n[:, :, None] * n[:, None, :]
+            rows = (3 * act[:, None] + np.arange(3)).ravel()
+            fric.update(rows=rows, Ba=Bs[rows], x0=Ps[act].ravel(), w=friction * a_s[act],
+                        Tb=sp.sparse.block_diag(list(T * (friction * a_s[act])[:, None, None]), format="csr"))
+
+        def friction_term(x, energy_only=False):
+            if fric["rows"] is None:
+                return 0.0, None, None
+            r = fric["Ba"] @ x - fric["x0"]
+            Tr = fric["Tb"] @ r
+            e = 0.5 * float(r @ Tr)
+            if energy_only:
+                return e, None, None
+            return e, fric["Ba"].T @ Tr, (fric["Ba"].T @ fric["Tb"] @ fric["Ba"]).tocsr()
+
         def system(x, a, energy_only=False):
             e, g, H = elastic_system(x, a, energy_only)
             ec, gc, Hc = contact(x, energy_only)
+            ef, gf, Hf = friction_term(x, energy_only)
             if energy_only:
-                return e + ec, None, None
+                return e + ec + ef, None, None
+            if gf is not None:
+                return e + ec + ef, g + gc + gf, (H + Hc + Hf).tocsr()
             return e + ec, g + gc, (H + Hc).tocsr()
 
         def contact_report(x):
@@ -204,7 +238,9 @@ def build_hand_system(level=None, k_pin=None, ball=None, obj=None):
             return dict(contact_vertices=int(act.sum()), max_pen_mm=float(d.max() * 1e3) if act.any() else 0.0,
                         force_N=float(F.sum()))
     tips = [hf.tip_vertices(f) for f in hf.fingers]
-    return dict(system=system, contact_report=(contact_report if obj is not None else None), obj=obj, x0=x0, M=M_r, P=P, B=B, X=Xc, T=Tc, scene=sc, level=level,
+    return dict(system=system, contact_report=(contact_report if obj is not None else None), obj=obj,
+                set_anchor=(set_anchor if obj is not None else None),
+                surface_map=(Bs if obj is not None else None), x0=x0, M=M_r, P=P, B=B, X=Xc, T=Tc, scene=sc, level=level,
                 n_dof=len(x0), n_tets=len(Tc), tips=tips, fingers=hf.fingers,
                 Gt=Gt, Gp=Gp, Sb=Sb)
 
@@ -258,6 +294,8 @@ def simulate(sysd, n_static=12, h=1 / 60, t_ramp=1.2, t_end=2.0, log=print, dyna
     x = x0.copy()
     contact = sysd.get("obj") is not None
     for a in a_vals:
+        if contact and sysd.get("set_anchor"):
+            sysd["set_anchor"](x)                  # friction anchors for this load step
         start = 2 * xs[-1] - xs[-2] if len(xs) > 1 and not contact else x
         x, it = newton(system, start, a, max_step=1e-3 if contact else None, max_iters=200 if contact else 60)
         xs.append(x.copy())
@@ -309,6 +347,8 @@ def main():
     ap.add_argument("--n-static", type=int, default=12)
     ap.add_argument("--ball", type=float, nargs=5, metavar=("CX", "CY", "CZ", "R", "K"),
                     help="rigid ball in contact with the fine surface (m, N/m^4)")
+    ap.add_argument("--friction", type=float, default=0.0,
+                    help="lagged viscous friction k_f (N/m^3) on the fine surface vertices inside the object")
     ap.add_argument("--cup", type=float, nargs=5, metavar=("CX", "CY", "CZ", "R", "K"),
                     help="rigid open cup (sdm_cup.Cup, axis along x) in contact with the fine surface")
     ap.add_argument("--k-pin", type=float, default=None, help="hinge-pin stiffness in the subspace")
@@ -317,7 +357,8 @@ def main():
     summ = json.load(open(os.path.join(CO, "coarse_summary.json")))
     levels = args.names if args.names else (args.levels if args.levels is not None
                                             else [r["target"] for r in summ["levels"]])
-    obj_tag = "_ball" if args.ball is not None else ("_cup" if args.cup is not None else "")
+    obj_tag = ("_ball" if args.ball is not None else ("_cup" if args.cup is not None else "")) + \
+        (f"_fric{args.friction:g}" if args.friction > 0 else "")
     pin_tag = ("" if args.k_pin is None else f"_kpin{args.k_pin:g}") + obj_tag
     runs = [(lv, f"_{lv}{pin_tag}") for lv in levels] + \
         ([(None, "_fine" + obj_tag)] if args.fine else [])
@@ -330,7 +371,8 @@ def main():
         elif args.cup is not None:
             from sdm_cup import Cup
             obj = Cup(center=args.cup[:3], R=args.cup[3], k=args.cup[4])
-        sysd = build_hand_system(lv, k_pin=args.k_pin if lv is not None else None, obj=obj)
+        sysd = build_hand_system(lv, k_pin=args.k_pin if lv is not None else None, obj=obj,
+                                 friction=args.friction)
         print(f"== {'fine (P = I)' if lv is None else f'level {lv}'}: {sysd['n_dof']} DOFs, "
               f"{sysd['n_tets']} integration tets [build {time.time() - t0:.1f} s]", flush=True)
         res = simulate(sysd, n_static=args.n_static, log=lambda s: print(s, flush=True),

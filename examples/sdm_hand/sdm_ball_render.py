@@ -129,3 +129,44 @@ def main(tag, ftag, kind="ball"):
 
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "ball")
+
+
+def compare(tag, runs, kind, name):
+    """runs: [(file_tag or 'full', label)] -> one row each (fine hand) + a coarse-mesh row first."""
+    F = Fine()
+    sc, P = R.load_level(tag)
+    bm = object_mesh(kind)
+    bounds = F.surf.merge(bm)
+    data = [(ft, lab, dict(np.load(os.path.join(R.OUT, f"reduced_sim_{'fine_' + kind if ft == 'full' else ft}.npz"))))
+            for ft, lab in runs]
+    avals = [0.0, 0.5, 0.75, 1.0]
+    rows = [("coarse", data[1][1], data[1][2])] + [(ft, lab, d) for ft, lab, d in data]
+    fig, ax = plt.subplots(len(rows), len(avals) + 1, figsize=(3.9 * (len(avals) + 1), 4.0 * len(rows)))
+    for i, (ft, lab, d) in enumerate(rows):
+        for j in range(len(avals) + 1):
+            a = avals[j] if j < len(avals) else 1.0
+            view = VIEW if j < len(avals) else ((-1.0, -0.35, 0.15), (0, 0, 1))
+            x = interp(d, a)
+            if ft == "coarse":
+                s, o = kind_surface(x, sc["T"], sc["part"], F.kinds), kind_opts(0.5)
+            else:
+                s, o = F.at(x if ft == "full" else P @ x), kind_opts(0.0) | dict(show_edges=False)
+
+            def add(pl, s=s, o=o):
+                pl.add_mesh(s, **o)
+                pl.add_mesh(bm, color=BALL_COL, opacity=0.55, smooth_shading=True)
+            ax[i, j].imshow(shot(add, view, size=(560, 600), bounds_mesh=bounds))
+            ax[i, j].axis("off")
+            if i == 0:
+                ax[i, j].set_title(f"a = {a:.2f}" + ("" if j < len(avals) else "  (thumb side)"), fontsize=13)
+        txt = (f"coarse mesh ({lab})\n{len(sc['X']):,} v, {len(sc['T']):,} tets" if ft == "coarse" else
+               f"{lab}\nstatics {float(d['t_static']):.0f} s\ncontact {d['contact_force'][-1]:.0f} N")
+        ax[i, 0].text(-0.05, 0.5, txt, transform=ax[i, 0].transAxes, ha="right", va="center", fontsize=11)
+    fig.legend(handles=[Patch(color=KIND_COL[k], label=KIND_LAB[k]) for k in ORDER] +
+               [Patch(color=BALL_COL, label=f"rigid {kind} (analytic SDF)")], loc="lower center", ncol=5,
+               frameon=False, fontsize=11)
+    fig.suptitle(f"Grasping a {kind} with lagged viscous friction on the contacting fine surface vertices "
+                 "(reduced 3,600 DOFs vs full space)", fontsize=13)
+    fig.tight_layout(rect=(0.1, 0.03, 1, 0.965))
+    fig.savefig(os.path.join(REN, name), dpi=78)
+    print("wrote renders/" + name)
