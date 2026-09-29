@@ -93,25 +93,16 @@
  },
  "_fine": {
   "level": null,
-  "dofs": 34776,
-  "tets": 52312,
-  "t_static": 253.56824374198914,
-  "t_dynamic": 1322.7136301994324,
-  "static_newton": 70,
-  "dyn_newton": 366,
+  "dofs": 34008,
+  "tets": 51755,
+  "t_static": 510.1638743877411,
+  "static_newton": 126,
   "static_tip_mm": [
-   85.5,
-   93.61,
-   88.81,
-   73.88,
-   80.85
-  ],
-  "dyn_tip_mm": [
-   85.5,
-   93.61,
-   88.81,
-   73.89,
-   80.85
+   95.2,
+   104.16,
+   98.65,
+   82.62,
+   89.67
   ]
  },
  "_1200_q30_kpin0": {
@@ -284,6 +275,48 @@
    84.54,
    72.63,
    77.76
+  ]
+ },
+ "_1200_palmar_mixw3_kpin100000": {
+  "level": "1200_palmar_mixw3",
+  "dofs": 3600,
+  "tets": 4379,
+  "t_static": 20.492517471313477,
+  "static_newton": 160,
+  "static_tip_mm": [
+   97.24,
+   98.55,
+   95.32,
+   83.02,
+   86.05
+  ]
+ },
+ "_1200_palmar_mixw3_kpin100000_ball": {
+  "level": "1200_palmar_mixw3",
+  "dofs": 3600,
+  "tets": 4379,
+  "t_static": 44.58871555328369,
+  "static_newton": 336,
+  "static_tip_mm": [
+   85.19,
+   78.25,
+   81.49,
+   81.74,
+   85.72
+  ]
+ },
+ "_1200_palmar_mixw3_kpin100000_cup": {
+  "level": "1200_palmar_mixw3",
+  "dofs": 3600,
+  "tets": 4379,
+  "t_static": 82.5173008441925,
+  "static_newton": 596,
+  "static_tip_mm": [
+   62.06,
+   75.0,
+   66.58,
+   45.99,
+   79.46
   ]
  }
 }

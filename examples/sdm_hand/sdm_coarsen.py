@@ -141,7 +141,8 @@ def pca_basis(hand, energy=1 - 1e-6, k_max=30):
     their singular values."""
     d = np.load(os.path.join(OUT, "reduced_sim_fine.npz"))
     X = hand.X.reshape(-1)
-    Us = np.vstack([d["static_x"], d["dyn_x"]]).astype(float) - X          # snapshots x 3n
+    snaps = [d["static_x"]] + ([d["dyn_x"]] if "dyn_x" in d.files else [])
+    Us = np.vstack(snaps).astype(float) - X                                   # snapshots x 3n
     sq = np.sqrt(hand.m)
     W, sig, _ = np.linalg.svd((sq[:, None] * Us.T), full_matrices=False)
     c = np.cumsum(sig ** 2) / (sig ** 2).sum()

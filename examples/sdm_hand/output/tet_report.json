@@ -1,8 +1,8 @@
 {
  "tet_boundary_nopads": {
-  "V": 2880,
-  "E": 8634,
-  "F": 5756,
+  "V": 2646,
+  "E": 7932,
+  "F": 5288,
   "chi": 2,
   "components": 1,
   "boundary_loops": 0,
@@ -11,13 +11,13 @@
   "oriented": true,
   "genus": 0.0,
   "closed_manifold": true,
-  "n_vertices": 3936,
-  "n_tets": 14809
+  "n_vertices": 3797,
+  "n_tets": 14648
  },
  "tet_boundary_pads": {
-  "V": 5930,
-  "E": 17784,
-  "F": 11856,
+  "V": 5620,
+  "E": 16854,
+  "F": 11236,
   "chi": 2,
   "components": 1,
   "boundary_loops": 0,
@@ -26,28 +26,28 @@
   "oriented": true,
   "genus": 0.0,
   "closed_manifold": true,
-  "n_vertices": 11592,
-  "n_tets": 52312
+  "n_vertices": 11336,
+  "n_tets": 51755
  },
  "label_counts": {
   "palm": {
-   "tets": 6899,
-   "volume_cm3": 225.76684495158875
+   "tets": 7076,
+   "volume_cm3": 225.47792192045114
   },
   "link": {
-   "tets": 15730,
-   "volume_cm3": 133.15384115976875
+   "tets": 15365,
+   "volume_cm3": 133.0572325450454
   },
   "flexure": {
-   "tets": 3873,
-   "volume_cm3": 7.496112405747863
+   "tets": 3342,
+   "volume_cm3": 7.358310054488916
   },
   "pad": {
-   "tets": 25810,
-   "volume_cm3": 27.88073156777281
+   "tets": 25972,
+   "volume_cm3": 28.185036553262638
   }
  },
- "min_tet_volume_mm3": 0.016345525863020027,
+ "min_tet_volume_mm3": 0.01254837232857682,
  "materials": {
   "stiff polyurethane (links, palm)": {
    "E": 1500000000.0,

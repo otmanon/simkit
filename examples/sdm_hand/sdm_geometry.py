@@ -71,7 +71,13 @@ class HandParams:
     flex_len: float = 6 * mm
     flex_t: float = 5 * mm
     flex_inset: float = 2 * mm                # flexure narrower by 2 mm per side
-    flex_dorsal_gap: float = 1 * mm           # flexure's dorsal face at y = palm_t - 1 mm
+    flex_dorsal_gap: float = 1 * mm           # (flex_side = "dorsal") flexure's dorsal face at y = palm_t - 1 mm
+    # which side the flexures sit on. "palmar": flush with the phalanges' palmar face,
+    # so the hinge is at the palmar corners and closing opens a dorsal wedge instead of
+    # driving the block corners into each other; the actuator springs then sit on the
+    # DORSAL side and lengthen under actuation (a palmar tendon would pass through the
+    # hinge). "dorsal": the original layout, palmar tendons that shorten.
+    flex_side: str = "palmar"
     overlap: float = 0.5 * mm
     pad_t: float = 8 * mm                     # fingertip / thumb pad thickness
     # thumb, built along local +z with its palmar side at local -y
@@ -134,6 +140,9 @@ def build_parts(p=HandParams(), pads=True):
     parts["palm"] = (box(*p.palm_x, 0, T, *p.palm_z) + thenar(p), "palm")
     ov, fl = p.overlap, p.flex_len
     y_f1 = T - p.flex_dorsal_gap
+    y_p = (T - p.phal_t) / 2                   # phalanx palmar face
+    if p.flex_side == "palmar":
+        y_f1 = y_p + p.flex_t                  # flexure spans [y_p, y_p + flex_t]
     y_p0 = (T - p.phal_t) / 2                  # palmar face of the phalanges
     for f, (xc, w, L) in p.fingers.items():
         z = p.palm_z[1]
@@ -153,8 +162,9 @@ def build_parts(p=HandParams(), pads=True):
     local = []
     for i, (l, w) in enumerate(p.thumb_seg):
         z_lo = zc - (p.thumb_root_embed if i == 0 else ov)
+        ty0, ty1 = ((-ht, -ht + p.thumb_flex_t) if p.flex_side == "palmar" else (ht - p.thumb_flex_t, ht))
         local.append((f"thumb_flex{i}", box(-w / 2 + p.flex_inset, w / 2 - p.flex_inset,
-                                            ht - p.thumb_flex_t, ht, z_lo, zc + fl + ov), "flexure"))
+                                            ty0, ty1, z_lo, zc + fl + ov), "flexure"))
         local.append((f"thumb_ph{i}", box(-w / 2, w / 2, -ht, ht, zc + fl, zc + fl + l), "link"))
         zc += fl + l
     if pads:
@@ -180,15 +190,18 @@ def joints(p=HandParams()):
             A[0, 3] = xc
             out.append(dict(name=f"{f}_flex{i}", below=prev, above=f"{f}_ph{i}", A=A,
                             z0=z, z1=z + p.flex_len,
-                            y_below=0.0 if prev == "palm" else y_p0, y_above=y_p0))
+                            **(dict(y_below=p.palm_t if prev == "palm" else y_p0 + p.phal_t,
+                                    y_above=y_p0 + p.phal_t) if p.flex_side == "palmar" else
+                               dict(y_below=0.0 if prev == "palm" else y_p0, y_above=y_p0))))
             prev = f"{f}_ph{i}"
             z += p.flex_len + l
     A = thumb_transform(p)
     zc, prev = 0.0, "palm"
     for i, (l, w) in enumerate(p.thumb_seg):
         out.append(dict(name=f"thumb_flex{i}", below=prev, above=f"thumb_ph{i}", A=A,
-                        z0=zc, z1=zc + p.flex_len, y_below=-p.thumb_half_t,
-                        y_above=-p.thumb_half_t))
+                        z0=zc, z1=zc + p.flex_len,
+                        y_below=p.thumb_half_t if p.flex_side == "palmar" else -p.thumb_half_t,
+                        y_above=p.thumb_half_t if p.flex_side == "palmar" else -p.thumb_half_t))
         prev = f"thumb_ph{i}"
         zc += p.flex_len + l
     return out
@@ -206,7 +219,8 @@ def tendon_anchors(p=HandParams()):
     for jt in joints(p):
         A = jt["A"]
         w = lambda q: A[:3, :3] @ np.asarray(q) + A[:3, 3]
-        off = ANCHOR_OFFSET_PADDED if jt["above"].endswith("ph2") else ANCHOR_OFFSET
+        off = (ANCHOR_OFFSET_PADDED if jt["above"].endswith("ph2") and p.flex_side == "dorsal"
+               else ANCHOR_OFFSET)   # the pad is on the palmar side only
         pa = w((0.0, jt["y_below"], jt["z0"] - ANCHOR_OFFSET))
         pb = w((0.0, jt["y_above"], jt["z1"] + off))
         # snap onto the surface of the block it is attached to (the thumb's

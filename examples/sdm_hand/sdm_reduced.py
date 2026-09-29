@@ -48,6 +48,20 @@ K_BASE = 1e8          # N/m, wrist-base penalty per fine base vertex
 _FINE = {}
 
 
+class Ball:
+    """Rigid ball: phi(p) = |p - c| - R."""
+
+    def __init__(self, center, R, k=1e12):
+        self.c, self.R, self.k = np.asarray(center, float), float(R), float(k)
+
+    def sdf(self, P):
+        return np.linalg.norm(P - self.c, axis=1) - self.R
+
+    def grad(self, P):
+        r = P - self.c
+        return r / np.linalg.norm(r, axis=1)[:, None]
+
+
 def fine_hand():
     """The fine hand: the source of the tendons, hinge pins, base and mass."""
     if "hand" not in _FINE:
@@ -62,15 +76,19 @@ def load_level(level):
     return d, P
 
 
-def build_hand_system(level=None, k_pin=None, ball=None):
+def build_hand_system(level=None, k_pin=None, ball=None, obj=None):
     """Return ``system(x, a) -> (E, g, H)`` plus what the solver and renderer need.
     ``k_pin`` overrides the hinge-pin stiffness (0 drops the pins: in a coarse
     subspace that cannot reproduce an exact hinge rotation they act as a locking
     constraint)."""
     K_PIN_ = K_PIN if k_pin is None else k_pin
-    # ball = (centre, radius, k): a fixed rigid ball, phi(p) = |p - c| - R, in contact with
-    # the FINE surface vertices only (x_s = B_s x, the one term integrated on the fine
-    # mesh); cubic penalty k/3 sum_v a_v max(0, -phi)^3, Gauss-Newton Hessian, pulled back by B_s
+    # obj: a fixed rigid object with an analytic signed distance (``obj.sdf(P)``,
+    # ``obj.grad(P)``, stiffness ``obj.k``), in contact with the FINE surface vertices only
+    # (x_s = B_s x, the one term integrated on the fine mesh); cubic penalty
+    # k/3 sum_v a_v max(0, -phi)^3, Gauss-Newton Hessian, pulled back by B_s.
+    # ball = (centre, radius, k) is shorthand for obj = Ball(centre, radius, k).
+    if ball is not None and obj is None:
+        obj = Ball(*ball)
     hf = fine_hand()
     if level is None:
         sc, P = _FINE["scene"], sp.sparse.identity(hf.n, format="csc")
@@ -137,9 +155,9 @@ def build_hand_system(level=None, k_pin=None, ball=None):
         H = (H + Ht + H_quad).tocsr()
         return float(e), g, H
 
-    if ball is not None:
+    if obj is not None:
         import igl
-        bc, bR, bk = np.asarray(ball[0], float), float(ball[1]), float(ball[2])
+        bk = float(obj.k)
         Fb = igl.boundary_facets(hf.T)[0]
         sv = np.unique(Fb)
         area = np.zeros(hf.n)
@@ -152,14 +170,12 @@ def build_hand_system(level=None, k_pin=None, ball=None):
 
         def contact(x, energy_only=False):
             Ps = (Bs @ x).reshape(-1, 3)
-            r = Ps - bc
-            dist = np.linalg.norm(r, axis=1)
-            d = bR - dist                                        # penetration depth
+            d = -obj.sdf(Ps)                                     # penetration depth
             act = d > 0
             e = bk / 3 * float((a_s[act] * d[act] ** 3).sum())
             if energy_only:
                 return e, None, None
-            n = r[act] / dist[act, None]
+            n = obj.grad(Ps[act])
             gs = np.zeros((len(sv), 3))
             gs[act] = (-bk * a_s[act] * d[act] ** 2)[:, None] * n
             g = Bs.T @ gs.ravel()
@@ -182,19 +198,18 @@ def build_hand_system(level=None, k_pin=None, ball=None):
 
         def contact_report(x):
             Ps = (Bs @ x).reshape(-1, 3)
-            dist = np.linalg.norm(Ps - bc, axis=1)
-            d = bR - dist
+            d = -obj.sdf(Ps)
             act = d > 0
             F = bk * a_s[act] * d[act] ** 2
             return dict(contact_vertices=int(act.sum()), max_pen_mm=float(d.max() * 1e3) if act.any() else 0.0,
                         force_N=float(F.sum()))
     tips = [hf.tip_vertices(f) for f in hf.fingers]
-    return dict(system=system, contact_report=(contact_report if ball is not None else None), ball=ball, x0=x0, M=M_r, P=P, B=B, X=Xc, T=Tc, scene=sc, level=level,
+    return dict(system=system, contact_report=(contact_report if obj is not None else None), obj=obj, x0=x0, M=M_r, P=P, B=B, X=Xc, T=Tc, scene=sc, level=level,
                 n_dof=len(x0), n_tets=len(Tc), tips=tips, fingers=hf.fingers,
                 Gt=Gt, Gp=Gp, Sb=Sb)
 
 
-def newton(system, x0, a, x_tilde=None, M=None, h=None, tol=1e-9, max_iters=60):
+def newton(system, x0, a, x_tilde=None, M=None, h=None, tol=1e-9, max_iters=60, max_step=None):
     """Projected Newton on system(., a) [+ inertia 1/(2h^2) |x - x_tilde|_M^2];
     stops when half the Newton decrement, -g.dx / 2, drops below ``tol`` (J)."""
     inert = x_tilde is not None
@@ -218,6 +233,10 @@ def newton(system, x0, a, x_tilde=None, M=None, h=None, tol=1e-9, max_iters=60):
         dec = -g @ dx
         if 0.5 * dec < tol:
             break
+        if max_step is not None:                # no tunnelling through thin contact walls
+            m = np.linalg.norm(dx.reshape(-1, 3), axis=1).max()
+            if m > max_step:
+                dx = dx * (max_step / m)
         alpha, x, _ = backtracking_line_search(lambda y: total(y, False)[0], x, g, dx)
         if alpha == 0:
             break
@@ -237,9 +256,10 @@ def simulate(sysd, n_static=12, h=1 / 60, t_ramp=1.2, t_end=2.0, log=print, dyna
     a_vals = np.linspace(0, 1, n_static + 1)
     xs, its = [], []
     x = x0.copy()
+    contact = sysd.get("obj") is not None
     for a in a_vals:
-        start = 2 * xs[-1] - xs[-2] if len(xs) > 1 else x
-        x, it = newton(system, start, a)
+        start = 2 * xs[-1] - xs[-2] if len(xs) > 1 and not contact else x
+        x, it = newton(system, start, a, max_step=1e-3 if contact else None, max_iters=200 if contact else 60)
         xs.append(x.copy())
         its.append(it)
     t_static = time.time() - t0
@@ -289,20 +309,28 @@ def main():
     ap.add_argument("--n-static", type=int, default=12)
     ap.add_argument("--ball", type=float, nargs=5, metavar=("CX", "CY", "CZ", "R", "K"),
                     help="rigid ball in contact with the fine surface (m, N/m^4)")
+    ap.add_argument("--cup", type=float, nargs=5, metavar=("CX", "CY", "CZ", "R", "K"),
+                    help="rigid open cup (sdm_cup.Cup, axis along x) in contact with the fine surface")
     ap.add_argument("--k-pin", type=float, default=None, help="hinge-pin stiffness in the subspace")
     ap.add_argument("--names", nargs="*", help="level file tags instead of --levels, e.g. 1200_q30")
     args = ap.parse_args()
     summ = json.load(open(os.path.join(CO, "coarse_summary.json")))
     levels = args.names if args.names else (args.levels if args.levels is not None
                                             else [r["target"] for r in summ["levels"]])
-    pin_tag = ("" if args.k_pin is None else f"_kpin{args.k_pin:g}") + ("" if args.ball is None else "_ball")
+    obj_tag = "_ball" if args.ball is not None else ("_cup" if args.cup is not None else "")
+    pin_tag = ("" if args.k_pin is None else f"_kpin{args.k_pin:g}") + obj_tag
     runs = [(lv, f"_{lv}{pin_tag}") for lv in levels] + \
-        ([(None, "_fine" + ("" if args.ball is None else "_ball"))] if args.fine else [])
+        ([(None, "_fine" + obj_tag)] if args.fine else [])
     report = {}
     for lv, tag in runs:
         t0 = time.time()
-        ball = None if args.ball is None else (args.ball[:3], args.ball[3], args.ball[4])
-        sysd = build_hand_system(lv, k_pin=args.k_pin if lv is not None else None, ball=ball)
+        obj = None
+        if args.ball is not None:
+            obj = Ball(args.ball[:3], args.ball[3], args.ball[4])
+        elif args.cup is not None:
+            from sdm_cup import Cup
+            obj = Cup(center=args.cup[:3], R=args.cup[3], k=args.cup[4])
+        sysd = build_hand_system(lv, k_pin=args.k_pin if lv is not None else None, obj=obj)
         print(f"== {'fine (P = I)' if lv is None else f'level {lv}'}: {sysd['n_dof']} DOFs, "
               f"{sysd['n_tets']} integration tets [build {time.time() - t0:.1f} s]", flush=True)
         res = simulate(sysd, n_static=args.n_static, log=lambda s: print(s, flush=True),

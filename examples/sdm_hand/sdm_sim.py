@@ -149,8 +149,12 @@ class Hand:
             name = jt["name"]
             finger = name.split("_")[0]
             idx = int(name[-1])
-            y_mid = (p.thumb_half_t - p.thumb_flex_t / 2 if finger == "thumb"
-                     else p.palm_t - p.flex_dorsal_gap - p.flex_t / 2)
+            if p.flex_side == "palmar":
+                y_mid = (-p.thumb_half_t + p.thumb_flex_t / 2 if finger == "thumb"
+                         else (p.palm_t - p.phal_t) / 2 + p.flex_t / 2)
+            else:
+                y_mid = (p.thumb_half_t - p.thumb_flex_t / 2 if finger == "thumb"
+                         else p.palm_t - p.flex_dorsal_gap - p.flex_t / 2)
             hinge = to_world(np.array([0.0, y_mid, 0.5 * (jt["z0"] + jt["z1"])]))
             axis = A[:3, 0]
             a_, b_ = pa, pb                   # the exact anchor points (embedded below)
@@ -159,6 +163,8 @@ class Hand:
             l_rest = np.linalg.norm(b_ - a_)
             th = np.radians(target["thumb" if finger == "thumb" else "finger"][idx])
             c = min(0.85, r * th / l_rest)
+            if p.flex_side == "palmar":         # dorsal actuator: lengthens by r*theta
+                c = -r * th / l_rest
             fv = self.part_vertices(name, surface=False)
             if len(fv) == 0:                    # flexure lost on a coarse mesh: span the block above
                 fv = self.part_vertices(jt["above"], surface=False)

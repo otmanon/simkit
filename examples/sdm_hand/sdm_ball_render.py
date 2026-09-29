@@ -26,17 +26,25 @@ BALL = ((-0.010, -0.036, 0.128), 0.030)
 BALL_COL = "#c9b99a"
 
 
-def ball_mesh():
-    return pv.Sphere(radius=BALL[1], center=BALL[0], theta_resolution=64, phi_resolution=64)
+OBJECTS = {"ball": dict(center=(-0.010, -0.036, 0.128), R=0.030),
+           "cup": dict(center=(-0.005, -0.040, 0.125), R=0.035)}
 
 
-def main(tag, ftag):
+def object_mesh(kind):
+    o = OBJECTS[kind]
+    if kind == "ball":
+        return pv.Sphere(radius=o["R"], center=o["center"], theta_resolution=64, phi_resolution=64)
+    from sdm_cup import Cup
+    return Cup(center=o["center"], R=o["R"]).mesh()
+
+
+def main(tag, ftag, kind="ball"):
     F = Fine()
     sc, P = R.load_level(tag)
     d = dict(np.load(os.path.join(R.OUT, f"reduced_sim_{ftag}.npz")))
-    ref_f = os.path.join(R.OUT, "reduced_sim_fine_ball.npz")
+    ref_f = os.path.join(R.OUT, f"reduced_sim_fine_{kind}.npz")
     ref = dict(np.load(ref_f)) if os.path.exists(ref_f) else None
-    bm = ball_mesh()
+    bm = object_mesh(kind)
     bounds = F.surf.merge(bm)
     rows = [("coarse", d), ("fine", d)] + ([("full", ref)] if ref is not None else [])
     avals = [0.0, 0.5, 0.75, 1.0]
@@ -70,9 +78,9 @@ def main(tag, ftag):
                    f"contact {dd['contact_force'][k]:.0f} N on\n{int(dd['contact_n'][k])} surface v")
         ax[i, 0].text(-0.05, 0.5, lab, transform=ax[i, 0].transAxes, ha="right", va="center", fontsize=11.5)
     fig.legend(handles=[Patch(color=KIND_COL[k], label=KIND_LAB[k]) for k in ORDER] +
-               [Patch(color=BALL_COL, label="rigid ball, R = 30 mm (analytic SDF)")],
+               [Patch(color=BALL_COL, label=f"rigid {kind}, R = {OBJECTS[kind]['R'] * 1e3:.0f} mm (analytic SDF)")],
                loc="lower center", ncol=5, frameon=False, fontsize=11)
-    fig.suptitle("Hyper-reduced hand grasping a rigid ball: elastic energy on the coarse mesh, contact (cubic "
+    fig.suptitle(f"Hyper-reduced hand grasping a rigid {kind}: elastic energy on the coarse mesh, contact (cubic "
                  "penalty) on the fine surface vertices x_s = B_s x, statics", fontsize=13)
     fig.tight_layout(rect=(0.08, 0.03, 1, 0.965))
     fig.savefig(os.path.join(REN, f"31_ball_{ftag}.png"), dpi=80)
@@ -120,4 +128,4 @@ def main(tag, ftag):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "ball")

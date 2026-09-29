@@ -60,6 +60,7 @@
   "flex_t": 0.005,
   "flex_inset": 0.002,
   "flex_dorsal_gap": 0.001,
+  "flex_side": "palmar",
   "overlap": 0.0005,
   "pad_t": 0.008,
   "thumb_seg": [
@@ -102,9 +103,9 @@
   ]
  },
  "surface_nopads": {
-  "V": 360,
-  "E": 1074,
-  "F": 716,
+  "V": 276,
+  "E": 822,
+  "F": 548,
   "chi": 2,
   "components": 1,
   "boundary_loops": 0,
@@ -117,9 +118,9 @@
   "shells": 1
  },
  "surface_pads": {
-  "V": 440,
-  "E": 1314,
-  "F": 876,
+  "V": 356,
+  "E": 1062,
+  "F": 708,
   "chi": 2,
   "components": 1,
   "boundary_loops": 0,

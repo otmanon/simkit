@@ -1,0 +1,123 @@
+{
+ "max_extrapolation": 1.0,
+ "fine_vertices": 11336,
+ "fine_tets": 51755,
+ "modes": 99,
+ "top_mode_hz": 528.399052229911,
+ "pad_modes_in_basis": {
+  "index_pad": [
+   13,
+   21,
+   33,
+   41,
+   42,
+   47,
+   65,
+   66,
+   77,
+   81,
+   82,
+   88,
+   95
+  ],
+  "middle_pad": [
+   15,
+   18,
+   29,
+   35,
+   38,
+   39,
+   48,
+   58,
+   59,
+   60,
+   69,
+   71,
+   73,
+   79,
+   87
+  ],
+  "ring_pad": [
+   14,
+   20,
+   30,
+   37,
+   43,
+   44,
+   62,
+   64,
+   67,
+   75,
+   76,
+   78,
+   84,
+   92
+  ],
+  "little_pad": [
+   10,
+   12,
+   22,
+   45,
+   50,
+   51,
+   52,
+   54,
+   83,
+   85,
+   90,
+   93
+  ],
+  "thumb_pad": [
+   16,
+   19,
+   28,
+   32,
+   34,
+   46,
+   49,
+   56,
+   57,
+   63,
+   68,
+   70,
+   80,
+   89
+  ],
+  "palm_pad": [
+   91,
+   94,
+   96
+  ]
+ },
+ "levels": [
+  {
+   "target": 1200,
+   "min_quality": 0.3,
+   "suffix": "_palmar_mixw3",
+   "vertices": 1200,
+   "tets": 4379,
+   "stages": [
+    {
+     "bound": 1.0,
+     "vertices": 1200,
+     "modes": 99
+    }
+   ],
+   "genus": 0.0,
+   "closed_manifold": true,
+   "components": 1,
+   "min_tet_volume_mm3": 0.22535563717934165,
+   "inverted_tets": 0,
+   "tets_by_kind": {
+    "palm": 648,
+    "link": 1011,
+    "flexure": 199,
+    "pad": 2521
+   },
+   "volume_ratio": 0.68192669728878,
+   "parts_without_tets": [],
+   "P_min": -0.9954910921226071,
+   "seconds": 54.34677338600159
+  }
+ ]
+}
