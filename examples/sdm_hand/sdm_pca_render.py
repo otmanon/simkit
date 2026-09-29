@@ -116,7 +116,7 @@ def interp(d, a):
     return ((1 - t) * d["static_x"][i] + t * d["static_x"][i + 1]).reshape(-1, 3).astype(float)
 
 
-def fig_statics(F, runs, ref):
+def fig_statics(F, runs, ref, name="26_pca_statics.png"):
     avals = [0.0, 1 / 3, 2 / 3, 1.0]
     rows = []
     for tag, title, d, P in runs:
@@ -146,14 +146,14 @@ def fig_statics(F, runs, ref):
         ax[i, 0].text(-0.05, 0.5, lab, transform=ax[i, 0].transAxes, ha="right", va="center", fontsize=11.5)
     fig.legend(handles=[Patch(color=KIND_COL[k], label=KIND_LAB[k]) for k in ORDER], loc="lower center",
                ncol=4, frameon=False, fontsize=11)
-    fig.suptitle("Quasi-static closing in the PCA and mixed subspaces (3,600 DOFs, hinge pins 1e5) vs the full "
-                 "space; error = |B x - x_full| / |x_full - X| at a = 1", fontsize=13)
+    fig.suptitle("Quasi-static closing, 3,600-DOF subspaces (hinge pins 1e5) vs the full space; "
+                 "error = |B x - x_full| / |x_full - X| at a = 1", fontsize=13)
     fig.tight_layout(rect=(0.1, 0.02, 1, 0.975))
-    fig.savefig(os.path.join(REN, "26_pca_statics.png"), dpi=80)
-    print("wrote renders/26_pca_statics.png")
+    fig.savefig(os.path.join(REN, name), dpi=80)
+    print("wrote renders/" + name)
 
 
-def video(F, runs, ref, n=73, fps=24):
+def video(F, runs, ref, n=73, fps=24, name="pca_closing.mp4"):
     import imageio.v2 as imageio
     panels = []
 
@@ -181,7 +181,7 @@ def video(F, runs, ref, n=73, fps=24):
     pl = plotter("full space")
     pl.add_mesh(fs, **kind_opts(0.0) | dict(show_edges=False))
     panels.append((pl, fs, F.pid, ref, "full"))
-    w = imageio.get_writer(os.path.join(REN, "pca_closing.mp4"), fps=fps, codec="libx264", macro_block_size=1,
+    w = imageio.get_writer(os.path.join(REN, name), fps=fps, codec="libx264", macro_block_size=1,
                            quality=8)
     for a in np.concatenate([np.linspace(0, 1, n), np.ones(18)]):
         imgs = []
@@ -197,11 +197,18 @@ def video(F, runs, ref, n=73, fps=24):
     w.close()
     for p in panels:
         p[0].close()
-    print("wrote renders/pca_closing.mp4")
+    print("wrote renders/" + name)
 
 
 if __name__ == "__main__":
     F = Fine()
+    if "--bounded" in sys.argv:
+        RUNS[:] = [("1200_q30pca", "PCA, extrapolation unbounded", "1200_q30pca_kpin100000"),
+                   ("1200_q30pcaE1", "PCA, extrapolation <= 1", "1200_q30pcaE1_kpin100000")]
+        runs, ref = load_runs(F)
+        fig_statics(F, runs, ref, name="27_pca_bounded_statics.png")
+        video(F, runs, ref, name="pca_bounded_closing.mp4")
+        raise SystemExit
     fig_modes_meshes(F)
     runs, ref = load_runs(F)
     fig_statics(F, runs, ref)
