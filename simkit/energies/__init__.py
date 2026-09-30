@@ -55,3 +55,5 @@ from .emu import *
 from .bending_energy import *
 from .barrier_energies import *
 from .mass_springs import *
+from .sdf_contact import *
+from .tangential_friction import *

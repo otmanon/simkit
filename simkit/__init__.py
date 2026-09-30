@@ -91,6 +91,9 @@ with _core:
     from .average_onto_simplex import average_onto_simplex
     from .combine_meshes import combine_meshes
     from .winding_number import winding_number
+    from .affine_embedding_matrix import affine_embedding_matrix
+    from .sphere_sdf import sphere_sdf
+    from .cup_sdf import cup_sdf
     from .edge_lengths import edge_lengths
     from .gradient_cfd import gradient_cfd
     from .hessian_cfd import hessian_cfd
