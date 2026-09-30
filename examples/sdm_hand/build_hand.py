@@ -1,27 +1,8 @@
-"""Build the compliant hand: box-CSG geometry, tet mesh, materials and actuation rig.
-
-A simplified SDM-style hand (Dollar & Howe, IJRR 2010): stiff polyurethane blocks
-joined by thin elastomer flexures, soft fingertip and palm pads, four fingers and
-an opposable thumb carried by a tapered thenar mound. The flexures sit on the
-palmar side (hinges at the palmar corners, so closing never drives the blocks
-into each other); one actuator spring per joint on the dorsal side lengthens to
-flex it. The union is one genus-0 solid.
-
-Writes to ``data/sdm_hand/``:
-
-* ``hand.obj``        boundary surface of the tet mesh (metres)
-* ``hand_tets.npz``   ``X, T``, per-tet ``part`` (index into ``part_names``),
-                      ``part_kind``, and materials ``E, nu, rho``
-* ``hand_rig.npz``    actuator springs (anchor points on the blocks either side of
-                      each joint, rest length, contraction ratio), hinge axes (two
-                      points per joint), wrist-base vertices, fingertip vertices
-
-Needs ``manifold3d``, ``tetgen``, ``pyvista`` and ``libigl``::
-
-    python examples/sdm_hand/build_hand.py
-"""
+"""Box-CSG compliant hand (palmar flexures, dorsal actuators, pads) -> data/sdm_hand/:
+hand.obj, hand_tets.npz (X, T, part labels, materials), hand_rig.npz (actuators, hinge axes,
+wrist base, fingertips). Needs manifold3d, tetgen, pyvista, libigl."""
 import os
-from dataclasses import dataclass, field
+from types import SimpleNamespace
 
 import igl
 import manifold3d as m3d
@@ -30,46 +11,25 @@ import pyvista as pv
 import tetgen
 
 from simkit.filesystem import get_data_directory
+from hand import part_vertices
 
 OUT = os.path.join(get_data_directory(), "sdm_hand")
 mm = 1e-3
-# kind -> (E [Pa], nu, rho [kg/m^3])
 MATERIALS = {"palm": (1.5e9, 0.35, 1150.0), "link": (1.5e9, 0.35, 1150.0),
              "flexure": (6.0e6, 0.45, 1050.0), "pad": (0.2e6, 0.45, 1030.0)}
-PRIORITY = ("pad", "flexure", "link", "palm")               # label order: first match wins
-TARGET_DEG = {"finger": (32.0, 34.0, 26.0), "thumb": (30.0, 26.0, 26.0)}   # flexion per joint at a = 1
-ANCHOR_OFFSET = 4 * mm                                    # actuator anchors 4 mm from each joint
+PRIORITY = ("pad", "flexure", "link", "palm")
+TARGET_DEG = {"finger": (32.0, 34.0, 26.0), "thumb": (30.0, 26.0, 26.0)}
+ANCHOR_OFFSET = 4 * mm
 
 
-@dataclass
-class HandParams:
-    palm_t: float = 22 * mm                               # palm thickness (y); palmar face at y = 0
-    palm_x: tuple = (-45 * mm, 45 * mm)
-    palm_z: tuple = (0.0, 95 * mm)
-    wrist: tuple = (-25 * mm, 25 * mm, 2 * mm, 20 * mm, -30 * mm, 0.5 * mm)
-    # finger: (x centre, width, (proximal, middle, distal) lengths)
-    fingers: dict = field(default_factory=lambda: {
-        "index": (-32 * mm, 19 * mm, (40 * mm, 25 * mm, 20 * mm)),
-        "middle": (-10.5 * mm, 20 * mm, (45 * mm, 28 * mm, 22 * mm)),
-        "ring": (11 * mm, 19 * mm, (42 * mm, 26 * mm, 21 * mm)),
-        "little": (31 * mm, 16 * mm, (32 * mm, 20 * mm, 18 * mm))})
-    phal_t: float = 17 * mm
-    flex_len: float = 6 * mm
-    flex_t: float = 5 * mm
-    flex_inset: float = 2 * mm
-    overlap: float = 0.5 * mm
-    pad_t: float = 8 * mm
-    # thumb, built along local +z with its palmar side at local -y
-    thumb_seg: tuple = ((26 * mm, 24 * mm), (30 * mm, 20 * mm), (24 * mm, 19 * mm))
-    thumb_half_t: float = 8 * mm
-    thumb_flex_t: float = 4 * mm
-    thumb_pronation: float = 50.0
-    thumb_tilt: float = 15.0
-    thumb_abduction: float = -50.0
-    thumb_base: tuple = (-61 * mm, 8 * mm, 25.5 * mm)
-    thenar_z: tuple = (0.0, 60 * mm)
-    thenar_depth: float = 12 * mm
-    palm_pad: tuple = (-38 * mm, 38 * mm, -3 * mm, 0.5 * mm, 20 * mm, 85 * mm)
+p = SimpleNamespace(
+    palm_t=22 * mm, palm_x=(-45 * mm, 45 * mm), palm_z=(0.0, 95 * mm), wrist=(-25 * mm, 25 * mm, 2 * mm, 20 * mm, -30 * mm, 0.5 * mm),
+    fingers={"index": (-32 * mm, 19 * mm, (40 * mm, 25 * mm, 20 * mm)), "middle": (-10.5 * mm, 20 * mm, (45 * mm, 28 * mm, 22 * mm)),
+             "ring": (11 * mm, 19 * mm, (42 * mm, 26 * mm, 21 * mm)), "little": (31 * mm, 16 * mm, (32 * mm, 20 * mm, 18 * mm))},
+    phal_t=17 * mm, flex_len=6 * mm, flex_t=5 * mm, flex_inset=2 * mm, overlap=0.5 * mm, pad_t=8 * mm,
+    thumb_seg=((26 * mm, 24 * mm), (30 * mm, 20 * mm), (24 * mm, 19 * mm)), thumb_half_t=8 * mm, thumb_flex_t=4 * mm,
+    thumb_pronation=50.0, thumb_tilt=15.0, thumb_abduction=-50.0, thumb_base=(-61 * mm, 8 * mm, 25.5 * mm),
+    thenar_z=(0.0, 60 * mm), thenar_depth=12 * mm, palm_pad=(-38 * mm, 38 * mm, -3 * mm, 0.5 * mm, 20 * mm, 85 * mm))
 
 
 def box(x0, x1, y0, y1, z0, z1):
@@ -84,7 +44,6 @@ def to_VF(M):
 
 
 def thumb_frame(p):
-    """4x4 transform from the thumb's local frame to the hand frame."""
     def rot(axis, deg):
         c, s = np.cos(np.radians(deg)), np.sin(np.radians(deg))
         R = np.eye(3)
@@ -98,16 +57,14 @@ def thumb_frame(p):
 
 
 def build_parts(p):
-    """Ordered ``{name: (Manifold, kind)}``, kind in palm / link / flexure / pad."""
     T, ov, fl = p.palm_t, p.overlap, p.flex_len
     A = thumb_frame(p)
-    # thenar mound: hull of a slab on the palm's radial side and the thumb's base section
     plate = box(-p.thumb_seg[0][1] / 2, p.thumb_seg[0][1] / 2, -p.thumb_half_t, p.thumb_half_t, -mm, 0.0)
     slab = box(p.palm_x[0], p.palm_x[0] + p.thenar_depth, 0.0, T, *p.thenar_z)
     thenar = m3d.Manifold.batch_hull([plate.transform(A[:3, :]), slab]) ^ \
         box(-0.2, 0.2, -0.2, 0.2, -0.4, 0.0).transform(A[:3, :])
     parts = {"wrist": (box(*p.wrist), "palm"), "palm": (box(*p.palm_x, 0, T, *p.palm_z) + thenar, "palm")}
-    y0 = (T - p.phal_t) / 2                                # palmar face of the phalanges
+    y0 = (T - p.phal_t) / 2
     for f, (xc, w, L) in p.fingers.items():
         z = p.palm_z[1]
         for i, l in enumerate(L):
@@ -130,9 +87,6 @@ def build_parts(p):
 
 
 def joints(p):
-    """Per flexure joint: blocks below/above, frame A (local z along the digit, local
-    x the hinge axis), local z-span of the flexure, hinge height y_mid and the local
-    y of the dorsal faces the actuator is anchored to."""
     out = []
     y0 = (p.palm_t - p.phal_t) / 2
     for f, (xc, w, L) in p.fingers.items():
@@ -154,7 +108,6 @@ def joints(p):
 
 
 def sizing_field(V, parts, h_flex=0.0022, h_pad=0.0035, h_tip=0.0013, h_coarse=0.012, grad=0.6, spacing=0.0025):
-    """Background grid with TetGen's ``target_size``: fine in the flexures and pads."""
     lo, hi = V.min(0) - 0.005, V.max(0) + 0.005
     g = pv.ImageData(dimensions=tuple(np.ceil((hi - lo) / spacing).astype(int) + 1),
                      spacing=(spacing,) * 3, origin=lo).triangulate()
@@ -173,19 +126,8 @@ def sizing_field(V, parts, h_flex=0.0022, h_pad=0.0035, h_tip=0.0013, h_coarse=0
     return g
 
 
-def part_vertices(T, part, pid):
-    """Vertices whose incident tets all belong to part ``pid`` (all its vertices if
-    fewer than 4)."""
-    inside = np.zeros(T.max() + 1, bool)
-    inside[np.unique(T[part == pid])] = True
-    touch = inside.copy()
-    inside[np.unique(T[part != pid])] = False
-    return np.nonzero(inside if inside.sum() >= 4 else touch)[0]
-
-
 def main():
     os.makedirs(OUT, exist_ok=True)
-    p = HandParams()
     parts = build_parts(p)
     names = list(parts)
     kinds = np.array([parts[n][1] for n in names])
@@ -197,11 +139,6 @@ def main():
     if (np.einsum("ij,ij->i", b - a, np.cross(c - a, d - a)) < 0).mean() > 0.5:
         T = T[:, [0, 2, 1, 3]]
     Fb = igl.boundary_facets(T)[0]
-    chi = len(np.unique(Fb)) - len(np.unique(np.sort(np.vstack([Fb[:, [0, 1]], Fb[:, [1, 2]], Fb[:, [2, 0]]]), 1),
-                                             axis=0)) + len(Fb)
-    assert chi == 2, "the tet boundary is not one closed genus-0 surface"
-
-    # per-tet part by generalized winding number, pads > flexures > links > palm
     C = X[T].mean(1)
     part = np.full(len(T), -1)
     for i in sorted(range(len(names)), key=lambda i: PRIORITY.index(kinds[i])):
@@ -217,8 +154,6 @@ def main():
         r[used] = np.arange(len(used))
         np.savetxt(f, X[used], fmt="v %.9f %.9f %.9f")
         np.savetxt(f, r[Fb] + 1, fmt="f %d %d %d")
-
-    # rig: one dorsal actuator per joint (lengthens by r * theta at a = 1), hinge axes
     rig = {k: [] for k in ("spring_below", "spring_pa", "spring_above", "spring_pb", "l_rest", "c",
                            "hinge_below", "hinge_above", "hinge_q")}
     for jt in joints(p):
@@ -240,7 +175,7 @@ def main():
             rig[k].append(v)
     fingers = list(p.fingers) + ["thumb"]
     tips = []
-    for f in fingers:                                      # far face of the distal block
+    for f in fingers:
         v = part_vertices(T, part, names.index(f"{f}_ph2"))
         A = [j for j in joints(p) if j["name"] == f"{f}_flex2"][0]["A"]
         s = (X[v] - A[:3, 3]) @ A[:3, 2]

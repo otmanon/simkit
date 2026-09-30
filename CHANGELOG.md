@@ -6,21 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 While the version stays below `1.0`, the public API may change in any release.
 
-## [Unreleased]
-
-### Added
-
-- **`affine_embedding_matrix`** — embeds points as affine combinations of nearby
-  vertices (exact under affine, hence rigid, motion); for springs, pins or
-  tendons attached where no vertex sits.
-- **`sphere_sdf`**, **`cup_sdf`** — analytic signed distances (and gradients) of a
-  sphere and of an open cylindrical cup.
-- **`energies.sdf_contact_*_x`** — cubic penalty contact of points `S x` against a
-  rigid object given by its signed distance, with a PSD Gauss-Newton Hessian.
-- **`energies.tangential_friction_*_x`** — lagged viscous friction: a quadratic
-  penalty on tangential motion away from per-step anchors.
-- **`examples/sdm_hand`** — a hyper-reduced compliant hand grasping a ball and a cup.
-
 ## [0.1.8] - 2026-09-23
 
 ### Removed
