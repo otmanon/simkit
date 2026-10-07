@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 While the version stays below `1.0`, the public API may change in any release.
 
+## [Unreleased]
+
+### Added
+
+- **`sparse_meshless`** — sparse meshless models of heterogeneous deformable
+  solids (Faure et al., SIGGRAPH 2011) on triangle meshes with a per-element
+  Young's modulus. `sparse_meshless_methods_basis` places control frames in the
+  compliance-distance metric (farthest-point sampling + Lloyd relaxation),
+  builds material-aware Voronoi skinning weights `W`, and assembles a sparse
+  linear-blend-skinning subspace `B`. `sparse_lbs_jacobian` is a sparse,
+  DOF-order-compatible drop-in for `lbs_jacobian`; `lbs_affine_coordinates`
+  returns the reduced coordinates of a global affine map (patch test helper).
+
 ## [0.1.8] - 2026-09-23
 
 ### Removed

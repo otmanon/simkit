@@ -148,6 +148,14 @@ with _core:
     from .farthest_point_sampling import farthest_point_sampling
     from .spectral_clustering import spectral_clustering
     from .spectral_cubature import spectral_cubature
+    from .sparse_meshless import (
+        sparse_meshless_methods_basis,
+        sparse_lbs_jacobian,
+        lbs_affine_coordinates,
+        compliance_graph,
+        compliance_distances,
+        voronoi_shape_functions,
+    )
 
     # Finite-difference variations -- pure numpy.
     from .variation_fd import variation_fd
