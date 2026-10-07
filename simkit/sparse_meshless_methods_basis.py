@@ -26,8 +26,6 @@ Everything downstream flows from that one metric:
 * :func:`simkit.lbs_jacobian` (``sparse=True``) -- assembles ``W`` into a
   sparse linear-blend-skinning subspace ``B`` (affine frames, Sec. 3); point
   frames are the simpler ``kron(W, I)``.
-* :func:`simkit.lbs_affine_coordinates`    -- reduced coordinates of a global
-  affine map, for the patch test.
 
 This module provides the one-call entry point that chains them.
 """
@@ -127,8 +125,8 @@ def sparse_meshless_methods_basis(
     >>> X, T = ...                       # triangle mesh
     >>> ym = np.where(stiff_elements, 1e4, 1.0)
     >>> W, B, labels, nodes = simkit.sparse_meshless_methods_basis(X, T, ym, n_nodes=12)
-    >>> z = simkit.lbs_affine_coordinates(len(nodes), np.eye(2), np.zeros(2))
-    >>> np.allclose((B @ z).reshape(-1, 2), X)   # rest state is reproduced
+    >>> z_rest = np.tile(np.c_[np.eye(2), np.zeros(2)].T.ravel(), len(nodes))
+    >>> np.allclose((B @ z_rest).reshape(-1, 2), X)   # every frame = identity reproduces the rest state
     True
     """
     X = np.asarray(X, dtype=float)

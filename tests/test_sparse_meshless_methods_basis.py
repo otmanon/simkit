@@ -6,7 +6,6 @@ import numpy as np
 import pytest
 import scipy.sparse as sps
 
-from simkit.lbs_affine_coordinates import lbs_affine_coordinates
 from simkit.lbs_jacobian import lbs_jacobian
 from simkit.sparse_meshless_methods_basis import sparse_meshless_methods_basis
 
@@ -28,11 +27,12 @@ def test_affine_patch_test(stiff_bar_strip) -> None:
     X, T, ym = stiff_bar_strip
     W, B, labels, nodes = sparse_meshless_methods_basis(X, T, ym, n_nodes=8)
     k = len(nodes)
+    # every frame carrying the same [A | t] (column-major per frame) reproduces x -> A x + t
     A = np.array([[1.3, 0.2], [-0.1, 0.8]])
     t = np.array([0.5, -0.2])
-    z = lbs_affine_coordinates(k, A, t)
+    z = np.tile(np.c_[A, t].T.ravel(), k).reshape(-1, 1)
     np.testing.assert_allclose((B @ z).reshape(-1, 2), X @ A.T + t, atol=1e-12)
-    z0 = lbs_affine_coordinates(k, np.eye(2), np.zeros(2))
+    z0 = np.tile(np.c_[np.eye(2), np.zeros(2)].T.ravel(), k).reshape(-1, 1)
     np.testing.assert_allclose((B @ z0).reshape(-1, 2), X, atol=1e-12)
 
 

@@ -73,8 +73,11 @@ def lbs_jacobian(
     Each of the ``k`` frames carries a ``d x (d + 1)`` affine transform
     ``[A_k | t_k]``, so there are ``k * d * (d + 1)`` DOFs. The DOF index is
     ``(k * (d + 1) + poly) * d + component`` with polynomial basis
-    ``[x, y, (z,) 1]`` per frame; see :func:`simkit.lbs_affine_coordinates`
-    for the coordinates that realise a global affine map in this layout.
+    ``[x, y, (z,) 1]`` per frame. Because the weights sum to one, giving every
+    frame the same affine map ``[A | t]`` reproduces ``x -> A x + t`` on the
+    whole mesh; in this layout those coordinates are
+    ``z = np.tile(np.c_[A, t].T.ravel(), k)``, and ``A = I, t = 0`` is the
+    rest state.
 
     Parameters
     ----------

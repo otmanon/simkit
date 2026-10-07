@@ -155,7 +155,6 @@ with _core:
     from .compliance_node_sampling import compliance_node_sampling
     from .voronoi_labels import voronoi_labels
     from .voronoi_shape_functions import voronoi_shape_functions
-    from .lbs_affine_coordinates import lbs_affine_coordinates
     from .sparse_meshless_methods_basis import sparse_meshless_methods_basis
 
     # Finite-difference variations -- pure numpy.
