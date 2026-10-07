@@ -7,7 +7,6 @@ import pytest
 
 from simkit.lbs_affine_coordinates import lbs_affine_coordinates
 from simkit.lbs_jacobian import lbs_jacobian
-from simkit.sparse_lbs_jacobian import sparse_lbs_jacobian
 
 
 def test_shape_and_layout() -> None:
@@ -32,7 +31,7 @@ def test_reproduces_affine_map_with_dense_and_sparse_bases(d) -> None:
     z = lbs_affine_coordinates(k, A, t)
     expected = X @ A.T + t
     np.testing.assert_allclose((lbs_jacobian(X, W) @ z).reshape(-1, d), expected, atol=1e-12)
-    np.testing.assert_allclose((sparse_lbs_jacobian(X, W) @ z).reshape(-1, d), expected, atol=1e-12)
+    np.testing.assert_allclose((lbs_jacobian(X, W, sparse=True) @ z).reshape(-1, d), expected, atol=1e-12)
 
 
 def test_identity_gives_rest_state() -> None:
@@ -40,4 +39,4 @@ def test_identity_gives_rest_state() -> None:
     X = rng.standard_normal((8, 2))
     W = np.ones((8, 1))
     z = lbs_affine_coordinates(1, np.eye(2), np.zeros(2))
-    np.testing.assert_allclose((sparse_lbs_jacobian(X, W) @ z).reshape(-1, 2), X, atol=1e-14)
+    np.testing.assert_allclose((lbs_jacobian(X, W, sparse=True) @ z).reshape(-1, 2), X, atol=1e-14)

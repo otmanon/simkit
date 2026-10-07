@@ -23,8 +23,9 @@ Everything downstream flows from that one metric:
 * :func:`simkit.voronoi_labels`            -- the Voronoi partition.
 * :func:`simkit.voronoi_shape_functions`   -- the material-aware, partition-of-
   unity, interpolating, compact-support skinning weights ``W`` (Sec. 4.3).
-* :func:`simkit.sparse_lbs_jacobian`       -- assembles ``W`` into a sparse
-  linear-blend-skinning subspace ``B`` (affine or point frames, Sec. 3).
+* :func:`simkit.lbs_jacobian` (``sparse=True``) -- assembles ``W`` into a
+  sparse linear-blend-skinning subspace ``B`` (affine frames, Sec. 3); point
+  frames are the simpler ``kron(W, I)``.
 * :func:`simkit.lbs_affine_coordinates`    -- reduced coordinates of a global
   affine map, for the patch test.
 
@@ -42,7 +43,7 @@ import scipy.sparse
 from .compliance_distances import compliance_distances
 from .compliance_graph import compliance_graph
 from .compliance_node_sampling import compliance_node_sampling
-from .sparse_lbs_jacobian import sparse_lbs_jacobian
+from .lbs_jacobian import lbs_jacobian
 from .voronoi_labels import voronoi_labels
 from .voronoi_shape_functions import voronoi_shape_functions
 
@@ -80,8 +81,10 @@ def sparse_meshless_methods_basis(
         Number of control nodes / frames (the model's sparsity). Soft regions
         automatically receive proportionally more of them.
     frame_order : {0, 1}, optional
-        ``1`` = affine frames (default, the paper's recommended compromise),
-        ``0`` = point/translation frames.
+        ``1`` = affine frames (default, the paper's recommended compromise):
+        ``dim * (dim + 1)`` DOFs per node, assembled with
+        :func:`simkit.lbs_jacobian` (``sparse=True``). ``0`` = point /
+        translation frames: ``dim`` DOFs per node, ``B = kron(W, I)``.
     support_scale : float, optional
         Widens or tightens the shape-function supports (see
         :func:`simkit.voronoi_shape_functions`).
@@ -102,8 +105,9 @@ def sparse_meshless_methods_basis(
     W : scipy.sparse.csr_matrix (n, k)
         Material-aware skinning weights (partition of unity, compact support).
     B : scipy.sparse.csr_matrix (n*dim, r)
-        Sparse linear-blend-skinning subspace, ``x = B z`` (affine frames) or
-        ``u = B z`` (point frames).
+        Sparse linear-blend-skinning subspace, ``x = B z`` with
+        ``r = k * dim * (dim + 1)`` (affine frames) or ``u = B z`` with
+        ``r = k * dim`` (point frames).
     labels : np.ndarray (t,)
         Voronoi region (control-frame index) each triangle cell belongs to.
     nodes : np.ndarray (k,)
@@ -111,6 +115,11 @@ def sparse_meshless_methods_basis(
     D_nodes : np.ndarray (k, n)
         Compliance distance from each control frame to every vertex. Returned
         **only** when ``return_distances=True``.
+
+    Raises
+    ------
+    ValueError
+        If ``frame_order`` is not 0 or 1.
 
     Examples
     --------
@@ -133,7 +142,12 @@ def sparse_meshless_methods_basis(
 
     _, labels = voronoi_labels(D_nodes, T)
     W = voronoi_shape_functions(D_nodes, nodes, support_scale=support_scale)
-    B = sparse_lbs_jacobian(X, W, order=frame_order)
+    if frame_order == 1:
+        B = lbs_jacobian(X, W, sparse=True)
+    elif frame_order == 0:
+        B = sp.sparse.kron(W, sp.sparse.identity(X.shape[1]), format="csr")
+    else:
+        raise ValueError("frame_order must be 0 (point frames) or 1 (affine frames)")
 
     if return_distances:
         return W, B, labels, nodes, D_nodes

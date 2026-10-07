@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 import scipy.sparse as sps
 
 from simkit.lbs_affine_coordinates import lbs_affine_coordinates
@@ -51,7 +52,17 @@ def test_return_distances_and_point_frames(small_stiff_bar_strip) -> None:
     assert D.shape == (4, X.shape[0])
     assert np.all(np.isfinite(D))
     np.testing.assert_allclose(D[np.arange(4), nodes], 0.0)
-    assert B.shape == (X.shape[0] * 2, 4 * 2)
+    assert sps.issparse(B) and B.shape == (X.shape[0] * 2, 4 * 2)
+    np.testing.assert_allclose(B.toarray(), np.kron(W.toarray(), np.eye(2)), atol=1e-14)
+    # a uniform translation of every node translates every vertex
+    t = np.array([0.3, -0.7])
+    np.testing.assert_allclose((B @ np.tile(t, 4)).reshape(-1, 2), np.tile(t, (X.shape[0], 1)), atol=1e-14)
+
+
+def test_invalid_frame_order_raises(small_stiff_bar_strip) -> None:
+    X, T, ym = small_stiff_bar_strip
+    with pytest.raises(ValueError):
+        sparse_meshless_methods_basis(X, T, ym, n_nodes=4, frame_order=2)
 
 
 def test_seed_nodes_and_edge_reduce_are_forwarded(small_stiff_bar_strip) -> None:

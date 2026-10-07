@@ -20,11 +20,16 @@ While the version stays below `1.0`, the public API may change in any release.
   - `voronoi_labels` — nearest-node partition of vertices and triangles.
   - `voronoi_shape_functions` — material-aware, partition-of-unity,
     interpolating, compact-support skinning weights `W`.
-  - `sparse_lbs_jacobian` — sparse linear-blend-skinning subspace `B` with the
-    same affine DOF ordering as `lbs_jacobian` (drop-in, but sparse).
   - `lbs_affine_coordinates` — reduced coordinates of a global affine map, for
     rest-state recovery and the linear-precision patch test.
   - `sparse_meshless_methods_basis` — one-call entry point chaining the above.
+
+### Changed
+
+- **`lbs_jacobian`** gains a `sparse=False` flag. With `sparse=True` it
+  assembles only the non-zeros of `W` and returns a `scipy.sparse.csr_matrix`
+  with the same DOF ordering as the dense result, so compact-support weights
+  keep their block structure. The default (dense) behaviour is unchanged.
 
 ## [0.1.8] - 2026-09-23
 

@@ -17,8 +17,8 @@ def lbs_affine_coordinates(n_nodes: int, A: np.ndarray, t: np.ndarray) -> np.nda
     uniform stretch gives a uniform deformation gradient). ``A = I, t = 0``
     returns the rest-state ``z``.
 
-    The DOF ordering matches :func:`simkit.sparse_lbs_jacobian` (``order=1``)
-    and :func:`simkit.lbs_jacobian`.
+    The DOF ordering matches :func:`simkit.lbs_jacobian` (dense or
+    ``sparse=True``).
 
     Parameters
     ----------
