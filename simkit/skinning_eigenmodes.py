@@ -5,6 +5,8 @@ boundary reduction or equality constraints, then forms the skinning Jacobian
 from the mode weights.
 """
 
+from __future__ import annotations
+
 from typing import Optional, Tuple
 
 import numpy as np
@@ -20,7 +22,7 @@ def skinning_eigenmodes(
     X: np.ndarray,
     T: np.ndarray,
     k: int,
-    mu: float = 1,
+    mu: float | np.ndarray = 1,
     bI: Optional[np.ndarray] = None,
     Aeq: Optional[sp.sparse.spmatrix] = None,
 ) -> Tuple[np.ndarray, np.ndarray, sp.sparse.spmatrix]:
@@ -34,8 +36,11 @@ def skinning_eigenmodes(
         Mesh simplices.
     k : int
         Number of modes to compute.
-    mu : float, optional
-        Stiffness parameter passed to the Dirichlet Laplacian.
+    mu : float or np.ndarray (nt,), optional
+        Stiffness weight passed to the Dirichlet Laplacian: a scalar for a
+        homogeneous material, or one value per element (e.g. the Lamé ``mu`` of
+        a heterogeneous model) so the modes are material-aware and vary mostly
+        in the soft parts.
     bI : np.ndarray, optional
         Pinned vertex indices; eigenproblem is solved on the free subset and
         embedded back into full vertex space.
