@@ -6,6 +6,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 While the version stays below `1.0`, the public API may change in any release.
 
+## [0.1.9] - 2026-10-07
+
+### Added
+
+- **Sparse meshless models** (Faure, Gilles, Bousquet, Pai, *Sparse Meshless
+  Models of Complex Deformable Solids*, SIGGRAPH 2011) on triangle meshes with
+  a per-element Young's modulus, as a set of flat one-function modules:
+  - `compliance_graph` — mesh-edge graph weighted by `length / E`.
+  - `compliance_distances` — Dijkstra compliance distances on that graph.
+  - `compliance_node_sampling` — farthest-point sampling + Lloyd relaxation in
+    the compliance metric (more nodes in soft regions, fewer in stiff ones).
+  - `voronoi_labels` — nearest-node partition of vertices and triangles.
+  - `voronoi_shape_functions` — material-aware, partition-of-unity,
+    interpolating, compact-support skinning weights `W`: clamped-linear tents
+    in compliance distance whose radius is the distance to the nearest other
+    node, widened per vertex (to the sum of its two nearest node distances)
+    only where that would leave the vertex uncovered, so the weights are
+    continuous everywhere.
+  - `sparse_meshless_methods_basis` — one-call entry point chaining the above.
+
+### Changed
+
+- **`skinning_eigenmodes`** documents (and tests) its per-element `mu`: pass
+  the Lamé `mu` of a heterogeneous model and the eigenmodes become
+  material-aware, nearly constant on stiff parts and varying in soft ones.
+  The behaviour was already there; the signature and docstring said scalar.
+- **`lbs_jacobian`** gains a `sparse=False` flag. With `sparse=True` it
+  assembles only the non-zeros of `W` and returns a `scipy.sparse.csr_matrix`
+  with the same DOF ordering as the dense result, so compact-support weights
+  keep their block structure. The default (dense) behaviour is unchanged.
+
 ## [0.1.8] - 2026-09-23
 
 ### Removed
