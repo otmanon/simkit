@@ -1,10 +1,13 @@
 """Material-aware Voronoi skinning weights (Faure et al. 2011, Sec. 4.3).
 
 The original paper smooths kernels by recursively subdividing Voronoi
-iso-surfaces on a voxel grid. Here that is replaced by the closed-form
-clamped-linear tent it converges to (value ``1`` at the node, ``0.5`` at the
-Voronoi frontier, ``0`` at the neighbouring node), evaluated in the compliance
-metric so material interfaces stay sharp.
+iso-surfaces on a voxel grid, converging to shape functions that are ``1`` at
+a node, ``0.5`` on its Voronoi frontier and ``0`` at the neighbouring nodes,
+linear in compliance distance in between. Here that limit is written in closed
+form as a clamped-linear tent whose radius is the distance to the nearest
+other node, widened only where that would leave a vertex uncovered, which
+keeps the weights continuous, compactly supported and exactly interpolating
+without any post-processing.
 """
 
 from __future__ import annotations
@@ -17,27 +20,32 @@ import scipy.sparse
 def voronoi_shape_functions(
     D_nodes: np.ndarray,
     nodes: np.ndarray,
-    support_scale: float = 1.25,
+    support_scale: float = 1.0,
 ) -> sp.sparse.csr_matrix:
     """Material-aware skinning weights ``W`` (the paper's Voronoi kernels).
 
-    Each node ``a`` gets a clamped-linear "tent" in the compliance metric,
+    Every node ``a`` gets a clamped-linear tent in the compliance metric,
 
-        ``w_a(v) = max(0, 1 - d_a(v) / R_a)`` ,
+        ``w_a(v) = max(0, 1 - d_a(v) / R_a(v))``,
+        ``R_a(v) = support_scale * max(r_a, d_(1)(v) + d_(2)(v))``,
 
-    with support radius ``R_a = support_scale * (distance to nearest other
-    node)``. At ``support_scale = 1`` the tent is exactly ``1`` at the node,
-    ``0.5`` at the Voronoi frontier (half-way to the nearest neighbour) and
-    ``0`` at that neighbour -- the paper's ideal, linear-in-compliance-distance
-    shape function. The tents are then normalised to a partition of unity.
-    Because the metric makes crossing soft material expensive, a node's
-    support does not leak across a stiff bone into the flesh beyond it, giving
-    the sharp interfaces the method is designed for.
+    where ``r_a`` is the compliance distance from node ``a`` to its nearest
+    other node and ``d_(1)(v) <= d_(2)(v)`` are the two smallest node distances
+    of vertex ``v``. The tents are then normalised to a partition of unity.
 
-    Interpolation (``w_a = 1`` at node ``a``, ``0`` at every other node) is
-    enforced exactly at the node vertices so the weights are suitable for
-    Dirichlet handles. Vertices beyond every node's support are assigned
-    rigidly to their nearest node so the partition of unity always holds.
+    Wherever the per-node radius ``r_a`` covers a vertex this is the paper's
+    ideal shape function: ``1`` at the node, ``0.5`` on the Voronoi frontier,
+    ``0`` at the neighbouring node and *linear* in compliance distance in
+    between, so across a soft joint between two stiff parts the two frames are
+    blended linearly over the whole joint. Where a vertex lies beyond every
+    per-node radius (thick soft regions far from any node) the radius widens
+    to the sum of the vertex's two nearest node distances, so the nearest node
+    always carries at least half the weight, no vertex is left uncovered and
+    every support ends continuously. At a node vertex every other tent is
+    zero, so with ``support_scale = 1`` the weights interpolate the nodes
+    exactly. Crossing soft material is expensive in the metric, so a node's
+    support does not leak through a joint into the next bone, which gives the
+    sharp material interfaces the method is designed for.
 
     Parameters
     ----------
@@ -45,13 +53,13 @@ def voronoi_shape_functions(
         Compliance distances from each node to every vertex, as returned by
         :func:`simkit.compliance_distances`.
     nodes : np.ndarray (k,)
-        Node vertex indices (``D_nodes[:, nodes]`` are the node-to-node
-        distances).
+        Node vertex indices. Their rows of ``W`` are the identity.
     support_scale : float, optional
-        Multiplies each node's support radius. ``1.0`` gives compact,
-        exactly-interpolating tents; ``>1`` widens supports for smoother
-        overlap (the analogue of using more Voronoi sub-divisions in the
-        paper).
+        Multiplies every tent radius. ``1.0`` (default) gives the compact,
+        exactly-interpolating kernels above; ``> 1`` widens every support for
+        smoother overlap (the analogue of using more Voronoi sub-divisions in
+        the paper) at the price of exact interpolation, which is then
+        re-imposed at the node vertices.
 
     Returns
     -------
@@ -62,30 +70,34 @@ def voronoi_shape_functions(
     D_nodes = np.asarray(D_nodes, dtype=float)
     k, n = D_nodes.shape
     nodes = np.asarray(nodes, dtype=int)
+    D = np.where(np.isfinite(D_nodes), D_nodes, np.inf)
 
-    # nearest-other-node compliance distance -> per-node support radius
-    Dnn = D_nodes[:, nodes].copy()  # (k, k)
+    # per-node radius: compliance distance to the nearest other node
+    Dnn = D[:, nodes].copy()  # (k, k)
     np.fill_diagonal(Dnn, np.inf)
-    R = support_scale * np.min(Dnn, axis=1)  # (k,)
+    r_node = Dnn.min(axis=1)  # (k,)
+    # per-vertex floor: sum of the vertex's two nearest node distances
+    r_vertex = np.partition(D, 1, axis=0)[:2].sum(axis=0) if k >= 2 else np.full(n, np.inf)
+    R = support_scale * np.maximum(r_node[:, None], r_vertex[None, :])  # (k, n)
     R = np.where(np.isfinite(R) & (R > 0), R, 1.0)
 
-    raw = np.maximum(0.0, 1.0 - D_nodes / R[:, None])  # (k, n)
-    raw[~np.isfinite(D_nodes)] = 0.0
+    with np.errstate(invalid="ignore", divide="ignore"):
+        raw = np.maximum(0.0, 1.0 - D / R)  # (k, n)
+    raw[~np.isfinite(D)] = 0.0
+    if k == 1:
+        raw[:] = 1.0
     W = raw.T  # (n, k)
 
-    # Holes (a vertex beyond every node's support) fall back to their owner: a
-    # rigid extension that keeps the partition of unity and the sharp interface.
+    # Vertices unreachable from every node (disconnected mesh): keep the
+    # partition of unity with a uniform row rather than dividing by zero.
     row_sum = W.sum(axis=1)
     empty = row_sum <= 1e-12
     if np.any(empty):
-        owner = np.argmin(D_nodes, axis=0)
-        W[empty, :] = 0.0
-        W[empty, owner[empty]] = 1.0
+        W[empty, :] = 1.0 / k
         row_sum = W.sum(axis=1)
-
     W = W / row_sum[:, None]
 
-    # Exact interpolation at the node vertices (clean Dirichlet handles).
+    # Exact interpolation at the node vertices (a no-op for support_scale = 1).
     W[nodes, :] = 0.0
     W[nodes, np.arange(k)] = 1.0
 

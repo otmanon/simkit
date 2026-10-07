@@ -19,7 +19,11 @@ While the version stays below `1.0`, the public API may change in any release.
     the compliance metric (more nodes in soft regions, fewer in stiff ones).
   - `voronoi_labels` — nearest-node partition of vertices and triangles.
   - `voronoi_shape_functions` — material-aware, partition-of-unity,
-    interpolating, compact-support skinning weights `W`.
+    interpolating, compact-support skinning weights `W`: clamped-linear tents
+    in compliance distance whose radius is the distance to the nearest other
+    node, widened per vertex (to the sum of its two nearest node distances)
+    only where that would leave the vertex uncovered, so the weights are
+    continuous everywhere.
   - `lbs_affine_coordinates` — reduced coordinates of a global affine map, for
     rest-state recovery and the linear-precision patch test.
   - `sparse_meshless_methods_basis` — one-call entry point chaining the above.

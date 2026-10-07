@@ -55,7 +55,7 @@ def sparse_meshless_methods_basis(
     *,
     n_nodes: int = 16,
     frame_order: int = 1,
-    support_scale: float = 1.25,
+    support_scale: float = 1.0,
     lloyd_iters: int = 8,
     seed_index: Optional[int] = None,
     seed_nodes: Optional[Sequence[int]] = None,
