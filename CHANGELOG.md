@@ -30,6 +30,10 @@ While the version stays below `1.0`, the public API may change in any release.
 
 ### Changed
 
+- **`skinning_eigenmodes`** documents (and tests) its per-element `mu`: pass
+  the Lamé `mu` of a heterogeneous model and the eigenmodes become
+  material-aware, nearly constant on stiff parts and varying in soft ones.
+  The behaviour was already there; the signature and docstring said scalar.
 - **`lbs_jacobian`** gains a `sparse=False` flag. With `sparse=True` it
   assembles only the non-zeros of `W` and returns a `scipy.sparse.csr_matrix`
   with the same DOF ordering as the dense result, so compact-support weights
