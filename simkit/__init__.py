@@ -148,14 +148,16 @@ with _core:
     from .farthest_point_sampling import farthest_point_sampling
     from .spectral_clustering import spectral_clustering
     from .spectral_cubature import spectral_cubature
-    from .sparse_meshless import (
-        sparse_meshless_methods_basis,
-        sparse_lbs_jacobian,
-        lbs_affine_coordinates,
-        compliance_graph,
-        compliance_distances,
-        voronoi_shape_functions,
-    )
+
+    # Sparse meshless models (Faure et al. 2011) -- material-aware sparse LBS.
+    from .compliance_graph import compliance_graph
+    from .compliance_distances import compliance_distances
+    from .compliance_node_sampling import compliance_node_sampling
+    from .voronoi_labels import voronoi_labels
+    from .voronoi_shape_functions import voronoi_shape_functions
+    from .sparse_lbs_jacobian import sparse_lbs_jacobian
+    from .lbs_affine_coordinates import lbs_affine_coordinates
+    from .sparse_meshless_methods_basis import sparse_meshless_methods_basis
 
     # Finite-difference variations -- pure numpy.
     from .variation_fd import variation_fd

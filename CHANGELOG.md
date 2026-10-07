@@ -6,18 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 While the version stays below `1.0`, the public API may change in any release.
 
-## [Unreleased]
+## [0.1.9] - 2026-10-07
 
 ### Added
 
-- **`sparse_meshless`** — sparse meshless models of heterogeneous deformable
-  solids (Faure et al., SIGGRAPH 2011) on triangle meshes with a per-element
-  Young's modulus. `sparse_meshless_methods_basis` places control frames in the
-  compliance-distance metric (farthest-point sampling + Lloyd relaxation),
-  builds material-aware Voronoi skinning weights `W`, and assembles a sparse
-  linear-blend-skinning subspace `B`. `sparse_lbs_jacobian` is a sparse,
-  DOF-order-compatible drop-in for `lbs_jacobian`; `lbs_affine_coordinates`
-  returns the reduced coordinates of a global affine map (patch test helper).
+- **Sparse meshless models** (Faure, Gilles, Bousquet, Pai, *Sparse Meshless
+  Models of Complex Deformable Solids*, SIGGRAPH 2011) on triangle meshes with
+  a per-element Young's modulus, as a set of flat one-function modules:
+  - `compliance_graph` — mesh-edge graph weighted by `length / E`.
+  - `compliance_distances` — Dijkstra compliance distances on that graph.
+  - `compliance_node_sampling` — farthest-point sampling + Lloyd relaxation in
+    the compliance metric (more nodes in soft regions, fewer in stiff ones).
+  - `voronoi_labels` — nearest-node partition of vertices and triangles.
+  - `voronoi_shape_functions` — material-aware, partition-of-unity,
+    interpolating, compact-support skinning weights `W`.
+  - `sparse_lbs_jacobian` — sparse linear-blend-skinning subspace `B` with the
+    same affine DOF ordering as `lbs_jacobian` (drop-in, but sparse).
+  - `lbs_affine_coordinates` — reduced coordinates of a global affine map, for
+    rest-state recovery and the linear-precision patch test.
+  - `sparse_meshless_methods_basis` — one-call entry point chaining the above.
 
 ## [0.1.8] - 2026-09-23
 
