@@ -156,6 +156,7 @@ with _core:
     from .voronoi_labels import voronoi_labels
     from .voronoi_shape_functions import voronoi_shape_functions
     from .sparse_meshless_methods_basis import sparse_meshless_methods_basis
+    from .hyper_reduced_projective_dynamics_basis import hyper_reduced_projective_dynamics_basis
 
     # Finite-difference variations -- pure numpy.
     from .variation_fd import variation_fd
