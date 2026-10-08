@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 While the version stays below `1.0`, the public API may change in any release.
 
+## [0.1.10] - 2026-10-08
+
+### Added
+
+- **`hyper_reduced_projective_dynamics_basis`** — the sparse skinning subspace
+  of *Hyper-Reduced Projective Dynamics* (Brandt, Eisemann, Hildebrandt,
+  SIGGRAPH 2018): sample vertices by farthest-point sampling in geodesic
+  distance, compactly supported Wendland radial weights of that distance
+  normalised to a partition of unity, and an affine frame per sample assembled
+  with `lbs_jacobian(sparse=True)`. The geometry-only counterpart of
+  `sparse_meshless_methods_basis`.
+
 ## [0.1.9] - 2026-10-07
 
 ### Added
