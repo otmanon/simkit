@@ -126,6 +126,7 @@ from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
 from ..psd_project import psd_project
 from ..block_diag_sandwich import block_diag_sandwich
+from .._backend import _cpp, use_cpp
 
 _MATERIALS = (
     'linear-elasticity',
@@ -208,6 +209,8 @@ def elastic_energy_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: 
     e : float
         Total elastic energy.
     """
+    if use_cpp():
+        return float(_cpp.elastic_energy_x(X, J, None, mu, lam, vol, material, X.shape[1]))
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     psi = elastic_energy_element_F(F, mu, lam, material)
@@ -362,6 +365,8 @@ def elastic_energy_z(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.nda
     e : float
         Total reduced elastic energy.
     """
+    if use_cpp() and F is None:
+        return float(_cpp.elastic_energy_x(z, precomp.JB, precomp.Jx0, mu, lam, vol, material, precomp.dim))
     if F is None:
         dim = precomp.dim
         F = (precomp.JB @ z + precomp.Jx0).reshape(-1, dim, dim)
@@ -395,7 +400,7 @@ def elastic_energy_filtered_z(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vo
         Total reduced elastic energy including the filter term.
     """
     e = elastic_energy_z(z, mu, lam, vol, material, precomp, F=F)
-    e += float(0.5 * z.T @ precomp.BJAMuJB @ z + z.T @ precomp.BJAMuJx0)
+    e += float(np.asarray(0.5 * z.T @ precomp.BJAMuJB @ z + z.T @ precomp.BJAMuJx0).item())
     return e
 
 
@@ -530,6 +535,8 @@ def elastic_gradient_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam
     g : np.ndarray (n*dim, 1)
         Assembled gradient.
     """
+    if use_cpp():
+        return _cpp.elastic_gradient_x(X, J, None, mu, lam, vol, material, X.shape[1])
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     P = elastic_gradient_element_F(F, mu, lam, material)
@@ -609,6 +616,8 @@ def elastic_gradient_z(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.n
     g : np.ndarray (r, 1)
         Assembled reduced gradient.
     """
+    if use_cpp() and F is None:
+        return _cpp.elastic_gradient_x(z, precomp.JB, precomp.Jx0, mu, lam, vol, material, precomp.dim)
     if F is None:
         dim = precomp.dim
         F = (precomp.JB @ z + precomp.Jx0).reshape(-1, dim, dim)
@@ -787,6 +796,8 @@ def elastic_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam:
     Q : scipy.sparse.csc_matrix (n*dim, n*dim)
         Assembled Hessian.
     """
+    if use_cpp():
+        return _cpp.elastic_hessian_x(X, J, None, mu, lam, vol, material, X.shape[1], psd, True)
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     He = elastic_hessian_element_F(F, mu, lam, material, psd=psd)
@@ -871,6 +882,8 @@ def elastic_hessian_z(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.nd
     H : np.ndarray or scipy.sparse matrix (r, r)
         Assembled reduced Hessian.
     """
+    if use_cpp() and F is None:
+        return _cpp.elastic_hessian_x(z, precomp.JB, precomp.Jx0, mu, lam, vol, material, precomp.dim, psd, True)
     if F is None:
         dim = precomp.dim
         F = (precomp.JB @ z + precomp.Jx0).reshape(-1, dim, dim)

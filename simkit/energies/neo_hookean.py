@@ -210,6 +210,8 @@ def neo_hookean_energy_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, l
     E : float
         Total Neo-Hookean energy.
     """
+    if use_cpp():
+        return float(_cpp.elastic_energy_x(X, J, None, mu, lam, vol, 'neo-hookean', X.shape[1]))
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     psi = neo_hookean_energy_element_F(F, mu, lam)
@@ -219,6 +221,8 @@ def neo_hookean_energy_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, l
 
 def neo_hookean_gradient_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray) -> np.ndarray:
     """Assembled classical Neo-Hookean gradient w.r.t. positions ``X``."""
+    if use_cpp():
+        return _cpp.elastic_gradient_x(X, J, None, mu, lam, vol, 'neo-hookean', X.shape[1])
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     P = neo_hookean_gradient_element_F(F, mu, lam)
@@ -229,6 +233,8 @@ def neo_hookean_gradient_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray,
 
 def neo_hookean_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray, psd: bool = True) -> sp.sparse.spmatrix:
     """Assembled classical Neo-Hookean Hessian w.r.t. positions ``X``."""
+    if use_cpp():
+        return _cpp.elastic_hessian_x(X, J, None, mu, lam, vol, 'neo-hookean', X.shape[1], psd)
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     He = neo_hookean_hessian_element_F(F, mu, lam)
@@ -244,6 +250,8 @@ def neo_hookean_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, 
 # --------------------------------------------------------------------------- #
 def neo_hookean_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray) -> float:
     """Assembled classical Neo-Hookean energy at displacement ``u`` from a reference ``x_bar``."""
+    if use_cpp():
+        return float(_cpp.elastic_energy_x(u, J, Jx_bar, mu, lam, vol, 'neo-hookean', u.shape[1]))
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     psi = neo_hookean_energy_element_F(F, mu, lam)
@@ -253,6 +261,8 @@ def neo_hookean_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarra
 
 def neo_hookean_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray) -> np.ndarray:
     """Assembled classical Neo-Hookean gradient w.r.t. displacement ``u``."""
+    if use_cpp():
+        return _cpp.elastic_gradient_x(u, J, Jx_bar, mu, lam, vol, 'neo-hookean', u.shape[1])
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     P = neo_hookean_gradient_element_F(F, mu, lam)
@@ -263,6 +273,8 @@ def neo_hookean_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndar
 
 def neo_hookean_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray, psd: bool = True) -> sp.sparse.spmatrix:
     """Assembled classical Neo-Hookean Hessian w.r.t. displacement ``u``."""
+    if use_cpp():
+        return _cpp.elastic_hessian_x(u, J, Jx_bar, mu, lam, vol, 'neo-hookean', u.shape[1], psd)
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     He = neo_hookean_hessian_element_F(F, mu, lam)

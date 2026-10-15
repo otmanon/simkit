@@ -510,6 +510,8 @@ def macklin_mueller_neo_hookean_energy_x(X: np.ndarray, J: sp.sparse.spmatrix, m
     E : float
         Total Macklin-Mueller Neo-Hookean energy.
     """
+    if use_cpp():
+        return float(_cpp.elastic_energy_x(X, J, None, mu, lam, vol, 'macklin-mueller-neo-hookean', X.shape[1]))
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     psi = macklin_mueller_neo_hookean_energy_element_F(F, mu, lam)
@@ -538,6 +540,8 @@ def macklin_mueller_neo_hookean_gradient_x(X: np.ndarray, J: sp.sparse.spmatrix,
     g : np.ndarray (n*dim, 1)
         Assembled energy gradient.
     """
+    if use_cpp():
+        return _cpp.elastic_gradient_x(X, J, None, mu, lam, vol, 'macklin-mueller-neo-hookean', X.shape[1])
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     P = macklin_mueller_neo_hookean_gradient_element_F(F, mu, lam)
@@ -570,6 +574,8 @@ def macklin_mueller_neo_hookean_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, 
     Q : scipy.sparse.csc_matrix (n*dim, n*dim)
         Assembled energy Hessian.
     """
+    if use_cpp():
+        return _cpp.elastic_hessian_x(X, J, None, mu, lam, vol, 'macklin-mueller-neo-hookean', X.shape[1], psd)
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     He = macklin_mueller_neo_hookean_hessian_element_F(F, mu, lam)
@@ -611,6 +617,8 @@ def macklin_mueller_neo_hookean_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, J
     E : float
         Total Macklin-Mueller Neo-Hookean energy.
     """
+    if use_cpp():
+        return float(_cpp.elastic_energy_x(u, J, Jx_bar, mu, lam, vol, 'macklin-mueller-neo-hookean', u.shape[1]))
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     psi = macklin_mueller_neo_hookean_energy_element_F(F, mu, lam)
@@ -645,6 +653,8 @@ def macklin_mueller_neo_hookean_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix,
     g : np.ndarray (n*dim, 1)
         Assembled energy gradient.
     """
+    if use_cpp():
+        return _cpp.elastic_gradient_x(u, J, Jx_bar, mu, lam, vol, 'macklin-mueller-neo-hookean', u.shape[1])
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     P = macklin_mueller_neo_hookean_gradient_element_F(F, mu, lam)
@@ -679,6 +689,8 @@ def macklin_mueller_neo_hookean_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, 
     Q : scipy.sparse.csc_matrix (n*dim, n*dim)
         Assembled energy Hessian.
     """
+    if use_cpp():
+        return _cpp.elastic_hessian_x(u, J, Jx_bar, mu, lam, vol, 'macklin-mueller-neo-hookean', u.shape[1], psd)
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     He = macklin_mueller_neo_hookean_hessian_element_F(F, mu, lam)

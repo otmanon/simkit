@@ -332,3 +332,104 @@ def test_reduced_z_tier_matches(both_backends, material):
     assert np.allclose(g0, g1, atol=1e-10)
     H0, H1 = both_backends(lambda: E.elastic_hessian_z(z, mu, lam, vol, material, precomp))
     assert np.allclose(np.asarray(H0), np.asarray(H1), atol=1e-9)
+
+
+@pytest.mark.parametrize("dim", [2, 3])
+@pytest.mark.parametrize("material", MATERIALS)
+def test_global_u_tier_matches(both_backends, dim, material):
+    rng = np.random.default_rng(14)
+    X, T = _mesh(dim)
+    simkit.set_backend("python")
+    J = simkit.deformation_jacobian(X, T)
+    vol = simkit.volume(X, T)
+    t = T.shape[0]
+    mu = rng.uniform(0.5, 2.0, (t, 1))
+    lam = rng.uniform(0.5, 3.0, (t, 1))
+    Jx_bar = J @ X.reshape(-1, 1)
+    u = 0.02 * rng.standard_normal(X.shape)
+    e0, e1 = both_backends(lambda: E.elastic_energy_u(u, J, Jx_bar, mu, lam, vol, material))
+    assert np.isclose(e0, e1, rtol=1e-10, atol=1e-12)
+    g0, g1 = both_backends(lambda: E.elastic_gradient_u(u, J, Jx_bar, mu, lam, vol, material))
+    assert g1.shape == g0.shape
+    assert np.allclose(g0, g1, atol=1e-10)
+    H0, H1 = both_backends(lambda: E.elastic_hessian_u(u, J, Jx_bar, mu, lam, vol, material))
+    assert sps.issparse(H1)
+    assert abs(H0 - H1).max() < 1e-9
+
+
+@pytest.mark.parametrize("material", MATERIALS)
+def test_reduced_z_tier_matches_all_materials(both_backends, material):
+    rng = np.random.default_rng(15)
+    X, T = _mesh(3)
+    simkit.set_backend("python")
+    J = simkit.deformation_jacobian(X, T)
+    vol = simkit.volume(X, T)
+    t = T.shape[0]
+    mu = rng.uniform(0.5, 2.0, (t, 1))
+    lam = rng.uniform(0.5, 3.0, (t, 1))
+    B = rng.standard_normal((J.shape[1], 7))
+    precomp = E.ElasticEnergyZPrecomp(B, X.reshape(-1, 1), sps.identity(J.shape[0]), J, 3)
+    z = 0.01 * rng.standard_normal((7, 1))
+    e0, e1 = both_backends(lambda: E.elastic_energy_z(z, mu, lam, vol, material, precomp))
+    assert np.isclose(e0, e1, rtol=1e-10, atol=1e-12)
+    g0, g1 = both_backends(lambda: E.elastic_gradient_z(z, mu, lam, vol, material, precomp))
+    assert g1.shape == (7, 1)
+    assert np.allclose(g0, g1, atol=1e-10)
+    H0, H1 = both_backends(lambda: E.elastic_hessian_z(z, mu, lam, vol, material, precomp))
+    assert np.asarray(H1).shape == (7, 7)
+    assert np.allclose(np.asarray(H0), np.asarray(H1), atol=1e-9)
+    # Precomputed F is honoured by both backends.
+    F = (precomp.JB @ z + precomp.Jx0).reshape(-1, 3, 3)
+    f0, f1 = both_backends(lambda: E.elastic_energy_z(z, mu, lam, vol, material, precomp, F=F))
+    assert np.isclose(f0, f1, rtol=1e-10)
+
+
+@pytest.mark.parametrize("material", MATERIALS)
+def test_filtered_z_tier_matches(both_backends, material):
+    rng = np.random.default_rng(16)
+    X, T = _mesh(3)
+    simkit.set_backend("python")
+    J = simkit.deformation_jacobian(X, T)
+    vol = simkit.volume(X, T)
+    t = T.shape[0]
+    mu = np.full((t, 1), 1.2)
+    lam = np.full((t, 1), 2.0)
+    B = rng.standard_normal((J.shape[1], 5))
+    precomp = E.ElasticEnergyZFilteredPrecomp(B, X.reshape(-1, 1), sps.identity(J.shape[0]), J, 3, mu, vol)
+    z = 0.01 * rng.standard_normal((5, 1))
+    e0, e1 = both_backends(lambda: E.elastic_energy_filtered_z(z, mu, lam, vol, material, precomp))
+    assert np.isclose(e0, e1, rtol=1e-10)
+    g0, g1 = both_backends(lambda: E.elastic_gradient_filtered_z(z, mu, lam, vol, material, precomp))
+    assert np.allclose(g0, g1, atol=1e-10)
+    H0, H1 = both_backends(lambda: E.elastic_hessian_filtered_z(z, mu, lam, vol, material, precomp))
+    assert np.allclose(np.asarray(H0), np.asarray(H1), atol=1e-9)
+
+
+@pytest.mark.parametrize("dim", [2, 3])
+def test_per_material_x_tiers_match(both_backends, dim):
+    """Every per-material ``*_x`` / ``*_u`` function, not only the dispatcher."""
+    import importlib
+    rng = np.random.default_rng(17)
+    X, T = _mesh(dim)
+    simkit.set_backend("python")
+    J = simkit.deformation_jacobian(X, T)
+    vol = simkit.volume(X, T)
+    t = T.shape[0]
+    mu = rng.uniform(0.5, 2.0, (t, 1))
+    lam = rng.uniform(0.5, 3.0, (t, 1))
+    U = X + 0.02 * rng.standard_normal(X.shape)
+    Jx_bar = J @ X.reshape(-1, 1)
+    u = U - X
+    for prefix in ["arap", "fcr", "neo_hookean", "stable_neo_hookean", "stvk", "linear_elasticity", "macklin_mueller_neo_hookean"]:
+        mod = importlib.import_module("simkit.energies." + prefix)
+        params = (mu,) if prefix == "arap" else (mu, lam)
+        for kind in ["energy", "gradient", "hessian"]:
+            fx = getattr(mod, f"{prefix}_{kind}_x")
+            fu = getattr(mod, f"{prefix}_{kind}_u")
+            a0, a1 = both_backends(lambda: fx(U, J, *params, vol))
+            b0, b1 = both_backends(lambda: fu(u, J, Jx_bar, *params, vol))
+            for p0, p1 in [(a0, a1), (b0, b1)]:
+                if sps.issparse(p0) or sps.issparse(p1):
+                    assert abs(p0 - p1).max() < 1e-9, (prefix, kind)
+                else:
+                    assert np.allclose(np.asarray(p0), np.asarray(p1), atol=1e-10), (prefix, kind)

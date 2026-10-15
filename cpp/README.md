@@ -10,7 +10,7 @@ flat free functions in the `simkit` namespace, one header per Python module:
 | `simkit/polar_svd.h` | `svd_rv`, `polar_svd` |
 | `simkit/rotation_gradient.h` | `rotation_gradient_F` |
 | `simkit/psd_project.h` | `psd_project` |
-| `simkit/energies/elastic.h` | `<material>_{energy,gradient,hessian}_element_F` for `arap`, `fcr`, `neo_hookean`, `stable_neo_hookean`, `stvk`, `linear_elasticity`, `macklin_mueller_neo_hookean`, plus the `elastic_*_element_F` dispatcher and `material_from_string` |
+| `simkit/energies/elastic.h` | `<material>_{energy,gradient,hessian}_element_F` for `arap`, `fcr`, `neo_hookean`, `stable_neo_hookean`, `stvk`, `linear_elasticity`, `macklin_mueller_neo_hookean`, the `elastic_*_element_F` dispatcher and `material_from_string`; the assembled tiers `elastic_*_x` (sparse CSR operator, optional offset for the `_u` tier) and `elastic_*_z` (dense reduced operator), plus `csr_matvec` / `csr_rmatvec` |
 | `simkit/deformation_jacobian.h` | `deformation_jacobian`, `deformation_jacobian_triplets` |
 | `simkit/block_diag_sandwich.h` | `block_diag_sandwich` (sparse / dense / CSR variants) |
 | `simkit/parallel_for.h` | `parallel_for`, `num_threads`, `set_num_threads` |

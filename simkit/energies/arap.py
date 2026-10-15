@@ -279,6 +279,8 @@ def arap_energy_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, vol: np.
     E : float
         Total ARAP energy.
     """
+    if use_cpp():
+        return float(_cpp.elastic_energy_x(X, J, None, mu, 0.0, vol, 'arap', X.shape[1]))
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     psi = arap_energy_element_F(F, mu)
@@ -305,6 +307,8 @@ def arap_gradient_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, vol: n
     g : np.ndarray (n*dim, 1)
         Assembled energy gradient.
     """
+    if use_cpp():
+        return _cpp.elastic_gradient_x(X, J, None, mu, 0.0, vol, 'arap', X.shape[1])
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     P = arap_gradient_element_F(F, mu)
@@ -335,6 +339,8 @@ def arap_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, vol: np
     Q : scipy.sparse.csc_matrix (n*dim, n*dim)
         Assembled energy Hessian.
     """
+    if use_cpp():
+        return _cpp.elastic_hessian_x(X, J, None, mu, 0.0, vol, 'arap', X.shape[1], psd)
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     He = arap_hessian_element_F(F, mu)
@@ -373,6 +379,8 @@ def arap_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: 
     E : float
         Total ARAP energy.
     """
+    if use_cpp():
+        return float(_cpp.elastic_energy_x(u, J, Jx_bar, mu, 0.0, vol, 'arap', u.shape[1]))
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     psi = arap_energy_element_F(F, mu)
@@ -401,6 +409,8 @@ def arap_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu
     g : np.ndarray (n*dim, 1)
         Assembled energy gradient.
     """
+    if use_cpp():
+        return _cpp.elastic_gradient_x(u, J, Jx_bar, mu, 0.0, vol, 'arap', u.shape[1])
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     P = arap_gradient_element_F(F, mu)
@@ -433,6 +443,8 @@ def arap_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu:
     Q : scipy.sparse.csc_matrix (n*dim, n*dim)
         Assembled energy Hessian.
     """
+    if use_cpp():
+        return _cpp.elastic_hessian_x(u, J, Jx_bar, mu, 0.0, vol, 'arap', u.shape[1], psd)
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     He = arap_hessian_element_F(F, mu)

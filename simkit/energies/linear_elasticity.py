@@ -168,6 +168,8 @@ def linear_elasticity_energy_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndar
     E : float
         Total linear elasticity energy.
     """
+    if use_cpp():
+        return float(_cpp.elastic_energy_x(X, J, None, mu, lam, vol, 'linear-elasticity', X.shape[1]))
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     psi = linear_elasticity_energy_element_F(F, mu, lam)
@@ -196,6 +198,8 @@ def linear_elasticity_gradient_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.nd
     g : np.ndarray (n*dim, 1)
         Assembled energy gradient.
     """
+    if use_cpp():
+        return _cpp.elastic_gradient_x(X, J, None, mu, lam, vol, 'linear-elasticity', X.shape[1])
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     P = linear_elasticity_gradient_element_F(F, mu, lam)
@@ -229,6 +233,8 @@ def linear_elasticity_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.nda
     Q : scipy.sparse.csc_matrix (n*dim, n*dim)
         Assembled energy Hessian.
     """
+    if use_cpp():
+        return _cpp.elastic_hessian_x(X, J, None, mu, lam, vol, 'linear-elasticity', X.shape[1], False)
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     He = linear_elasticity_hessian_element_F(F, mu, lam)
@@ -267,6 +273,8 @@ def linear_elasticity_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.
     E : float
         Total linear elasticity energy.
     """
+    if use_cpp():
+        return float(_cpp.elastic_energy_x(u, J, Jx_bar, mu, lam, vol, 'linear-elasticity', u.shape[1]))
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     psi = linear_elasticity_energy_element_F(F, mu, lam)
@@ -297,6 +305,8 @@ def linear_elasticity_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: n
     g : np.ndarray (n*dim, 1)
         Assembled energy gradient.
     """
+    if use_cpp():
+        return _cpp.elastic_gradient_x(u, J, Jx_bar, mu, lam, vol, 'linear-elasticity', u.shape[1])
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     P = linear_elasticity_gradient_element_F(F, mu, lam)
@@ -331,6 +341,8 @@ def linear_elasticity_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np
     Q : scipy.sparse.csc_matrix (n*dim, n*dim)
         Assembled energy Hessian.
     """
+    if use_cpp():
+        return _cpp.elastic_hessian_x(u, J, Jx_bar, mu, lam, vol, 'linear-elasticity', u.shape[1], False)
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     He = linear_elasticity_hessian_element_F(F, mu, lam)

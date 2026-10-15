@@ -211,6 +211,8 @@ def stvk_energy_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: np.
     E : float
         Total StVK energy.
     """
+    if use_cpp():
+        return float(_cpp.elastic_energy_x(X, J, None, mu, lam, vol, 'stvk', X.shape[1]))
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     psi = stvk_energy_element_F(F, mu, lam)
@@ -239,6 +241,8 @@ def stvk_gradient_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: n
     g : np.ndarray (n*dim, 1)
         Assembled energy gradient.
     """
+    if use_cpp():
+        return _cpp.elastic_gradient_x(X, J, None, mu, lam, vol, 'stvk', X.shape[1])
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     P = stvk_gradient_element_F(F, mu, lam)
@@ -271,6 +275,8 @@ def stvk_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: np
     Q : scipy.sparse.csc_matrix (n*dim, n*dim)
         Assembled energy Hessian.
     """
+    if use_cpp():
+        return _cpp.elastic_hessian_x(X, J, None, mu, lam, vol, 'stvk', X.shape[1], psd)
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     He = stvk_hessian_element_F(F, mu, lam)
@@ -310,6 +316,8 @@ def stvk_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: 
     E : float
         Total StVK energy.
     """
+    if use_cpp():
+        return float(_cpp.elastic_energy_x(u, J, Jx_bar, mu, lam, vol, 'stvk', u.shape[1]))
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     psi = stvk_energy_element_F(F, mu, lam)
@@ -319,6 +327,8 @@ def stvk_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: 
 
 def stvk_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray) -> np.ndarray:
     """Assembled StVK gradient w.r.t. displacement ``u``."""
+    if use_cpp():
+        return _cpp.elastic_gradient_x(u, J, Jx_bar, mu, lam, vol, 'stvk', u.shape[1])
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     P = stvk_gradient_element_F(F, mu, lam)
@@ -329,6 +339,8 @@ def stvk_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu
 
 def stvk_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray, psd: bool = True) -> sp.sparse.spmatrix:
     """Assembled StVK Hessian w.r.t. displacement ``u``."""
+    if use_cpp():
+        return _cpp.elastic_hessian_x(u, J, Jx_bar, mu, lam, vol, 'stvk', u.shape[1], psd)
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     He = stvk_hessian_element_F(F, mu, lam)

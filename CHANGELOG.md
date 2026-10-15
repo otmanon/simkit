@@ -28,6 +28,18 @@ While the version stays below `1.0`, the public API may change in any release.
   `SIMKIT_NO_CPP` environment variables.
 - `scripts/benchmark_cpp.py` to time both backends, and a standalone CMake
   build with C++ tests under `cpp/`.
+- **Assembled tiers in C++**: `elastic_{energy,gradient,hessian}_x` fused
+  (`F = J x`, element kernel, `vol` weighting, PSD projection, CSR assembly)
+  behind every per-material `*_x` / `*_u` function and the dispatcher, and
+  the subspace `elastic_*_z` tiers with a dense reduced operator.
+- `examples/benchmarks/cpp_backend_speedup.ipynb`: the speedup experiment
+  for `svd_rv`, the neo-Hookean element terms, the assembled and subspace
+  gradient / Hessian, individually and together.
+
+### Fixed
+
+- `elastic_energy_filtered_z` raised a `TypeError` on NumPy 2 when reducing
+  the quadratic filter term to a float.
 
 ## [0.1.8] - 2026-09-23
 

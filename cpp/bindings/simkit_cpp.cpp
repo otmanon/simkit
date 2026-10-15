@@ -16,6 +16,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -90,6 +91,41 @@ py::array hessian_wrap(const Arr& F, Fn fn) {
     out = fn(Fv);
   }
   return to_array(std::move(out), {Fv.rows(), d * d, d * d});
+}
+
+// ---- assembled tiers: J may be a scipy.sparse matrix or a dense ndarray ------
+// Holds the CSR arrays of a scipy matrix alive for the duration of a call.
+struct CsrArrays {
+  ArrL indptr, indices;
+  Arr data;
+  Index rows, cols;
+};
+
+bool is_scipy_sparse(const py::object& J) {
+  return py::bool_(py::module_::import("scipy.sparse").attr("issparse")(J));
+}
+
+CsrArrays csr_arrays(const py::object& J) {
+  py::object Jc = J.attr("tocsr")();
+  CsrArrays a{Jc.attr("indptr").cast<ArrL>(), Jc.attr("indices").cast<ArrL>(), Jc.attr("data").cast<Arr>(), 0, 0};
+  py::tuple shape = Jc.attr("shape");
+  a.rows = shape[0].cast<Index>();
+  a.cols = shape[1].cast<Index>();
+  return a;
+}
+
+simkit::SparseCSR csr_view(const CsrArrays& a) { return {a.indptr.data(), a.indices.data(), a.data.data(), a.rows, a.cols}; }
+
+Eigen::Map<const Eigen::VectorXd> optional_vec(const Arr* a) {
+  static const double dummy = 0.0;
+  if (a == nullptr) return {&dummy, 0};
+  return vec_view(*a);
+}
+
+py::object scipy_csr(simkit::VectorXl&& indptr, simkit::VectorXl&& indices, Eigen::VectorXd&& data, Index n) {
+  py::object csr_matrix = py::module_::import("scipy.sparse").attr("csr_matrix");
+  return csr_matrix(py::make_tuple(py::cast(std::move(data)), py::cast(std::move(indices)), py::cast(std::move(indptr))),
+                    py::arg("shape") = py::make_tuple(n, n));
 }
 
 }  // namespace
@@ -264,4 +300,78 @@ PYBIND11_MODULE(_cpp, m) {
         return to_array(std::move(out), {out.rows(), out.cols()});
       },
       py::arg("J"), py::arg("He"), "Dense J^T blockdiag(He) J for a dense J.");
+
+  // ---- assembled tiers -------------------------------------------------------
+  // x: flattened primary variable; J: scipy.sparse (positions / displacements)
+  // or dense ndarray (reduced JB); Jx0: optional offset so that F = J x + Jx0.
+  m.def(
+      "elastic_energy_x",
+      [](const Arr& x, const py::object& J, const py::object& Jx0, const Arr& mu, const Arr& lam, const Arr& vol,
+         const std::string& material, int dim) {
+        const auto mat = simkit::material_from_string(material);
+        std::unique_ptr<Arr> off;
+        if (!Jx0.is_none()) off = std::make_unique<Arr>(Jx0.cast<Arr>());
+        if (is_scipy_sparse(J)) {
+          const CsrArrays a = csr_arrays(J);
+          py::gil_scoped_release release;
+          return simkit::elastic_energy_x(csr_view(a), vec_view(x), optional_vec(off.get()), vec_view(mu), vec_view(lam), vec_view(vol), mat, dim);
+        }
+        const Arr Jd = J.cast<Arr>();
+        const auto Jv = stack_view(Jd);
+        py::gil_scoped_release release;
+        return simkit::elastic_energy_z(Jv, vec_view(x), optional_vec(off.get()), vec_view(mu), vec_view(lam), vec_view(vol), mat, dim);
+      },
+      py::arg("x"), py::arg("J"), py::arg("Jx0"), py::arg("mu"), py::arg("lam"), py::arg("vol"), py::arg("material"), py::arg("dim"));
+
+  m.def(
+      "elastic_gradient_x",
+      [](const Arr& x, const py::object& J, const py::object& Jx0, const Arr& mu, const Arr& lam, const Arr& vol,
+         const std::string& material, int dim) {
+        const auto mat = simkit::material_from_string(material);
+        std::unique_ptr<Arr> off;
+        if (!Jx0.is_none()) off = std::make_unique<Arr>(Jx0.cast<Arr>());
+        Eigen::VectorXd g;
+        if (is_scipy_sparse(J)) {
+          const CsrArrays a = csr_arrays(J);
+          py::gil_scoped_release release;
+          g = simkit::elastic_gradient_x(csr_view(a), vec_view(x), optional_vec(off.get()), vec_view(mu), vec_view(lam), vec_view(vol), mat, dim);
+        } else {
+          const Arr Jd = J.cast<Arr>();
+          const auto Jv = stack_view(Jd);
+          py::gil_scoped_release release;
+          g = simkit::elastic_gradient_z(Jv, vec_view(x), optional_vec(off.get()), vec_view(mu), vec_view(lam), vec_view(vol), mat, dim);
+        }
+        const Index n = g.size();
+        return to_array(std::move(g), {n, 1});
+      },
+      py::arg("x"), py::arg("J"), py::arg("Jx0"), py::arg("mu"), py::arg("lam"), py::arg("vol"), py::arg("material"), py::arg("dim"));
+
+  m.def(
+      "elastic_hessian_x",
+      [](const Arr& x, const py::object& J, const py::object& Jx0, const Arr& mu, const Arr& lam, const Arr& vol,
+         const std::string& material, int dim, bool psd, bool psd_before_weighting) -> py::object {
+        const auto mat = simkit::material_from_string(material);
+        std::unique_ptr<Arr> off;
+        if (!Jx0.is_none()) off = std::make_unique<Arr>(Jx0.cast<Arr>());
+        if (is_scipy_sparse(J)) {
+          const CsrArrays a = csr_arrays(J);
+          simkit::VectorXl indptr, indices;
+          Eigen::VectorXd data;
+          {
+            py::gil_scoped_release release;
+            simkit::elastic_hessian_x(csr_view(a), vec_view(x), optional_vec(off.get()), vec_view(mu), vec_view(lam), vec_view(vol), mat, dim, psd, indptr, indices, data, psd_before_weighting);
+          }
+          return scipy_csr(std::move(indptr), std::move(indices), std::move(data), a.cols);
+        }
+        const Arr Jd = J.cast<Arr>();
+        const auto Jv = stack_view(Jd);
+        RowMatrixXd Q;
+        {
+          py::gil_scoped_release release;
+          Q = simkit::elastic_hessian_z(Jv, vec_view(x), optional_vec(off.get()), vec_view(mu), vec_view(lam), vec_view(vol), mat, dim, psd, psd_before_weighting);
+        }
+        const Index r = Q.rows();
+        return to_array(std::move(Q), {r, r});
+      },
+      py::arg("x"), py::arg("J"), py::arg("Jx0"), py::arg("mu"), py::arg("lam"), py::arg("vol"), py::arg("material"), py::arg("dim"), py::arg("psd") = true, py::arg("psd_before_weighting") = false);
 }

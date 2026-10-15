@@ -334,6 +334,8 @@ def fcr_energy_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: np.n
     E : float
         Total FCR energy.
     """
+    if use_cpp():
+        return float(_cpp.elastic_energy_x(X, J, None, mu, lam, vol, 'fcr', X.shape[1]))
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     psi = fcr_energy_element_F(F, mu, lam)
@@ -362,6 +364,8 @@ def fcr_gradient_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: np
     g : np.ndarray (n*dim, 1)
         Assembled energy gradient.
     """
+    if use_cpp():
+        return _cpp.elastic_gradient_x(X, J, None, mu, lam, vol, 'fcr', X.shape[1])
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     P = fcr_gradient_element_F(F, mu, lam)
@@ -394,6 +398,8 @@ def fcr_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: np.
     Q : scipy.sparse.csc_matrix (n*dim, n*dim)
         Assembled energy Hessian.
     """
+    if use_cpp():
+        return _cpp.elastic_hessian_x(X, J, None, mu, lam, vol, 'fcr', X.shape[1], psd)
     dim = X.shape[1]
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     He = fcr_hessian_element_F(F, mu, lam)
@@ -434,6 +440,8 @@ def fcr_energy_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: n
     E : float
         Total FCR energy.
     """
+    if use_cpp():
+        return float(_cpp.elastic_energy_x(u, J, Jx_bar, mu, lam, vol, 'fcr', u.shape[1]))
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     psi = fcr_energy_element_F(F, mu, lam)
@@ -464,6 +472,8 @@ def fcr_gradient_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu:
     g : np.ndarray (n*dim, 1)
         Assembled energy gradient.
     """
+    if use_cpp():
+        return _cpp.elastic_gradient_x(u, J, Jx_bar, mu, lam, vol, 'fcr', u.shape[1])
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     P = fcr_gradient_element_F(F, mu, lam)
@@ -498,6 +508,8 @@ def fcr_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: 
     Q : scipy.sparse.csc_matrix (n*dim, n*dim)
         Assembled energy Hessian.
     """
+    if use_cpp():
+        return _cpp.elastic_hessian_x(u, J, Jx_bar, mu, lam, vol, 'fcr', u.shape[1], psd)
     dim = u.shape[1]
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     He = fcr_hessian_element_F(F, mu, lam)
