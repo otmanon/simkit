@@ -52,6 +52,8 @@ from typing import Optional
 
 import numpy as np
 import scipy as sp
+from .._backend import _cpp, use_cpp
+from ..block_diag_sandwich import block_diag_sandwich
 
 from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
@@ -81,6 +83,8 @@ def neo_hookean_energy_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray)
         Zero at the rest state ``F = I``; diverges as ``det(F) -> 0+``;
         NaN where ``det(F) <= 0``.
     """
+    if use_cpp():
+        return _cpp.neo_hookean_energy_element_F(F, mu, lam)
     dim = F.shape[-1]
     F = F.reshape(-1, dim, dim)
     mu = np.asarray(mu).reshape(-1, 1)
@@ -116,6 +120,8 @@ def neo_hookean_gradient_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarra
     P : np.ndarray (t, dim, dim)
         Per-element PK1 stress blocks. No quadrature weighting applied.
     """
+    if use_cpp():
+        return _cpp.neo_hookean_gradient_element_F(F, mu, lam)
     dim = F.shape[-1]
     if dim not in (2, 3):
         raise ValueError("Neo-Hookean supports dim=2 or dim=3")
@@ -156,6 +162,8 @@ def neo_hookean_hessian_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray
         (``H[t, i*dim + j, k*dim + l]``). No quadrature weighting applied.
         Not PSD-projected; projection happens in the global tier.
     """
+    if use_cpp():
+        return _cpp.neo_hookean_hessian_element_F(F, mu, lam)
     dim = F.shape[-1]
     if dim not in (2, 3):
         raise ValueError("Neo-Hookean supports dim=2 or dim=3")
@@ -227,8 +235,7 @@ def neo_hookean_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, 
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    H = sp.sparse.block_diag(He)
-    Q = J.transpose() @ H @ J
+    Q = block_diag_sandwich(J, He)
     return Q
 
 
@@ -262,8 +269,7 @@ def neo_hookean_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarr
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    H = sp.sparse.block_diag(He)
-    Q = J.transpose() @ H @ J
+    Q = block_diag_sandwich(J, He)
     return Q
 
 

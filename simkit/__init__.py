@@ -63,6 +63,9 @@ class _OptionalImport:
         return False
 
 
+# Backend selection (C++ extension vs NumPy); always importable.
+from ._backend import backend, set_backend, cpp_available, cpp_num_threads  # noqa: E402
+
 _core = _OptionalImport("all")
 _mesh = _OptionalImport("mesh")
 _viz = _OptionalImport("viz")
@@ -75,6 +78,7 @@ _video = _OptionalImport("video")
 # ---------------------------------------------------------------------------
 with _core:
     from .backtracking_line_search import backtracking_line_search
+    from .block_diag_sandwich import block_diag_sandwich
     from .ympr_to_lame import ympr_to_lame
     from .normalize_and_center import normalize_and_center
     from .orthonormalize import orthonormalize

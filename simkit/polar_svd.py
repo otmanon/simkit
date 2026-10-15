@@ -3,6 +3,7 @@
 from typing import Tuple
 
 import numpy as np
+from ._backend import _cpp, use_cpp
 
 
 def svd_rv(F: np.ndarray, flip: bool = True) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -29,6 +30,8 @@ def svd_rv(F: np.ndarray, flip: bool = True) -> Tuple[np.ndarray, np.ndarray, np
     """
     if len(F.shape) == 2:
         F = F[None, :, :]
+    if flip and use_cpp():
+        return _cpp.svd_rv(F)
 
     d = F.shape[1]
     [U, S, VT] = np.linalg.svd(F)
@@ -74,6 +77,9 @@ def polar_svd(F: np.ndarray, flip: bool = True) -> Tuple[np.ndarray, np.ndarray]
     SS : np.ndarray (t, d, d)
         Symmetric stretch factor ``V S V^T``.
     """
+    if flip and use_cpp():
+        F = np.asarray(F)
+        return _cpp.polar_svd(F.reshape(-1, F.shape[-1], F.shape[-1]))
     if flip:
         [U, S, V] = svd_rv(F, flip=flip)
         VT = V.transpose([0, 2, 1])

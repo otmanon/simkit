@@ -49,6 +49,8 @@ from typing import Optional
 
 import numpy as np
 import scipy as sp
+from .._backend import _cpp, use_cpp
+from ..block_diag_sandwich import block_diag_sandwich
 
 from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
@@ -76,6 +78,8 @@ def stvk_energy_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray) -> np.
         Per-element energy densities. No quadrature weighting applied.
         Zero at the rest state ``F = I``.
     """
+    if use_cpp():
+        return _cpp.stvk_energy_element_F(F, mu, lam)
     dim = F.shape[-1]
     F = F.reshape(-1, dim, dim)
     mu = np.asarray(mu).reshape(-1, 1)
@@ -112,6 +116,8 @@ def stvk_gradient_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray) -> n
     P : np.ndarray (t, dim, dim)
         Per-element PK1 stress blocks. No quadrature weighting applied.
     """
+    if use_cpp():
+        return _cpp.stvk_gradient_element_F(F, mu, lam)
     dim = F.shape[-1]
     if dim not in (2, 3):
         raise ValueError("StVK supports dim=2 or dim=3")
@@ -154,6 +160,8 @@ def stvk_hessian_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray) -> np
         (``H[t, i*dim + j, k*dim + l]``). No quadrature weighting applied.
         Not PSD-projected; projection happens in the global tier.
     """
+    if use_cpp():
+        return _cpp.stvk_hessian_element_F(F, mu, lam)
     dim = F.shape[-1]
     if dim not in (2, 3):
         raise ValueError("StVK supports dim=2 or dim=3")
@@ -269,8 +277,7 @@ def stvk_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: np
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    H = sp.sparse.block_diag(He)
-    Q = J.transpose() @ H @ J
+    Q = block_diag_sandwich(J, He)
     return Q
 
 
@@ -328,8 +335,7 @@ def stvk_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu:
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    H = sp.sparse.block_diag(He)
-    Q = J.transpose() @ H @ J
+    Q = block_diag_sandwich(J, He)
     return Q
 
 

@@ -125,6 +125,7 @@ from .stable_neo_hookean import (
 from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
 from ..psd_project import psd_project
+from ..block_diag_sandwich import block_diag_sandwich
 
 _MATERIALS = (
     'linear-elasticity',
@@ -790,8 +791,7 @@ def elastic_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam:
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     He = elastic_hessian_element_F(F, mu, lam, material, psd=psd)
     He = He * np.asarray(vol).reshape(-1, 1, 1)
-    H = sp.sparse.block_diag(He)
-    return J.transpose() @ H @ J
+    return block_diag_sandwich(J, He)
 
 
 # --------------------------------------------------------------------------- #
@@ -876,8 +876,7 @@ def elastic_hessian_z(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.nd
         F = (precomp.JB @ z + precomp.Jx0).reshape(-1, dim, dim)
     He = elastic_hessian_element_F(F, mu, lam, material, psd=psd)
     He = He * np.asarray(vol).reshape(-1, 1, 1)
-    H = sp.sparse.block_diag(He)
-    return precomp.JB.transpose() @ H @ precomp.JB
+    return block_diag_sandwich(precomp.JB, He)
 
 
 def elastic_hessian_filtered_z(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray, material: str, precomp: ElasticEnergyZFilteredPrecomp, F: Optional[np.ndarray] = None, psd: bool = True) -> sp.sparse.spmatrix:

@@ -7,6 +7,7 @@ Uses rotationally invariant SVD (:func:`.svd_rv.svd_rv`) and closed-form
 import numpy as np
 
 from .svd_rv import svd_rv
+from ._backend import _cpp, use_cpp
 
 
 def rotation_gradient_F(F: np.ndarray) -> np.ndarray:
@@ -22,6 +23,8 @@ def rotation_gradient_F(F: np.ndarray) -> np.ndarray:
     K : np.ndarray (n, dim*dim, dim*dim)
         Per-element Jacobian of the rotation factor w.r.t. flattened ``F``.
     """
+    if use_cpp():
+        return _cpp.rotation_gradient_F(F)
     dim = F.shape[-1]
     if dim == 2:
         d = F.shape[1]

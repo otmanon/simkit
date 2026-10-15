@@ -43,6 +43,8 @@ from typing import Optional, Tuple
 
 import numpy as np
 import scipy as sp
+from .._backend import _cpp, use_cpp
+from ..block_diag_sandwich import block_diag_sandwich
 
 from ..polar_svd import polar_svd
 from ..rotation_gradient import rotation_gradient_F
@@ -96,6 +98,8 @@ def arap_energy_element_F(F: np.ndarray, mu: np.ndarray) -> np.ndarray:
     psi : np.ndarray (t, 1)
         Per-element energy densities. No quadrature weighting applied.
     """
+    if use_cpp():
+        return _cpp.arap_energy_element_F(F, mu)
     dim = F.shape[-1]
     F = F.reshape(-1, dim, dim)
     mu = np.asarray(mu).reshape(-1, 1)
@@ -119,6 +123,8 @@ def arap_gradient_element_F(F: np.ndarray, mu: np.ndarray) -> np.ndarray:
     P : np.ndarray (t, dim, dim)
         Per-element PK1 stress blocks. No quadrature weighting applied.
     """
+    if use_cpp():
+        return _cpp.arap_gradient_element_F(F, mu)
     dim = F.shape[-1]
     F = F.reshape(-1, dim, dim)
     mu = np.asarray(mu).reshape(-1, 1, 1)
@@ -148,6 +154,8 @@ def arap_hessian_element_F(F: np.ndarray, mu: np.ndarray) -> np.ndarray:
     Uses ``H = mu * ( I -  dR/dF)``, carried over verbatim from the original
     implementation.
     """
+    if use_cpp():
+        return _cpp.arap_hessian_element_F(F, mu)
     dim = F.shape[-1]
     F = F.reshape(-1, dim, dim)
     n = F.shape[0]
@@ -333,8 +341,7 @@ def arap_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, vol: np
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    H = sp.sparse.block_diag(He)
-    Q = J.transpose() @ H @ J
+    Q = block_diag_sandwich(J, He)
     return Q
 
 
@@ -432,8 +439,7 @@ def arap_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu:
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    H = sp.sparse.block_diag(He)
-    Q = J.transpose() @ H @ J
+    Q = block_diag_sandwich(J, He)
     return Q
 
 

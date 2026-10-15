@@ -1,0 +1,4 @@
+include LICENSE.MIT README.md CHANGELOG.md
+graft cpp
+prune cpp/build
+global-exclude *.py[cod] __pycache__ *.so *.o

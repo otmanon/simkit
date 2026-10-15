@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 While the version stays below `1.0`, the public API may change in any release.
 
+## [Unreleased]
+
+### Added
+
+- **C++ core with Python bindings** (`cpp/`, `simkit._cpp`). The slow NumPy
+  paths now have Eigen implementations behind the same flat functions:
+  every `*_element_F` material kernel (`arap`, `fcr`, `neo_hookean`,
+  `stable_neo_hookean`, `stvk`, `linear_elasticity`,
+  `macklin_mueller_neo_hookean` and the `elastic_*` dispatcher),
+  `polar_svd`, `svd_rv`, `rotation_gradient_F`, `psd_project`,
+  `deformation_jacobian`, and the Hessian assembly. The extension is built
+  by `pip install .` when a C++17 compiler is available and is optional:
+  without it the package is unchanged. Results agree with the NumPy code to
+  round-off (`tests/test_cpp_backend.py`).
+- **`block_diag_sandwich(J, He)`**: `J.T @ block_diag(He) @ J` without
+  materializing the block diagonal. All `*_hessian_x/_u/_z` functions now
+  assemble through it (sparse or dense `J`).
+- **Backend helpers** `backend()`, `set_backend()`, `cpp_available()`,
+  `cpp_num_threads()` and the `SIMKIT_BACKEND` / `SIMKIT_NUM_THREADS` /
+  `SIMKIT_NO_CPP` environment variables.
+- `scripts/benchmark_cpp.py` to time both backends, and a standalone CMake
+  build with C++ tests under `cpp/`.
+
 ## [0.1.8] - 2026-09-23
 
 ### Removed

@@ -30,6 +30,8 @@ from typing import Optional
 
 import numpy as np
 import scipy as sp
+from .._backend import _cpp, use_cpp
+from ..block_diag_sandwich import block_diag_sandwich
 
 from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
@@ -57,6 +59,8 @@ def linear_elasticity_energy_element_F(F: np.ndarray, mu: np.ndarray, lam: np.nd
     psi : np.ndarray (t, 1)
         Per-element energy densities. No quadrature weighting applied.
     """
+    if use_cpp():
+        return _cpp.linear_elasticity_energy_element_F(F, mu, lam)
     assert F.ndim == 3
     assert F.shape[1] == F.shape[2]
     mu = np.asarray(mu).reshape(-1, 1)
@@ -87,6 +91,8 @@ def linear_elasticity_gradient_element_F(F: np.ndarray, mu: np.ndarray, lam: np.
     P : np.ndarray (t, dim, dim)
         Per-element PK1 stress blocks. No quadrature weighting applied.
     """
+    if use_cpp():
+        return _cpp.linear_elasticity_gradient_element_F(F, mu, lam)
     assert F.ndim == 3
     assert F.shape[1] == F.shape[2]
     mu = np.asarray(mu).reshape(-1, 1, 1)
@@ -119,6 +125,8 @@ def linear_elasticity_hessian_element_F(F: np.ndarray, mu: np.ndarray, lam: np.n
         Per-element Hessian blocks in vectorized ``F`` layout. Constant in
         ``F`` and positive semi-definite. No quadrature weighting applied.
     """
+    if use_cpp():
+        return _cpp.linear_elasticity_hessian_element_F(F, mu, lam)
     assert F.ndim == 3
     assert F.shape[1] == F.shape[2]
     mu = np.asarray(mu).reshape(-1, 1, 1)
@@ -225,8 +233,7 @@ def linear_elasticity_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.nda
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     He = linear_elasticity_hessian_element_F(F, mu, lam)
     He = He * np.asarray(vol).reshape(-1, 1, 1)
-    H = sp.sparse.block_diag(He)
-    Q = J.transpose() @ H @ J
+    Q = block_diag_sandwich(J, He)
     return Q
 
 
@@ -328,8 +335,7 @@ def linear_elasticity_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     He = linear_elasticity_hessian_element_F(F, mu, lam)
     He = He * np.asarray(vol).reshape(-1, 1, 1)
-    H = sp.sparse.block_diag(He)
-    Q = J.transpose() @ H @ J
+    Q = block_diag_sandwich(J, He)
     return Q
 
 

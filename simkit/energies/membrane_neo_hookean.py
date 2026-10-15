@@ -19,6 +19,7 @@ a precomputed ``J`` and ``vol``.
 from typing import Optional
 
 import scipy as sp
+from ..block_diag_sandwich import block_diag_sandwich
 import numpy as np
 from numpy import sqrt
 
@@ -190,8 +191,7 @@ def membrane_neo_hookean_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    H = sp.sparse.block_diag(He)
-    return J.transpose() @ H @ J
+    return block_diag_sandwich(J, He)
 
 
 # --------------------------------------------------------------------------- #
@@ -289,5 +289,4 @@ def membrane_neo_hookean_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar:
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    H = sp.sparse.block_diag(He)
-    return J.transpose() @ H @ J
+    return block_diag_sandwich(J, He)

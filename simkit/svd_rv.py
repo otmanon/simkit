@@ -3,6 +3,7 @@
 from typing import Tuple
 
 import numpy as np
+from ._backend import _cpp, use_cpp
 
 
 def svd_rv(F: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -28,6 +29,8 @@ def svd_rv(F: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     dim = F.shape[-1]
     F = F.reshape(-1, dim, dim)
+    if use_cpp():
+        return _cpp.svd_rv(F)
 
     d = F.shape[1]
     [U, S, VT] = np.linalg.svd(F)

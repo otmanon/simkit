@@ -47,6 +47,8 @@ from typing import Optional
 
 import numpy as np
 import scipy as sp
+from .._backend import _cpp, use_cpp
+from ..block_diag_sandwich import block_diag_sandwich
 
 from ..mat2py import (
     _4vector_2D_ordering_,
@@ -81,6 +83,8 @@ def stable_neo_hookean_energy_element_F(F: np.ndarray, mu: np.ndarray, lam: np.n
         Note: ``psi(F=I)`` is a non-zero constant; the rest state is a
         stationary point (gradient zero) but not the zero of the energy.
     """
+    if use_cpp():
+        return _cpp.stable_neo_hookean_energy_element_F(F, mu, lam)
     dim = F.shape[-1]
     F = F.reshape(-1, dim, dim)
     mu = np.asarray(mu).reshape(-1, 1)
@@ -146,6 +150,8 @@ def stable_neo_hookean_gradient_element_F(F: np.ndarray, mu: np.ndarray, lam: np
     P : np.ndarray (t, dim, dim)
         Per-element PK1 stress blocks. No quadrature weighting applied.
     """
+    if use_cpp():
+        return _cpp.stable_neo_hookean_gradient_element_F(F, mu, lam)
     dim = F.shape[-1]
     mu = np.asarray(mu).reshape(-1, 1)
     lam = np.asarray(lam).reshape(-1, 1)
@@ -237,6 +243,8 @@ def stable_neo_hookean_hessian_element_F(F: np.ndarray, mu: np.ndarray, lam: np.
         weighting applied. Not PSD-projected; projection happens in the global
         tier.
     """
+    if use_cpp():
+        return _cpp.stable_neo_hookean_hessian_element_F(F, mu, lam)
     dim = F.shape[-1]
     mu = np.asarray(mu).reshape(-1, 1)
     lam = np.asarray(lam).reshape(-1, 1)
@@ -533,8 +541,7 @@ def stable_neo_hookean_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.nd
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    H = sp.sparse.block_diag(He)
-    Q = J.transpose() @ H @ J
+    Q = block_diag_sandwich(J, He)
     return Q
 
 
@@ -643,8 +650,7 @@ def stable_neo_hookean_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: n
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    H = sp.sparse.block_diag(He)
-    Q = J.transpose() @ H @ J
+    Q = block_diag_sandwich(J, He)
     return Q
 
 

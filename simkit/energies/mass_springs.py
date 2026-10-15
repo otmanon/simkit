@@ -34,6 +34,7 @@ import scipy as sp
 
 from ..edge_displacement_jacobian import edge_displacement_jacobian
 from ..psd_project import psd_project
+from ..block_diag_sandwich import block_diag_sandwich
 
 
 # --------------------------------------------------------------------------- #
@@ -220,9 +221,8 @@ def mass_springs_hessian_x(x: np.ndarray, E: np.ndarray, ym: np.ndarray, vol: np
     He = mass_springs_hessian_element_d(d, ym, l0) * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    Q = sp.sparse.block_diag(He)
     J = sp.sparse.kron(edge_displacement_jacobian(x, E), sp.sparse.identity(dim))
-    return J.transpose() @ Q @ J
+    return block_diag_sandwich(J, He)
 
 
 def mass_springs_energy_z(z: np.ndarray, J: sp.sparse.spmatrix, ym: np.ndarray, vol: np.ndarray, l0: np.ndarray, Jx0: Optional[np.ndarray] = None) -> float:
@@ -319,8 +319,7 @@ def mass_springs_hessian_z(z: np.ndarray, J: sp.sparse.spmatrix, ym: np.ndarray,
     He = mass_springs_hessian_element_d(d, ym, l0) * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    Q = sp.sparse.block_diag(He)
-    return J.transpose() @ Q @ J
+    return block_diag_sandwich(J, He)
 
 
 # --------------------------------------------------------------------------- #

@@ -9,6 +9,7 @@ import numpy as np
 import scipy as sp
 
 from .simplex_vertex_map import simplex_vertex_map
+from ._backend import _cpp, use_cpp
 
 
 def deformation_jacobian(X: np.ndarray, T: np.ndarray) -> "sp.sparse.csc_matrix":
@@ -43,6 +44,9 @@ def deformation_jacobian(X: np.ndarray, T: np.ndarray) -> "sp.sparse.csc_matrix"
     T = T.reshape(-1, dt)
     nt = T.shape[0]
     dim = X.shape[1]
+    if use_cpp():
+        rows, cols, vals = _cpp.deformation_jacobian_coo(np.asarray(X, dtype=np.float64), np.asarray(T))
+        return sp.sparse.csc_matrix((vals, (rows, cols)), shape=(nt * dim * dim, X.shape[0] * dim))
 
     # Reference-element shape-function gradient, set by simplex dimension.
     if dim == 1:

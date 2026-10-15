@@ -49,6 +49,7 @@ from ..dihedral_angles import (
 )
 from ..wedge_map import wedge_map
 from ..psd_project import psd_project
+from ..block_diag_sandwich import block_diag_sandwich
 
 
 def _infer_dim(C: np.ndarray) -> int:
@@ -206,10 +207,9 @@ def bending_hessian_x(x: np.ndarray, C: np.ndarray, theta0: np.ndarray, kappa: n
     if psd:
         Q = psd_project(Q)
 
-    Q2 = sp.sparse.block_diag(Q)
     if W is None:
         W = sp.sparse.kron(wedge_map(C, nv), sp.sparse.identity(dim))
-    return (W.T @ Q2 @ W).tocsc()
+    return block_diag_sandwich(W, Q).tocsc()
 
 
 # --------------------------------------------------------------------------- #

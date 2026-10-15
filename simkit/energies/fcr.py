@@ -23,6 +23,8 @@ from typing import Optional
 
 import numpy as np
 import scipy as sp
+from .._backend import _cpp, use_cpp
+from ..block_diag_sandwich import block_diag_sandwich
 
 from .arap import (
     arap_energy_element_F,
@@ -55,6 +57,8 @@ def fcr_energy_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray) -> np.n
     psi : np.ndarray (t, 1)
         Per-element energy densities. No quadrature weighting applied.
     """
+    if use_cpp():
+        return _cpp.fcr_energy_element_F(F, mu, lam)
     lam = np.asarray(lam).reshape(-1, 1)
     psi_shear = 2.0 * arap_energy_element_F(F, mu)
     det = np.linalg.det(F).reshape(-1, 1)
@@ -79,6 +83,8 @@ def fcr_gradient_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray) -> np
     P : np.ndarray (t, dim, dim)
         Per-element PK1 stress blocks. No quadrature weighting applied.
     """
+    if use_cpp():
+        return _cpp.fcr_gradient_element_F(F, mu, lam)
     dim = F.shape[-1]
     lam = np.asarray(lam).reshape(-1, 1)
     P_shear = 2.0 * arap_gradient_element_F(F, mu)
@@ -144,6 +150,8 @@ def fcr_hessian_element_F(F: np.ndarray, mu: np.ndarray, lam: np.ndarray) -> np.
         weighting applied. Not PSD-projected; projection happens in the global
         tier.
     """
+    if use_cpp():
+        return _cpp.fcr_hessian_element_F(F, mu, lam)
     dim = F.shape[-1]
     lam = np.asarray(lam).reshape(-1, 1)
 
@@ -392,8 +400,7 @@ def fcr_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, mu: np.ndarray, lam: np.
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    H = sp.sparse.block_diag(He)
-    Q = J.transpose() @ H @ J
+    Q = block_diag_sandwich(J, He)
     return Q
 
 
@@ -497,8 +504,7 @@ def fcr_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, mu: 
     He = He * np.asarray(vol).reshape(-1, 1, 1)
     if psd:
         He = psd_project(He)
-    H = sp.sparse.block_diag(He)
-    Q = J.transpose() @ H @ J
+    Q = block_diag_sandwich(J, He)
     return Q
 
 

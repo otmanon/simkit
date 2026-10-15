@@ -54,6 +54,33 @@ pip install -e ".[all]"             # everything end-user-facing
 pip install -e ".[all,dev,docs]"    # everything, including dev tooling
 ```
 
+## Optional C++ Acceleration
+
+The per-element energies, gradients and Hessians, the batched polar
+decomposition / SVD / PSD projection, the deformation Jacobian and the sparse
+Hessian assembly also exist as a small C++ library under [`cpp/`](cpp)
+(Eigen + pybind11, flat free functions mirroring the Python ones). When
+`pip install -e .` finds a C++17 compiler it builds the extension
+`simkit._cpp` and every accelerated function uses it automatically; without a
+compiler the install still succeeds and the identical NumPy code is used.
+Nothing in the API changes between the two.
+
+```python
+import simkit
+simkit.cpp_available()        # True when the extension was built
+simkit.backend()              # 'cpp' or 'python'
+simkit.set_backend('python')  # switch at runtime (e.g. to compare)
+simkit.cpp_num_threads(4)     # worker threads for the C++ loops
+```
+
+`SIMKIT_BACKEND=python` in the environment forces the NumPy code at import
+time, `SIMKIT_NO_CPP=1` skips compiling the extension at install time, and
+`EIGEN3_INCLUDE_DIR` points the build at a different Eigen than the vendored
+copy. `python scripts/benchmark_cpp.py` times both backends side by side; on a
+16k-tetrahedra mesh the C++ path is roughly 3-10x faster per call
+(Hessian assembly included). See [`cpp/README.md`](cpp/README.md) for the
+C++ API and the standalone CMake build.
+
 ## Running Examples
 
 The repository includes several end-to-end demos under `examples/`, each

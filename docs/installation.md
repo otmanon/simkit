@@ -106,3 +106,23 @@ sphinx-build -b html docs docs/_build/html
 ```
 
 Then open `docs/_build/html/index.html` in a browser.
+
+
+## Optional C++ acceleration
+
+`pip install -e .` also compiles the extension `simkit._cpp` (pybind11 + the
+vendored Eigen under `cpp/external/eigen`) when a C++17 compiler is found.
+The extension speeds up the per-element energies, gradients and Hessians,
+the batched decompositions and the Hessian assembly; the NumPy
+implementations stay as the fallback and are used automatically when the
+extension is missing.
+
+```bash
+pip install -e .                 # builds simkit._cpp if a compiler is available
+SIMKIT_NO_CPP=1 pip install -e . # pure-Python install
+python -c "import simkit; print(simkit.backend())"   # 'cpp' or 'python'
+```
+
+Set `SIMKIT_BACKEND=python` to force the NumPy code at import time, or call
+`simkit.set_backend('python')` at runtime. See `cpp/README.md` for the C++
+API and the standalone CMake build.

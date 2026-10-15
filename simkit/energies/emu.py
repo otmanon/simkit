@@ -24,6 +24,7 @@ from typing import Optional
 
 import numpy as np
 import scipy as sp
+from ..block_diag_sandwich import block_diag_sandwich
 
 from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
@@ -195,8 +196,7 @@ def emu_hessian_x(X: np.ndarray, J: sp.sparse.spmatrix, d: np.ndarray, a: np.nda
     F = (J @ X.reshape(-1, 1)).reshape(-1, dim, dim)
     He = emu_hessian_element_F(F, d, a)
     He = He * np.asarray(vol).reshape(-1, 1, 1)
-    H = sp.sparse.block_diag(He)
-    return J.transpose() @ H @ J
+    return block_diag_sandwich(J, He)
 
 
 # --------------------------------------------------------------------------- #
@@ -295,8 +295,7 @@ def emu_hessian_u(u: np.ndarray, J: sp.sparse.spmatrix, Jx_bar: np.ndarray, d: n
     F = (J @ u.reshape(-1, 1) + Jx_bar).reshape(-1, dim, dim)
     He = emu_hessian_element_F(F, d, a)
     He = He * np.asarray(vol).reshape(-1, 1, 1)
-    H = sp.sparse.block_diag(He)
-    return J.transpose() @ H @ J
+    return block_diag_sandwich(J, He)
 
 
 def emu_force_matrix(X: np.ndarray, d: np.ndarray, vol: np.ndarray, J: sp.sparse.spmatrix) -> sp.sparse.spmatrix:

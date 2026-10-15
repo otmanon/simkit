@@ -30,13 +30,49 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
-      - name: Install (numpy + scipy + pytest only)
+      - name: Install (numpy + scipy + pytest only; builds the C++ extension)
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Verify simkit imports with only the lean install
-        run: python -c "import simkit; print(simkit.__name__, 'imported OK')"
+      - name: Verify simkit imports and the C++ backend is active
+        run: python -c "import simkit; assert simkit.cpp_available(), 'C++ extension not built'; print(simkit.__name__, 'backend', simkit.backend())"
+
+      - name: Run pytest (C++ backend)
+        run: pytest -ra
+
+      - name: Run pytest (NumPy backend)
+        run: pytest -ra
+        env:
+          SIMKIT_BACKEND: python
+
+      - name: C++ standalone build and tests
+        run: |
+          cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=Release -DSIMKIT_BUILD_PYTHON=OFF
+          cmake --build cpp/build --parallel
+          ctest --test-dir cpp/build --output-on-failure
+
+  test-pure-python:
+    name: Tests (pure Python, no C++ extension)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install without the C++ extension
+        run: |
+          python -m pip install --upgrade pip
+          SIMKIT_NO_CPP=1 pip install -e ".[dev]"
+
+      - name: Verify the NumPy backend is used
+        run: python -c "import simkit; assert not simkit.cpp_available(); assert simkit.backend() == 'python'"
 
       - name: Run pytest
         run: pytest -ra
