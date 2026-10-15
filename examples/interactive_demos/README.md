@@ -261,7 +261,7 @@ The tutorials cover the spine of an FEM simulator: deformation gradient → ener
 
 A 3D octopus (48k tets, from the `data/` submodule — run `git submodule update --init data` first) with its belly pinned, simulated with the true neo-Hookean energy ([simkit/energies/neo_hookean.py](../../simkit/energies/neo_hookean.py)) and backward Euler. Left-click anywhere on the octopus to create a soft penalty handle on the patch of vertices around the click, drag to pull it (the target moves in the camera-facing plane), release to destroy the handle. Untick *Click-to-grab* to orbit the camera instead.
 
-The *Backend* radio switches simkit between the C++ core and the NumPy implementation live; the step-time plot and the running means show what each costs on this mesh. Everything else in the simulation (the integrator, the penalty pins, the handle) is the same code either way.
+The *Backend* radio switches simkit between the C++ core and the NumPy implementation live. The UI breaks each step into the assembled gradient, the assembled PSD-projected Hessian, the linear solve and the line search, with running means per backend, so you can see which piece the C++ core speeds up (and that the solver switches from SuperLU to Eigen's Cholesky, falling back to LDLT if the system is not positive definite). Everything else in the simulation (the penalty pins, the handle, the time integration) is the same code either way.
 
 **What to try:**
 - Grab an arm tip and pull it in a slow circle; release and watch it spring back.
@@ -270,7 +270,7 @@ The *Backend* radio switches simkit between the C++ core and the NumPy implement
 - Enable *Gravity* and lower Young's `E`: the arms sag off the pinned belly.
 
 **Focus code:**
-- `OctopusSim.energy / gradient / hessian` sum the neo-Hookean tiers, the pin penalty, the handle penalty and gravity; `OctopusSim.step` is backward Euler through `simkit.solvers.newton_solver` with the kinetic terms from `simkit.energies.kinetic`, starting Newton from the current pose whenever the inertial guess has inverted a tet.
+- `OctopusSim.energy / gradient / hessian` sum the neo-Hookean tiers, the pin penalty, the handle penalty and gravity; `OctopusSim.step` is backward Euler written out (the kinetic terms from `simkit.energies.kinetic`, `simkit.sparse_solve`, `simkit.backtracking_line_search`) so each piece can be timed; it starts Newton from the current pose whenever the inertial guess has inverted a tet.
 - `GrabHandle.grab / move / release` build and tear down the handle via `simkit.dirichlet_penalty`; the mouse plumbing lives in `main_interactive`.
-- `simkit.set_backend('cpp' | 'python')` is the whole backend switch. With the C++ backend the Newton solve also uses `simkit.sparse_solve` (Eigen LDLT) instead of SuperLU.
+- `simkit.set_backend('cpp' | 'python')` is the whole backend switch. With the C++ backend `simkit.sparse_solve` factors the Newton system with Eigen's Cholesky (LLT, then LDLT) instead of SuperLU, reusing the symbolic analysis across steps.
 - `python 016_octopus_grab_cpp_vs_python.py --headless 4` runs a scripted grab under both backends and prints the timings, no window needed.

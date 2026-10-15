@@ -107,11 +107,10 @@ bool is_scipy_sparse(const py::object& J) {
 }
 
 CsrArrays csr_arrays(const py::object& J) {
-  py::object Jc = J.attr("tocsr")();
-  CsrArrays a{Jc.attr("indptr").cast<ArrL>(), Jc.attr("indices").cast<ArrL>(), Jc.attr("data").cast<Arr>(), 0, 0};
-  py::tuple shape = Jc.attr("shape");
-  a.rows = shape[0].cast<Index>();
-  a.cols = shape[1].cast<Index>();
+  // simkit._backend.csr_parts caches the int64 CSR arrays on the matrix.
+  py::tuple parts = py::module_::import("simkit._backend").attr("csr_parts")(J);
+  CsrArrays a{parts[0].cast<ArrL>(), parts[1].cast<ArrL>(), parts[2].cast<Arr>(), parts[3].cast<Index>(),
+              parts[4].cast<Index>()};
   return a;
 }
 
@@ -377,6 +376,22 @@ PYBIND11_MODULE(_cpp, m) {
       py::arg("x"), py::arg("J"), py::arg("Jx0"), py::arg("mu"), py::arg("lam"), py::arg("vol"), py::arg("material"), py::arg("dim"), py::arg("psd") = true, py::arg("psd_before_weighting") = false);
 
   // ---- linear solve -------------------------------------------------------------
+  m.def(
+      "sparse_solve_cholesky",
+      [](const ArrL& indptr, const ArrL& indices, const Arr& data, Index n, const Arr& b) -> py::object {
+        const auto bv = b.ndim() == 1 ? Eigen::Map<const RowMatrixXd>(b.data(), b.shape(0), 1) : stack_view(b);
+        RowMatrixXd x;
+        simkit::SolveMethod method;
+        {
+          py::gil_scoped_release release;
+          method = simkit::sparse_solve_cholesky(lvec_view(indptr), lvec_view(indices), vec_view(data), n, bv, x);
+        }
+        if (method == simkit::SolveMethod::failed) return py::none();
+        const Index r = x.rows(), c = x.cols();
+        return py::make_tuple(to_array(std::move(x), {r, c}), method == simkit::SolveMethod::llt ? "llt" : "ldlt");
+      },
+      py::arg("indptr"), py::arg("indices"), py::arg("data"), py::arg("n"), py::arg("b"),
+      "Solve A x = b for a symmetric CSC A: SimplicialLLT, then SimplicialLDLT. Returns (x, method) or None.");
   m.def(
       "sparse_solve_ldlt",
       [](const ArrL& indptr, const ArrL& indices, const Arr& data, Index n, const Arr& b) -> py::object {

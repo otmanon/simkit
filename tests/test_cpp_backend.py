@@ -456,6 +456,17 @@ def test_sparse_solve_matches_spsolve(both_backends):
     assert np.allclose(y0, y1, atol=1e-9)
     z0, z1 = both_backends(lambda: simkit.sparse_solve(H, b[:, 0]))
     assert z1.shape == (J.shape[1],) and np.allclose(z0, z1, atol=1e-9)
+    # SPD systems take the Cholesky path; an indefinite one falls through to LDLT.
+    simkit.set_backend("cpp")
+    _, method = simkit.sparse_solve(H, b, return_method=True)
+    assert method == "llt"
+    K = H - 2.0 * sps.identity(J.shape[1])  # shifted below zero: indefinite but non-singular
+    xk, method = simkit.sparse_solve(K, b, return_method=True)
+    assert method in ("ldlt", "spsolve")
+    assert np.allclose(K @ xk, b, atol=1e-7)
+    simkit.set_backend("python")
+    _, method = simkit.sparse_solve(H, b, return_method=True)
+    assert method == "spsolve"
 
 
 def test_sparse_solve_falls_back_on_singular_matrix():

@@ -36,9 +36,12 @@ While the version stays below `1.0`, the public API may change in any release.
   for `svd_rv`, the neo-Hookean element terms, the assembled and subspace
   gradient / Hessian, individually and together.
 
-- **`sparse_solve(A, b)`**: direct solve with Eigen's `SimplicialLDLT` on the
-  C++ backend (falls back to `scipy.sparse.linalg.spsolve`); `newton_solver`
-  uses it, which roughly halves the linear-solve time of a Newton step.
+- **`sparse_solve(A, b)`**: direct solve on the C++ backend with Eigen's
+  `SimplicialLLT` (Cholesky), `SimplicialLDLT` if the system is not positive
+  definite, and `scipy.sparse.linalg.spsolve` as the last resort; the symbolic
+  analysis is reused across calls with the same sparsity pattern.
+  `newton_solver` uses it, which roughly halves the linear-solve time of a
+  Newton step. `return_method=True` reports which solver ran.
 - **`read_mesh(path)`**: NumPy-only reader for MEDIT `.mesh` files
   (vertices, triangles, tetrahedra), so the `data/` meshes load without libigl.
 - `examples/interactive_demos/016_octopus_grab_cpp_vs_python.py`: click-and-drag

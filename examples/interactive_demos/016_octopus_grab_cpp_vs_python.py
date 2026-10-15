@@ -44,7 +44,8 @@ from simkit.energies.kinetic import be_target, kinetic_energy_be, kinetic_gradie
 from simkit.massmatrix import massmatrix
 from simkit.normalize_and_center import normalize_and_center
 from simkit.read_mesh import read_mesh
-from simkit.solvers import newton_solver
+from simkit.backtracking_line_search import backtracking_line_search
+from simkit.sparse_solve import sparse_solve
 from simkit.volume import volume
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -112,6 +113,8 @@ class OctopusSim:
         self.U = X.copy()
         self.U_prev = X.copy()
         self.last_step_time = 0.0
+        self.last_timing = {}
+        self.solve_method = "-"
 
     def set_material(self, E, nu):
         mu, lam = lame_from_E_nu(E, nu)
@@ -151,32 +154,47 @@ class OctopusSim:
     def step(self):
         """One backward-Euler timestep; returns the wall-clock seconds it took.
 
-        Same as ``simkit.integrators.backward_euler`` except for the choice of
-        the Newton starting point: the inertial guess ``x + h v`` can invert
-        tets when the handle yanks an arm, and neo-Hookean is undefined
+        This is ``simkit.integrators.backward_euler`` written out, so the demo
+        can time each piece of a Newton iteration separately (assembled
+        gradient, assembled Hessian, linear solve, line search) and report
+        which direct solver handled the system. The only behavioural
+        difference is the starting point: the inertial guess ``x + h v`` can
+        invert tets when the handle yanks an arm, and neo-Hookean is undefined
         there, so in that case Newton starts from the current pose instead.
         """
-        t0 = time.perf_counter()
+        t_start = time.perf_counter()
         x_curr = self.U.reshape(-1, 1)
         x_prev = self.U_prev.reshape(-1, 1)
         M, h = self.M, self.h
+        timing = dict(gradient=0.0, hessian=0.0, solve=0.0, line_search=0.0)
 
         def energy(x):
             return self.energy(x) + kinetic_energy_be(x, x_curr, x_prev, M, h)
 
-        def gradient(x):
-            return self.gradient(x) + kinetic_gradient_be(x, x_curr, x_prev, M, h)
-
-        def hessian(x):
-            return self.hessian(x) + kinetic_hessian_be(M, h)
-
-        x0 = be_target(x_curr, x_prev, h)
-        if not np.isfinite(self.energy(x0)):
-            x0 = x_curr.copy()
-        x_next = newton_solver(x0, energy, gradient, hessian, max_iter=self.newton_iters, do_line_search=True)
+        x = be_target(x_curr, x_prev, h)
+        if not np.isfinite(self.energy(x)):
+            x = x_curr.copy()
+        for _ in range(self.newton_iters):
+            t0 = time.perf_counter()
+            g = self.gradient(x) + kinetic_gradient_be(x, x_curr, x_prev, M, h)
+            t1 = time.perf_counter()
+            H = self.hessian(x) + kinetic_hessian_be(M, h)
+            t2 = time.perf_counter()
+            dx, self.solve_method = sparse_solve(H, -g, return_method=True)
+            t3 = time.perf_counter()
+            alpha, x, _ = backtracking_line_search(energy, x, g, dx)
+            t4 = time.perf_counter()
+            timing["gradient"] += t1 - t0
+            timing["hessian"] += t2 - t1
+            timing["solve"] += t3 - t2
+            timing["line_search"] += t4 - t3
+            if np.linalg.norm(alpha * dx) < 1e-6:
+                break
         self.U_prev[:] = self.U
-        self.U[:] = x_next.reshape(self.n, self.dim)
-        self.last_step_time = time.perf_counter() - t0
+        self.U[:] = x.reshape(self.n, self.dim)
+        timing["total"] = time.perf_counter() - t_start
+        self.last_timing = timing
+        self.last_step_time = timing["total"]
         return self.last_step_time
 
 
@@ -272,6 +290,7 @@ def main_interactive(args):
         plane_p=None,
         plane_n=None,
         ema={b: None for b in BACKENDS},
+        parts={b: {} for b in BACKENDS},
     )
     simkit.set_backend(BACKENDS[state["backend"]])
     plot = RollingPlot("step time (ms)", length=120, fmt="{:.0f}")
@@ -328,9 +347,15 @@ def main_interactive(args):
                 plot.clear()
             if i == 0:
                 psim.SameLine()
-        for b in BACKENDS:
-            ms = state["ema"][b]
-            psim.Text(f"  {b:7s}: " + (f"{ms * 1e3:7.0f} ms / step (running mean)" if ms is not None else "   not measured yet"))
+        psim.Text(f"{'running means (ms / step)':28s}" + "".join(f"{b:>10s}" for b in BACKENDS))
+        for key, label in [("gradient", "assembled gradient"), ("hessian", "assembled Hessian (PSD)"),
+                           ("solve", "linear solve"), ("line_search", "line search"), ("total", "whole step")]:
+            row = f"  {label:26s}"
+            for b in BACKENDS:
+                v = state["parts"][b].get(key)
+                row += f"{v * 1e3:10.0f}" if v is not None else f"{'-':>10s}"
+            psim.Text(row)
+        psim.Text(f"  linear solver: {sim.solve_method}  (cpp: Cholesky LLT, then LDLT; python: SuperLU)")
         plot.draw()
         psim.Separator()
         _, state["running"] = psim.Checkbox("Run", state["running"])
@@ -362,6 +387,9 @@ def main_interactive(args):
         dt = sim.step()
         b = BACKENDS[state["backend"]]
         state["ema"][b] = dt if state["ema"][b] is None else 0.9 * state["ema"][b] + 0.1 * dt
+        parts = state["parts"][b]
+        for key, v in sim.last_timing.items():
+            parts[key] = v if parts.get(key) is None else 0.9 * parts[key] + 0.1 * v
         plot.push(dt * 1e3)
 
     def callback():
@@ -400,7 +428,11 @@ def main_headless(n_steps, args):
             handle.move(X[tip] + pull * (k + 1) / n_steps)
             times.append(sim.step())
             disp = np.linalg.norm(sim.U - X, axis=1).max()
-            print(f"  [{b:6s}] step {k + 1}/{n_steps}: {times[-1] * 1e3:7.0f} ms, max displacement {disp:.3f}")
+            tm = sim.last_timing
+            print(f"  [{b:6s}] step {k + 1}/{n_steps}: {times[-1] * 1e3:6.0f} ms "
+                  f"(gradient {tm['gradient'] * 1e3:4.0f}, hessian {tm['hessian'] * 1e3:5.0f}, "
+                  f"solve {tm['solve'] * 1e3:5.0f} via {sim.solve_method}, line search {tm['line_search'] * 1e3:4.0f}), "
+                  f"max displacement {disp:.3f}")
         handle.release()
         assert np.all(np.isfinite(sim.U)), "simulation produced non-finite positions"
         results[b] = (np.mean(times), sim.U.copy())

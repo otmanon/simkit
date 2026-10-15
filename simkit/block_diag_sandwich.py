@@ -7,7 +7,7 @@ from typing import Union
 import numpy as np
 import scipy as sp
 
-from ._backend import _cpp, use_cpp
+from ._backend import _cpp, csr_parts, use_cpp
 
 Matrix = Union[np.ndarray, sp.sparse.spmatrix]
 
@@ -30,8 +30,8 @@ def block_diag_sandwich(J: Matrix, He: np.ndarray) -> Matrix:
 
     Returns
     -------
-    Q : scipy.sparse.csc_matrix (m, m) or np.ndarray (m, m)
-        Assembled matrix.
+    Q : scipy.sparse matrix (m, m) or np.ndarray (m, m)
+        Assembled matrix (CSR from the C++ path, like the explicit product).
     """
     He = np.asarray(He, dtype=np.float64)
     if He.ndim == 2:
@@ -43,9 +43,9 @@ def block_diag_sandwich(J: Matrix, He: np.ndarray) -> Matrix:
         )
     if use_cpp():
         if sp.sparse.issparse(J):
-            Jc = J.tocsr()
-            indptr, indices, data = _cpp.block_diag_sandwich_csr(Jc.indptr, Jc.indices, Jc.data, J.shape[1], He)
-            return sp.sparse.csr_matrix((data, indices, indptr), shape=(J.shape[1], J.shape[1])).tocsc()
+            indptr, indices, data, _, ncols = csr_parts(J)
+            indptr, indices, data = _cpp.block_diag_sandwich_csr(indptr, indices, data, ncols, He)
+            return sp.sparse.csr_matrix((data, indices, indptr), shape=(ncols, ncols))
         Q = _cpp.block_diag_sandwich_dense(np.ascontiguousarray(J, dtype=np.float64), He)
         return np.asarray(Q)
     H = sp.sparse.block_diag(He)

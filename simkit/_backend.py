@@ -109,3 +109,35 @@ def cpp_num_threads(n: int | None = None) -> int:
     if n is not None:
         _cpp.set_num_threads(int(n))
     return int(_cpp.num_threads())
+
+
+def csr_parts(J):
+    """CSR arrays ``(indptr, indices, data, nrows, ncols)`` of a sparse operator, cached.
+
+    The C++ core consumes operators as int64 CSR arrays. Converting a SciPy
+    matrix costs a few milliseconds per call on a large mesh, so the arrays
+    are kept on the matrix object (attribute ``_simkit_csr``) and reused while
+    its ``data`` buffer, ``nnz`` and ``shape`` are unchanged. Operators like a
+    deformation Jacobian are built once and never edited, which is what this
+    assumes: an in-place edit of ``J.data`` after the first use is not seen.
+    Pass a fresh matrix (or delete the attribute) in that case.
+    """
+    import numpy as np
+
+    key = (id(J.data), J.data.ctypes.data, J.nnz, J.shape)
+    cached = getattr(J, "_simkit_csr", None)
+    if cached is not None and cached[0] == key:
+        return cached[1]
+    Jc = J.tocsr()
+    parts = (
+        np.ascontiguousarray(Jc.indptr, dtype=np.int64),
+        np.ascontiguousarray(Jc.indices, dtype=np.int64),
+        np.ascontiguousarray(Jc.data, dtype=np.float64),
+        int(Jc.shape[0]),
+        int(Jc.shape[1]),
+    )
+    try:
+        J._simkit_csr = (key, parts)
+    except AttributeError:  # exotic sparse types without a __dict__
+        pass
+    return parts
