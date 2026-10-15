@@ -79,6 +79,12 @@ _video = _OptionalImport("video")
 with _core:
     from .backtracking_line_search import backtracking_line_search
     from .block_diag_sandwich import block_diag_sandwich
+    from .assemble import (
+        assembled_gradient,
+        assembled_hessian,
+        assembled_subspace_gradient,
+        assembled_subspace_hessian,
+    )
     from .sparse_solve import sparse_solve
     from .read_mesh import read_mesh
     from .ympr_to_lame import ympr_to_lame

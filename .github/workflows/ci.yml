@@ -52,6 +52,46 @@ jobs:
           cmake --build cpp/build --parallel
           ctest --test-dir cpp/build --output-on-failure
 
+  test-cpp-cross-platform:
+    name: Tests (C++ extension, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install (builds simkit._cpp with the runner's compiler)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Verify the C++ backend is active
+        run: python -c "import simkit; assert simkit.cpp_available(), 'C++ extension not built'; print('backend', simkit.backend(), 'threads', simkit.cpp_num_threads())"
+
+      - name: Run pytest (C++ backend)
+        run: pytest -ra
+
+      - name: Run pytest (NumPy backend)
+        run: pytest -ra
+        env:
+          SIMKIT_BACKEND: python
+
+      - name: C++ standalone build and tests
+        run: |
+          cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=Release -DSIMKIT_BUILD_PYTHON=OFF
+          cmake --build cpp/build --parallel --config Release
+          ctest --test-dir cpp/build --output-on-failure -C Release
+
   test-pure-python:
     name: Tests (pure Python, no C++ extension)
     runs-on: ubuntu-latest

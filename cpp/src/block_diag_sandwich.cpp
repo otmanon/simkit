@@ -1,5 +1,7 @@
 #include "simkit/block_diag_sandwich.h"
 
+#include "simkit/assemble.h"
+
 #include "simkit/parallel_for.h"
 
 #include <algorithm>
@@ -174,27 +176,7 @@ void block_diag_sandwich_csr(const ConstRefVecL& indptr, const ConstRefVecL& ind
 }
 
 RowMatrixXd block_diag_sandwich_dense(const ConstRefRow& J, const ConstRefRow& He) {
-  const int b = block_from_cols(He.cols());
-  const Index t = He.rows();
-  const Index r = J.cols();
-  if (J.rows() != t * b) throw std::invalid_argument("J must have t*b rows");
-
-  const Index nt = std::max<Index>(1, std::min<Index>(num_threads(), t));
-  const Index chunk = (t + nt - 1) / nt;
-  std::vector<RowMatrixXd> partial(static_cast<std::size_t>(nt), RowMatrixXd::Zero(r, r));
-  parallel_for(nt, [&](Index k) {
-    RowMatrixXd& acc = partial[static_cast<std::size_t>(k)];
-    RowMatrixXd tmp(b, r);
-    for (Index e = k * chunk; e < std::min(t, (k + 1) * chunk); ++e) {
-      Eigen::Map<const RowMatrixXd> Je(J.row(e * b).data(), b, r);
-      Eigen::Map<const RowMatrixXd> Hb(He.row(e).data(), b, b);
-      tmp.noalias() = Hb * Je;
-      acc.noalias() += Je.transpose() * tmp;
-    }
-  }, 1);
-  RowMatrixXd Q = RowMatrixXd::Zero(r, r);
-  for (const auto& p : partial) Q += p;
-  return Q;
+  return assembled_subspace_hessian(J, He);
 }
 
 Eigen::SparseMatrix<double> block_diag_sandwich(const Eigen::SparseMatrix<double, Eigen::RowMajor>& Jin,

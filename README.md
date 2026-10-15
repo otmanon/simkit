@@ -73,6 +73,8 @@ simkit.set_backend('python')  # switch at runtime (e.g. to compare)
 simkit.cpp_num_threads(4)     # worker threads for the C++ loops
 ```
 
+The extension builds with GCC, Clang or MSVC on Linux, macOS and Windows
+(CI covers all three); it needs nothing beyond a C++17 compiler.
 `SIMKIT_BACKEND=python` in the environment forces the NumPy code at import
 time, `SIMKIT_NO_CPP=1` skips compiling the extension at install time, and
 `EIGEN3_INCLUDE_DIR` points the build at a different Eigen than the vendored

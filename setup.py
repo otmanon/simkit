@@ -64,10 +64,18 @@ def _extension_modules():
     sources.append(os.path.join(HERE, "cpp", "bindings", "simkit_cpp.cpp"))
     sources = [os.path.relpath(s, HERE) for s in sources]
 
+    # Per-platform flags. pybind11's helper adds the C++17 switch, /EHsc and
+    # /bigobj on MSVC and -fvisibility=hidden elsewhere; the rest is
+    # optimization, Eigen's licence guard, and (on Linux) explicit pthread
+    # linking for the std::thread worker pool.
+    link = []
     if sys.platform == "win32":
         extra = ["/O2", "/DNDEBUG", "/DEIGEN_MPL2_ONLY"]
     else:
         extra = ["-O3", "-DNDEBUG", "-DEIGEN_MPL2_ONLY"]
+        if sys.platform.startswith("linux"):
+            extra.append("-pthread")
+            link.append("-pthread")
 
     ext = Pybind11Extension(
         "simkit._cpp",
@@ -75,6 +83,7 @@ def _extension_modules():
         include_dirs=[os.path.relpath(os.path.join(HERE, "cpp", "include"), HERE), eigen],
         cxx_std=17,
         extra_compile_args=extra,
+        extra_link_args=link,
         optional=True,
     )
     return [ext], {"build_ext": build_ext}

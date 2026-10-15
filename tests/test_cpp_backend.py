@@ -501,3 +501,44 @@ End
     assert X.shape == (4, 3) and T.shape == (1, 4) and F.shape == (1, 3)
     assert T.tolist() == [[0, 1, 2, 3]] and F.tolist() == [[0, 1, 2]]
     assert np.isclose(simkit.volume(X, T)[0, 0], 1.0 / 6.0)
+
+
+@pytest.mark.parametrize("dim", [2, 3])
+def test_assembled_gradient_and_hessian_match(both_backends, dim):
+    rng = np.random.default_rng(19)
+    X, T = _mesh(dim)
+    simkit.set_backend("python")
+    J = simkit.deformation_jacobian(X, T)
+    t, b = T.shape[0], dim * dim
+    P = rng.standard_normal((t, dim, dim))
+    He = rng.standard_normal((t, b, b))
+    He = He + He.transpose(0, 2, 1)
+    g0, g1 = both_backends(lambda: simkit.assembled_gradient(J, P))
+    assert g1.shape == (J.shape[1], 1) and np.allclose(g0, g1, atol=1e-11)
+    assert np.allclose(g1, J.T @ P.reshape(-1, 1), atol=1e-11)
+    H0, H1 = both_backends(lambda: simkit.assembled_hessian(J, He))
+    assert sps.issparse(H1) and abs(H0 - H1).max() < 1e-10
+    with pytest.raises(ValueError):
+        simkit.assembled_gradient(J, P[:-1])
+
+
+@pytest.mark.parametrize("r", [5, 40])
+def test_assembled_subspace_gradient_and_hessian_match(both_backends, r):
+    rng = np.random.default_rng(20)
+    X, T = _mesh(3)
+    simkit.set_backend("python")
+    J = simkit.deformation_jacobian(X, T)
+    t, b = T.shape[0], 9
+    B = rng.standard_normal((J.shape[1], r))
+    JB = J @ B
+    P = rng.standard_normal((t, 3, 3))
+    He = rng.standard_normal((t, b, b))
+    He = He + He.transpose(0, 2, 1)
+    g0, g1 = both_backends(lambda: simkit.assembled_subspace_gradient(JB, P))
+    assert g1.shape == (r, 1) and np.allclose(g0, g1, atol=1e-9)
+    assert np.allclose(g1, JB.T @ P.reshape(-1, 1), atol=1e-9)
+    H0, H1 = both_backends(lambda: simkit.assembled_subspace_hessian(JB, He))
+    assert H1.shape == (r, r) and np.allclose(H0, H1, atol=1e-8)
+    assert np.allclose(H1, JB.T @ sps.block_diag(He) @ JB, atol=1e-8)
+    with pytest.raises(ValueError):
+        simkit.assembled_subspace_hessian(JB, He[:-1])

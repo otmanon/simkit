@@ -126,6 +126,7 @@ from ..deformation_jacobian import deformation_jacobian
 from ..volume import volume
 from ..psd_project import psd_project
 from ..block_diag_sandwich import block_diag_sandwich
+from ..assemble import assembled_subspace_gradient, assembled_subspace_hessian
 from .._backend import _cpp, use_cpp
 
 _MATERIALS = (
@@ -623,7 +624,7 @@ def elastic_gradient_z(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.n
         F = (precomp.JB @ z + precomp.Jx0).reshape(-1, dim, dim)
     P = elastic_gradient_element_F(F, mu, lam, material)
     P = P * np.asarray(vol).reshape(-1, 1, 1)
-    return precomp.JB.transpose() @ P.reshape(-1, 1)
+    return assembled_subspace_gradient(precomp.JB, P)
 
 
 def elastic_gradient_filtered_z(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray, material: str, precomp: ElasticEnergyZFilteredPrecomp, F: Optional[np.ndarray] = None) -> np.ndarray:
@@ -889,7 +890,7 @@ def elastic_hessian_z(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.nd
         F = (precomp.JB @ z + precomp.Jx0).reshape(-1, dim, dim)
     He = elastic_hessian_element_F(F, mu, lam, material, psd=psd)
     He = He * np.asarray(vol).reshape(-1, 1, 1)
-    return block_diag_sandwich(precomp.JB, He)
+    return assembled_subspace_hessian(precomp.JB, He)
 
 
 def elastic_hessian_filtered_z(z: np.ndarray, mu: np.ndarray, lam: np.ndarray, vol: np.ndarray, material: str, precomp: ElasticEnergyZFilteredPrecomp, F: Optional[np.ndarray] = None, psd: bool = True) -> sp.sparse.spmatrix:

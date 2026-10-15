@@ -3,6 +3,7 @@
 // The bindings deal with NumPy shapes so the Python wrappers stay one-liners:
 // per-element stacks come in as (t, d, d) / (t, b, b) arrays and go out the
 // same way; material parameters accept (t, 1), (t,) or scalar arrays.
+#include "simkit/assemble.h"
 #include "simkit/block_diag_sandwich.h"
 #include "simkit/deformation_jacobian.h"
 #include "simkit/energies/elastic.h"
@@ -408,4 +409,64 @@ PYBIND11_MODULE(_cpp, m) {
       },
       py::arg("indptr"), py::arg("indices"), py::arg("data"), py::arg("n"), py::arg("b"),
       "Solve A x = b for a symmetric CSC A with SimplicialLDLT; None if the factorization fails.");
+
+  // ---- assembly (material-agnostic) ----------------------------------------------
+  m.def(
+      "assembled_gradient",
+      [](const py::object& J, const Arr& P) {
+        const CsrArrays a = csr_arrays(J);
+        const auto Pv = stack_view(P);
+        Eigen::VectorXd g;
+        {
+          py::gil_scoped_release release;
+          g = simkit::assembled_gradient(csr_view(a), Pv);
+        }
+        const Index n = g.size();
+        return to_array(std::move(g), {n, 1});
+      },
+      py::arg("J"), py::arg("P"), "J^T vec(P) for a scipy.sparse J and per-element P (t, b) or (t, d, d).");
+  m.def(
+      "assembled_hessian",
+      [](const py::object& J, const Arr& He) {
+        const CsrArrays a = csr_arrays(J);
+        const auto Hv = stack_view(He);
+        simkit::VectorXl indptr, indices;
+        Eigen::VectorXd data;
+        {
+          py::gil_scoped_release release;
+          simkit::assembled_hessian(csr_view(a), Hv, indptr, indices, data);
+        }
+        return scipy_csr(std::move(indptr), std::move(indices), std::move(data), a.cols);
+      },
+      py::arg("J"), py::arg("He"), "J^T blockdiag(He) J as a scipy CSR matrix for a scipy.sparse J.");
+  m.def(
+      "assembled_subspace_gradient",
+      [](const Arr& JB, const Arr& P) {
+        if (JB.ndim() != 2) throw std::invalid_argument("JB must be 2D");
+        const auto Jv = stack_view(JB);
+        const auto Pv = stack_view(P);
+        Eigen::VectorXd g;
+        {
+          py::gil_scoped_release release;
+          g = simkit::assembled_subspace_gradient(Jv, Pv);
+        }
+        const Index n = g.size();
+        return to_array(std::move(g), {n, 1});
+      },
+      py::arg("JB"), py::arg("P"), "JB^T vec(P) for a dense reduced operator.");
+  m.def(
+      "assembled_subspace_hessian",
+      [](const Arr& JB, const Arr& He) {
+        if (JB.ndim() != 2) throw std::invalid_argument("JB must be 2D");
+        const auto Jv = stack_view(JB);
+        const auto Hv = stack_view(He);
+        RowMatrixXd Q;
+        {
+          py::gil_scoped_release release;
+          Q = simkit::assembled_subspace_hessian(Jv, Hv);
+        }
+        const Index r = Q.rows();
+        return to_array(std::move(Q), {r, r});
+      },
+      py::arg("JB"), py::arg("He"), "JB^T blockdiag(He) JB (dense r x r) for a dense reduced operator.");
 }

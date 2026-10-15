@@ -1,3 +1,4 @@
+#include "simkit/assemble.h"
 #include "simkit/block_diag_sandwich.h"
 #include "simkit/energies/elastic.h"
 #include "simkit/parallel_for.h"
@@ -88,7 +89,7 @@ Eigen::VectorXd elastic_gradient_x(const SparseCSR& J, const ConstRefVec& x, con
                                    Material material, int dim) {
   const RowMatrixXd F = deformation_stack(csr_matvec(J, x), Jx0, dim);
   const RowMatrixXd P = weighted_stress(F, mu, lam, vol, material);
-  return csr_rmatvec(J, Eigen::Map<const Eigen::VectorXd>(P.data(), P.size()));
+  return assembled_gradient(J, P);
 }
 
 void elastic_hessian_x(const SparseCSR& J, const ConstRefVec& x, const ConstRefVec& Jx0, const ConstRefVec& mu,
@@ -107,7 +108,7 @@ void elastic_hessian_x(const SparseCSR& J, const ConstRefVec& x, const ConstRefV
 double elastic_energy_z(const ConstRefRow& JB, const ConstRefVec& z, const ConstRefVec& Jx0, const ConstRefVec& mu,
                         const ConstRefVec& lam, const ConstRefVec& vol, Material material, int dim) {
   if (z.size() != JB.cols()) throw std::invalid_argument("z must have JB.cols entries");
-  const RowMatrixXd F = deformation_stack(JB * z, Jx0, dim);
+  const RowMatrixXd F = deformation_stack(dense_matvec(JB, z), Jx0, dim);
   return weighted_energy(F, mu, lam, vol, material);
 }
 
@@ -115,18 +116,18 @@ Eigen::VectorXd elastic_gradient_z(const ConstRefRow& JB, const ConstRefVec& z, 
                                    const ConstRefVec& mu, const ConstRefVec& lam, const ConstRefVec& vol,
                                    Material material, int dim) {
   if (z.size() != JB.cols()) throw std::invalid_argument("z must have JB.cols entries");
-  const RowMatrixXd F = deformation_stack(JB * z, Jx0, dim);
+  const RowMatrixXd F = deformation_stack(dense_matvec(JB, z), Jx0, dim);
   const RowMatrixXd P = weighted_stress(F, mu, lam, vol, material);
-  return JB.transpose() * Eigen::Map<const Eigen::VectorXd>(P.data(), P.size());
+  return assembled_subspace_gradient(JB, P);
 }
 
 RowMatrixXd elastic_hessian_z(const ConstRefRow& JB, const ConstRefVec& z, const ConstRefVec& Jx0,
                               const ConstRefVec& mu, const ConstRefVec& lam, const ConstRefVec& vol, Material material,
                               int dim, bool psd, bool psd_before_weighting) {
   if (z.size() != JB.cols()) throw std::invalid_argument("z must have JB.cols entries");
-  const RowMatrixXd F = deformation_stack(JB * z, Jx0, dim);
+  const RowMatrixXd F = deformation_stack(dense_matvec(JB, z), Jx0, dim);
   const RowMatrixXd He = weighted_hessian(F, mu, lam, vol, material, psd, psd_before_weighting);
-  return block_diag_sandwich_dense(JB, He);
+  return assembled_subspace_hessian(JB, He);
 }
 
 }  // namespace simkit

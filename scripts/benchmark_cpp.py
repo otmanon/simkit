@@ -80,6 +80,13 @@ def main() -> None:
     H = H + H.transpose(0, 2, 1)
     record("psd_project (9x9)", lambda: psd_project(H))
     record("block_diag_sandwich", lambda: simkit.block_diag_sandwich(J, H))
+    P = rng.standard_normal((t, 3, 3))
+    record("assembled_gradient", lambda: simkit.assembled_gradient(J, P))
+    record("assembled_hessian", lambda: simkit.assembled_hessian(J, H))
+    B, _ = np.linalg.qr(rng.standard_normal((J.shape[1], 60)))
+    JB = J @ B
+    record("assembled_subspace_gradient (r=60)", lambda: simkit.assembled_subspace_gradient(JB, P))
+    record("assembled_subspace_hessian (r=60)", lambda: simkit.assembled_subspace_hessian(JB, H))
     for mat in E._MATERIALS:
         record(f"{mat} energy_x", lambda: E.elastic_energy_x(U, J, mu, lam, vol, mat))
         record(f"{mat} gradient_x", lambda: E.elastic_gradient_x(U, J, mu, lam, vol, mat))

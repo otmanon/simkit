@@ -14,8 +14,11 @@ project(simkit_cpp LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-if(NOT CMAKE_BUILD_TYPE)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release)
+endif()
+if(MSVC)
+  add_compile_options(/bigobj /EHsc)
 endif()
 
 option(SIMKIT_BUILD_PYTHON "Build the simkit._cpp pybind11 module" ON)
@@ -58,7 +61,16 @@ if(SIMKIT_BUILD_PYTHON)
     target_link_libraries(_cpp PRIVATE simkit)
     # Drop the built module next to the Python package so ``import simkit``
     # picks it up from a source checkout.
-    set_target_properties(_cpp PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../simkit")
+    set(_simkit_pkg_dir "${CMAKE_CURRENT_SOURCE_DIR}/../simkit")
+    set_target_properties(_cpp PROPERTIES
+      LIBRARY_OUTPUT_DIRECTORY "${_simkit_pkg_dir}"
+      RUNTIME_OUTPUT_DIRECTORY "${_simkit_pkg_dir}")   # .pyd is a runtime output on Windows
+    foreach(_cfg Debug Release RelWithDebInfo MinSizeRel)
+      string(TOUPPER "${_cfg}" _CFG)
+      set_target_properties(_cpp PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY_${_CFG} "${_simkit_pkg_dir}"
+        RUNTIME_OUTPUT_DIRECTORY_${_CFG} "${_simkit_pkg_dir}")
+    endforeach()
     message(STATUS "simkit: building the Python module simkit._cpp")
   else()
     message(STATUS "simkit: pybind11 not found, skipping the Python module (pip install pybind11)")

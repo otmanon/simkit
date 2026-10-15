@@ -36,6 +36,15 @@ While the version stays below `1.0`, the public API may change in any release.
   for `svd_rv`, the neo-Hookean element terms, the assembled and subspace
   gradient / Hessian, individually and together.
 
+- **Assembly as its own functions**: `assembled_gradient(J, P)`,
+  `assembled_hessian(J, He)` (full space, sparse `J`) and
+  `assembled_subspace_gradient(JB, P)`, `assembled_subspace_hessian(JB, He)`
+  (dense reduced operator), in C++ with the NumPy products as fallback. The
+  dense ones are chunked over elements across the worker threads, and the
+  subspace Hessian uses a symmetric rank update (half the flops) whenever
+  the blocks are positive definite. The reduced `elastic_*_z` tiers and
+  `block_diag_sandwich` assemble through them.
+- CI builds and tests the extension on Linux, macOS and Windows.
 - **`sparse_solve(A, b)`**: direct solve on the C++ backend with Eigen's
   `SimplicialLLT` (Cholesky), `SimplicialLDLT` if the system is not positive
   definite, and `scipy.sparse.linalg.spsolve` as the last resort; the symbolic

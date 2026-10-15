@@ -12,6 +12,7 @@ flat free functions in the `simkit` namespace, one header per Python module:
 | `simkit/psd_project.h` | `psd_project` |
 | `simkit/energies/elastic.h` | `<material>_{energy,gradient,hessian}_element_F` for `arap`, `fcr`, `neo_hookean`, `stable_neo_hookean`, `stvk`, `linear_elasticity`, `macklin_mueller_neo_hookean`, the `elastic_*_element_F` dispatcher and `material_from_string`; the assembled tiers `elastic_*_x` (sparse CSR operator, optional offset for the `_u` tier) and `elastic_*_z` (dense reduced operator), plus `csr_matvec` / `csr_rmatvec` |
 | `simkit/deformation_jacobian.h` | `deformation_jacobian`, `deformation_jacobian_triplets` |
+| `simkit/assemble.h` | `assembled_gradient`, `assembled_hessian` (sparse `J`), `assembled_subspace_gradient`, `assembled_subspace_hessian` (dense `JB`), `dense_matvec`, `dense_rmatvec` |
 | `simkit/block_diag_sandwich.h` | `block_diag_sandwich` (sparse / dense / CSR variants) |
 | `simkit/sparse_solve.h` | `sparse_solve_cholesky` (SimplicialLLT, then SimplicialLDLT, cached symbolic analysis), `sparse_solve_ldlt` |
 | `simkit/parallel_for.h` | `parallel_for`, `num_threads`, `set_num_threads` |
@@ -25,6 +26,14 @@ batching layer.
 
 Loops over elements are parallelized with `std::thread` (no OpenMP); the
 thread count comes from `SIMKIT_NUM_THREADS` or the hardware concurrency.
+
+## Portability
+
+Plain C++17 with Eigen and `std::thread`: no OpenMP, no BLAS, no platform
+calls. It builds with GCC, Clang (Linux and macOS, Apple clang included) and
+MSVC; the CI matrix covers Ubuntu, macOS and Windows. On MSVC the CMake
+build adds `/bigobj /EHsc` (pybind11's setuptools helper does the same for
+`pip install`).
 
 ## Building
 
