@@ -433,3 +433,60 @@ def test_per_material_x_tiers_match(both_backends, dim):
                     assert abs(p0 - p1).max() < 1e-9, (prefix, kind)
                 else:
                     assert np.allclose(np.asarray(p0), np.asarray(p1), atol=1e-10), (prefix, kind)
+
+
+def test_sparse_solve_matches_spsolve(both_backends):
+    rng = np.random.default_rng(18)
+    X, T = _mesh(3)
+    simkit.set_backend("python")
+    J = simkit.deformation_jacobian(X, T)
+    vol = simkit.volume(X, T)
+    t = T.shape[0]
+    mu = np.full((t, 1), 1.0)
+    lam = np.full((t, 1), 2.0)
+    H = E.elastic_hessian_x(X, J, mu, lam, vol, "arap") + sps.identity(J.shape[1])
+    b = rng.standard_normal((J.shape[1], 1))
+    x0, x1 = both_backends(lambda: simkit.sparse_solve(H, b))
+    assert x1.shape == b.shape
+    assert np.allclose(x0, x1, atol=1e-9)
+    assert np.allclose(H @ x1, b, atol=1e-8)
+    # Multiple right-hand sides and a 1D right-hand side.
+    B = rng.standard_normal((J.shape[1], 3))
+    y0, y1 = both_backends(lambda: simkit.sparse_solve(H, B))
+    assert np.allclose(y0, y1, atol=1e-9)
+    z0, z1 = both_backends(lambda: simkit.sparse_solve(H, b[:, 0]))
+    assert z1.shape == (J.shape[1],) and np.allclose(z0, z1, atol=1e-9)
+
+
+def test_sparse_solve_falls_back_on_singular_matrix():
+    A = sps.csc_matrix(np.array([[1.0, 2.0], [2.0, 4.0]]))  # singular, symmetric
+    b = np.array([[1.0], [2.0]])
+    with np.errstate(all="ignore"):
+        x = simkit.sparse_solve(A, b)
+    assert x.shape == (2, 1)
+
+
+def test_read_mesh_roundtrip(tmp_path):
+    from simkit.read_mesh import read_mesh
+    text = """MeshVersionFormatted 1
+Dimension 3
+Vertices
+4
+0 0 0 0
+1 0 0 0
+0 1 0 0
+0 0 1 0
+Triangles
+1
+1 2 3 0
+Tetrahedra
+1
+1 2 3 4 0
+End
+"""
+    p = tmp_path / "tet.mesh"
+    p.write_text(text)
+    X, T, F = read_mesh(str(p))
+    assert X.shape == (4, 3) and T.shape == (1, 4) and F.shape == (1, 3)
+    assert T.tolist() == [[0, 1, 2, 3]] and F.tolist() == [[0, 1, 2]]
+    assert np.isclose(simkit.volume(X, T)[0, 0], 1.0 / 6.0)

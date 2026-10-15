@@ -7,6 +7,7 @@ import scipy as sp
 import numpy as np
 
 from ..backtracking_line_search import backtracking_line_search
+from ..sparse_solve import sparse_solve
 
 
 def newton_solver(x0, energy_func, gradient_func, hessian_func,
@@ -76,7 +77,7 @@ def newton_solver(x0, energy_func, gradient_func, hessian_func,
 
         # if sparse matrix
         if sp.sparse.issparse(H):
-            dx = sp.sparse.linalg.spsolve(H.tocsc(), -g).reshape(-1, 1)
+            dx = sparse_solve(H, -g).reshape(-1, 1)
         else:
             dx = sp.linalg.solve(H, -g).reshape(-1, 1)
 

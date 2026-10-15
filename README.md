@@ -89,8 +89,9 @@ reproducing a slice of a published paper:
 - [`fast_complementary_dynamics/`](examples/fast_complementary_dynamics) -- Fast Complementary Dynamics via Skinning Eigenmodes (SIGGRAPH 2023).
 - [`modal_muscles/`](examples/modal_muscles) -- CMA-ES-optimised modal-actuator locomotion.
 - [`subspace_mfem/`](examples/subspace_mfem) -- Subspace Mixed FEM elastodynamics (SIGGRAPH Asia 2023), including an interactive demo.
-- [`interactive_demos/`](examples/interactive_demos) -- 15 short polyscope demos, from a single
-  deformation gradient up to interactive 3D mixed FEM.
+- [`interactive_demos/`](examples/interactive_demos) -- 16 short polyscope demos, from a single
+  deformation gradient up to interactive 3D mixed FEM and an octopus you can grab
+  while flipping between the C++ and NumPy backends.
 
 Force-dual / linear modal-analysis subspaces are not on `main` yet; they live on the
 [`force_dual_modes`](https://github.com/otmanon/simkit/tree/force_dual_modes/examples/force_dual_modes)

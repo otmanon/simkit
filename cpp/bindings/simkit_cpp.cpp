@@ -10,6 +10,7 @@
 #include "simkit/polar_svd.h"
 #include "simkit/psd_project.h"
 #include "simkit/rotation_gradient.h"
+#include "simkit/sparse_solve.h"
 
 #include <pybind11/eigen.h>
 #include <pybind11/numpy.h>
@@ -374,4 +375,22 @@ PYBIND11_MODULE(_cpp, m) {
         return to_array(std::move(Q), {r, r});
       },
       py::arg("x"), py::arg("J"), py::arg("Jx0"), py::arg("mu"), py::arg("lam"), py::arg("vol"), py::arg("material"), py::arg("dim"), py::arg("psd") = true, py::arg("psd_before_weighting") = false);
+
+  // ---- linear solve -------------------------------------------------------------
+  m.def(
+      "sparse_solve_ldlt",
+      [](const ArrL& indptr, const ArrL& indices, const Arr& data, Index n, const Arr& b) -> py::object {
+        const auto bv = b.ndim() == 1 ? Eigen::Map<const RowMatrixXd>(b.data(), b.shape(0), 1) : stack_view(b);
+        RowMatrixXd x;
+        bool ok;
+        {
+          py::gil_scoped_release release;
+          ok = simkit::sparse_solve_ldlt(lvec_view(indptr), lvec_view(indices), vec_view(data), n, bv, x);
+        }
+        if (!ok) return py::none();
+        const Index r = x.rows(), c = x.cols();
+        return to_array(std::move(x), {r, c});
+      },
+      py::arg("indptr"), py::arg("indices"), py::arg("data"), py::arg("n"), py::arg("b"),
+      "Solve A x = b for a symmetric CSC A with SimplicialLDLT; None if the factorization fails.");
 }

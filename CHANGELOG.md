@@ -36,6 +36,15 @@ While the version stays below `1.0`, the public API may change in any release.
   for `svd_rv`, the neo-Hookean element terms, the assembled and subspace
   gradient / Hessian, individually and together.
 
+- **`sparse_solve(A, b)`**: direct solve with Eigen's `SimplicialLDLT` on the
+  C++ backend (falls back to `scipy.sparse.linalg.spsolve`); `newton_solver`
+  uses it, which roughly halves the linear-solve time of a Newton step.
+- **`read_mesh(path)`**: NumPy-only reader for MEDIT `.mesh` files
+  (vertices, triangles, tetrahedra), so the `data/` meshes load without libigl.
+- `examples/interactive_demos/016_octopus_grab_cpp_vs_python.py`: click-and-drag
+  soft handles on a pinned neo-Hookean octopus with a live C++ / Python
+  backend switch (and a `--headless` timing mode).
+
 ### Fixed
 
 - `elastic_energy_filtered_z` raised a `TypeError` on NumPy 2 when reducing

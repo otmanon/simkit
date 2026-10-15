@@ -252,3 +252,25 @@ The tutorials cover the spine of an FEM simulator: deformation gradient → ener
 - [simkit/energies/](../../simkit/energies/) — the actual Macklin-Mueller Neo-Hookean / kinetic / contact energy implementations, including their analytic gradients and PSD-projected Hessians.
 - [simkit/solvers/](../../simkit/solvers/) — `newton_solver`, `gradient_descent_solver`, and the line-search and backtracking utilities.
 - [examples/](..) — larger end-to-end scenes that compose these same primitives.
+
+---
+
+## 016 — Octopus grab: neo-Hookean, C++ vs Python backend
+
+[016_octopus_grab_cpp_vs_python.py](016_octopus_grab_cpp_vs_python.py)
+
+A 3D octopus (48k tets, from the `data/` submodule — run `git submodule update --init data` first) with its belly pinned, simulated with the true neo-Hookean energy ([simkit/energies/neo_hookean.py](../../simkit/energies/neo_hookean.py)) and backward Euler. Left-click anywhere on the octopus to create a soft penalty handle on the patch of vertices around the click, drag to pull it (the target moves in the camera-facing plane), release to destroy the handle. Untick *Click-to-grab* to orbit the camera instead.
+
+The *Backend* radio switches simkit between the C++ core and the NumPy implementation live; the step-time plot and the running means show what each costs on this mesh. Everything else in the simulation (the integrator, the penalty pins, the handle) is the same code either way.
+
+**What to try:**
+- Grab an arm tip and pull it in a slow circle; release and watch it spring back.
+- Flip the backend while dragging — the motion is identical, only the frame time changes.
+- Raise *Newton iterations / step* to 4-6: the C++ backend absorbs it, the NumPy one crawls.
+- Enable *Gravity* and lower Young's `E`: the arms sag off the pinned belly.
+
+**Focus code:**
+- `OctopusSim.energy / gradient / hessian` sum the neo-Hookean tiers, the pin penalty, the handle penalty and gravity; `OctopusSim.step` is backward Euler through `simkit.solvers.newton_solver` with the kinetic terms from `simkit.energies.kinetic`, starting Newton from the current pose whenever the inertial guess has inverted a tet.
+- `GrabHandle.grab / move / release` build and tear down the handle via `simkit.dirichlet_penalty`; the mouse plumbing lives in `main_interactive`.
+- `simkit.set_backend('cpp' | 'python')` is the whole backend switch. With the C++ backend the Newton solve also uses `simkit.sparse_solve` (Eigen LDLT) instead of SuperLU.
+- `python 016_octopus_grab_cpp_vs_python.py --headless 4` runs a scripted grab under both backends and prints the timings, no window needed.
