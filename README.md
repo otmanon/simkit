@@ -54,6 +54,32 @@ pip install -e ".[all]"             # everything end-user-facing
 pip install -e ".[all,dev,docs]"    # everything, including dev tooling
 ```
 
+## Optional C++ Acceleration
+
+A small C++ core under [`cpp/`](cpp) (Eigen + pybind11, flat free functions
+mirroring the Python ones) accelerates the batched polar decomposition, SVD
+and PSD projection behind the energy Hessians. When `pip install -e .` finds
+a C++17 compiler (GCC, Clang or MSVC) it builds the extension `simkit._cpp`
+and the accelerated functions use it automatically; without a compiler the
+install still succeeds and the identical NumPy code is used. Nothing in the
+API changes between the two.
+
+```python
+import simkit
+simkit.cpp_available()        # True when the extension was built
+simkit.backend()              # 'cpp' or 'python'
+simkit.set_backend('python')  # switch at runtime (e.g. to compare)
+simkit.cpp_num_threads(4)     # worker threads for the C++ loops
+```
+
+Eigen is header-only and is taken from the `cpp/external/eigen` submodule
+(`git submodule update --init cpp/external/eigen`), from
+`EIGEN3_INCLUDE_DIR`, from the system, or downloaded once into `build/eigen`
+by `setup.py`. `SIMKIT_BACKEND=python` forces the NumPy code at import time
+and `SIMKIT_NO_CPP=1` skips compiling the extension. See
+[`cpp/README.md`](cpp/README.md) for the C++ API and the standalone CMake
+build.
+
 ## Running Examples
 
 The repository includes several end-to-end demos under `examples/`, each

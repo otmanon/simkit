@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 While the version stays below `1.0`, the public API may change in any release.
 
+## [Unreleased]
+
+### Added
+
+- **Optional C++ extension `simkit._cpp`** (pybind11 + Eigen, sources under
+  `cpp/`). `pip install .` builds it when a C++17 compiler is available and
+  silently falls back to the pure-Python package otherwise. This first step
+  accelerates the batched decompositions used by every energy's Hessian
+  path: `polar_svd`, `svd_rv` and `psd_project`. Each keeps its NumPy
+  implementation as the fallback and agrees with it to round-off
+  (`tests/test_cpp_backend.py`).
+- **Backend helpers** `backend()`, `set_backend()`, `cpp_available()`,
+  `cpp_num_threads()` and the `SIMKIT_BACKEND` / `SIMKIT_NUM_THREADS` /
+  `SIMKIT_NO_CPP` environment variables.
+- CI builds and `pip install`s the extension on Linux, macOS and Windows,
+  with and without the Eigen submodule, and keeps a pure-Python job.
+
 ## [0.1.8] - 2026-09-23
 
 ### Removed

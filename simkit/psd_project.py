@@ -7,6 +7,7 @@ reassembly via ``U @ diag(s) @ U^T``.
 import numpy as np
 
 from .svd_rv import svd_rv
+from ._backend import _cpp, use_cpp
 
 
 def psd_project(H: np.ndarray, method: str = 'proj') -> np.ndarray:
@@ -27,6 +28,8 @@ def psd_project(H: np.ndarray, method: str = 'proj') -> np.ndarray:
     """
     if H.ndim == 2:
         H = H[None, :, :]
+    if use_cpp():
+        return _cpp.psd_project(H, method)
     [s, U] = np.linalg.eigh(H)
 
     dim = H.shape[-1]

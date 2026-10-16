@@ -1,5 +1,7 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+# pybind11 is only needed for the optional C++ extension (see setup.py);
+# it is a pure-Python package so it never blocks a lean install.
+requires = ["setuptools>=61.0", "wheel", "pybind11>=2.12"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -86,6 +88,9 @@ include = ["simkit*"]
 
 [tool.setuptools.package-data]
 simkit = ["*.py", "**/*.py"]
+
+[tool.setuptools.exclude-package-data]
+simkit = ["*.so", "*.pyd"]  # the compiled extension is added by ext_modules, not as data
 
 [tool.pytest.ini_options]
 minversion = "7.0"
