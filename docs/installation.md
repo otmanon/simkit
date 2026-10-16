@@ -106,3 +106,25 @@ sphinx-build -b html docs docs/_build/html
 ```
 
 Then open `docs/_build/html/index.html` in a browser.
+
+## Optional C++ acceleration
+
+`pip install` also compiles the extension `simkit._cpp` (pybind11 + Eigen)
+when a C++17 compiler is found: GCC or Clang on Linux and macOS, MSVC on
+Windows. It speeds up the batched polar decomposition, SVD and PSD
+projection behind the energy Hessians; the NumPy implementations stay as
+the fallback and are used automatically when the extension is missing.
+
+```bash
+pip install -e .                 # builds simkit._cpp if a compiler is available
+SIMKIT_NO_CPP=1 pip install -e . # pure-Python install
+python -c "import simkit; print(simkit.backend())"   # 'cpp' or 'python'
+```
+
+Eigen is header-only and comes from the `cpp/external/eigen` submodule
+(`git submodule update --init cpp/external/eigen`), from `EIGEN3_INCLUDE_DIR`,
+from the system, or from a checksummed one-time download into `build/eigen`.
+Set `SIMKIT_BACKEND=python` to force the NumPy code at import time, or call
+`simkit.set_backend('python')` at runtime. Binary wheels on PyPI already
+contain the extension. See `cpp/README.md` for the C++ API and the
+standalone CMake build.

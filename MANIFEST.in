@@ -1,0 +1,14 @@
+# Source distribution contents beyond the Python package.
+include LICENSE.MIT README.md CHANGELOG.md
+# C++ core (built by setup.py into simkit._cpp) and its standalone build.
+graft cpp/include
+graft cpp/src
+graft cpp/bindings
+graft cpp/tests
+include cpp/CMakeLists.txt cpp/README.md
+# Eigen headers from the submodule (MPL2), so the sdist builds offline. Only
+# the Eigen/ tree and licence files are shipped, not Eigen's docs or tests.
+graft cpp/external/eigen/Eigen
+include cpp/external/eigen/COPYING.* cpp/external/eigen/README.md
+prune cpp/build
+global-exclude *.py[cod] __pycache__ *.so *.pyd *.o

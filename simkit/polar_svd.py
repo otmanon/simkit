@@ -3,6 +3,8 @@
 from typing import Tuple
 
 import numpy as np
+from ._backend import _cpp, use_cpp
+from .svd_rv import svd_rv as _svd_rv
 
 
 def svd_rv(F: np.ndarray, flip: bool = True) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -29,31 +31,15 @@ def svd_rv(F: np.ndarray, flip: bool = True) -> Tuple[np.ndarray, np.ndarray, np
     """
     if len(F.shape) == 2:
         F = F[None, :, :]
+    if flip:
+        # Same decomposition as simkit.svd_rv (NumPy or C++ backend).
+        return _svd_rv(F)
 
     d = F.shape[1]
-    [U, S, VT] = np.linalg.svd(F)
-
-    # check if S
+    [U, s, VT] = np.linalg.svd(F)
     V = VT.transpose([0, 2, 1])
-
-    I = np.tile(np.identity(d), (F.shape[0], 1, 1))
-    S = I * S[:, None, :]
-
-    L = I
-
-    if flip:
-        L[:, d - 1, d - 1] = np.linalg.det(U @ V)
-
-    detU = np.linalg.det(U)
-    detV = np.linalg.det(V)
-    uI = np.logical_and(detU < 0, detV > 0)[:, None, None]
-    vI = np.logical_and(detV < 0, detU > 0)[:, None, None]
-
-    Ut = uI * U @ L + np.logical_not(uI) * U
-    Vt = vI * V @ L + np.logical_not(vI) * V
-    St = S @ L
-
-    return Ut, St, Vt
+    S = np.identity(d)[None, :, :] * s[:, None, :]
+    return U, S, V
 
 
 def polar_svd(F: np.ndarray, flip: bool = True) -> Tuple[np.ndarray, np.ndarray]:
@@ -74,14 +60,13 @@ def polar_svd(F: np.ndarray, flip: bool = True) -> Tuple[np.ndarray, np.ndarray]
     SS : np.ndarray (t, d, d)
         Symmetric stretch factor ``V S V^T``.
     """
-    if flip:
-        [U, S, V] = svd_rv(F, flip=flip)
-        VT = V.transpose([0, 2, 1])
-    else:
-        [U, s, VT] = np.linalg.svd(F)
-        V = VT.transpose([0, 2, 1])
-        I = np.tile(np.identity(d), (F.shape[0], 1, 1))
-        S = I * S[:, None, :]
+    F = np.asarray(F)
+    if len(F.shape) == 2:
+        F = F[None, :, :]
+    if flip and use_cpp():
+        return _cpp.polar_svd(F)
+    [U, S, V] = svd_rv(F, flip=flip)
+    VT = V.transpose([0, 2, 1])
 
     R = U @ VT
     SS = V @ S @ VT

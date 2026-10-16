@@ -63,6 +63,9 @@ class _OptionalImport:
         return False
 
 
+# Backend selection (C++ extension vs NumPy); always importable.
+from ._backend import backend, set_backend, cpp_available, cpp_num_threads  # noqa: E402
+
 _core = _OptionalImport("all")
 _mesh = _OptionalImport("mesh")
 _viz = _OptionalImport("viz")

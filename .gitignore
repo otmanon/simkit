@@ -131,3 +131,8 @@ examples/**/*.blend1
 imgui.ini
 .polyscope.ini
 imgui.ini
+
+# C++ extension build outputs
+cpp/build/
+simkit/_cpp*.so
+simkit/_cpp*.pyd

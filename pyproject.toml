@@ -1,5 +1,7 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+# pybind11 is only needed for the optional C++ extension (see setup.py);
+# it is a pure-Python package so it never blocks a lean install.
+requires = ["setuptools>=61.0", "wheel", "pybind11>=2.12"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -24,6 +26,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: C++",
+    "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
@@ -87,6 +91,9 @@ include = ["simkit*"]
 [tool.setuptools.package-data]
 simkit = ["*.py", "**/*.py"]
 
+[tool.setuptools.exclude-package-data]
+simkit = ["*.so", "*.pyd"]  # the compiled extension is added by ext_modules, not as data
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 testpaths = ["tests"]
@@ -99,3 +106,16 @@ markers = [
     "mesh: needs libigl (pip install simkit[mesh])",
     "viz: needs polyscope/matplotlib (pip install simkit[viz])",
 ]
+
+# Binary wheels for PyPI (see .github/workflows/release.yml). One wheel per
+# CPython version and platform; the sdist remains the fallback for anything
+# else and builds the extension on install when a compiler is available.
+[tool.cibuildwheel]
+build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*"]
+skip = ["*-musllinux_*", "*_i686", "*-win32"]
+build-verbosity = 1
+test-requires = ["pytest>=7"]
+test-command = "pytest -q -p no:cacheprovider {project}/tests/test_cpp_backend.py {project}/tests/test_elastic.py"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]

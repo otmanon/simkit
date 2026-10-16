@@ -1,8 +1,9 @@
 name: Release
 
-# Triggered when you push a version tag like `v0.1.0`. The job builds
-# sdist + wheel and uploads them to TestPyPI (always) and PyPI (only on
-# non-pre-release tags). Authentication uses PyPI Trusted Publishing
+# Triggered when you push a version tag like `v0.1.0`. The jobs build the
+# sdist and binary wheels (cibuildwheel: manylinux x86_64, macOS Intel and
+# Apple silicon, Windows x86_64; CPython 3.10-3.13) and upload them to
+# TestPyPI (always) and PyPI (only on non-pre-release tags). Authentication uses PyPI Trusted Publishing
 # (OIDC) -- no API tokens are stored in the repo.
 #
 # One-time setup: register this repo as a Trusted Publisher on
@@ -18,26 +19,83 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build sdist + wheel
+  sdist:
+    name: Build sdist
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true  # Eigen headers are shipped in the sdist
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: pyproject.toml
+          python-version: "3.12"
 
-      - name: Build distributions
+      - name: Build and check the sdist
         run: |
           python -m pip install --upgrade pip build twine
-          python -m build --sdist --wheel --outdir dist
+          python -m build --sdist --outdir dist
           twine check dist/*
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Install the sdist into a clean venv and check the C++ backend
+        run: |
+          python -m venv /tmp/venv
+          /tmp/venv/bin/python -m pip install --upgrade pip
+          /tmp/venv/bin/python -m pip install dist/*.tar.gz
+          cd /tmp && /tmp/venv/bin/python -c "import simkit; assert simkit.cpp_available(); print('sdist OK')"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-sdist
+          path: dist/
+          if-no-files-found: error
+
+  wheels:
+    name: Build wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # x86_64 Linux (manylinux), Intel and Apple-silicon macOS, x86_64 Windows.
+        os: [ubuntu-latest, macos-13, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build wheels with cibuildwheel (config in pyproject.toml)
+        run: |
+          python -m pip install --upgrade pip cibuildwheel
+          python -m cibuildwheel --output-dir wheelhouse
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  build:
+    name: Collect distributions
+    needs: [sdist, wheels]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+
+      - name: List and check
+        run: |
+          ls -l dist
+          python -m pip install --upgrade twine
+          twine check dist/*
+
+      - uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
