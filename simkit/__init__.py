@@ -158,6 +158,9 @@ with _core:
     from .sparse_meshless_methods_basis import sparse_meshless_methods_basis
     from .hyper_reduced_projective_dynamics_basis import hyper_reduced_projective_dynamics_basis
 
+    # Force-dual modes (Benchekroun et al. 2025) -- subspaces from force distributions.
+    from .force_dual_modes import force_dual_modes
+
     # Finite-difference variations -- pure numpy.
     from .variation_fd import variation_fd
     from .equillibrium_variation_fd import equillibrium_variation_fd

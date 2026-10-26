@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 While the version stays below `1.0`, the public API may change in any release.
 
+## [Unreleased]
+
+### Added
+
+- **`force_dual_modes`** — the subspace of *Force-Dual Modes: Subspace Design
+  from Stochastic Forces* (Benchekroun, Grinspun, Chiaramonte, Etter, SIGGRAPH
+  Asia 2025) for a diagonal force covariance, given as a variance per DOF: the
+  top mass-orthonormal principal directions of `H^{-1} f`,
+  `f ~ N(0, diag(variance))`. Only the supported DOFs are touched (one sparse
+  LU, one solve per supported DOF, a thin SVD), so a variance confined to a
+  region gives modes answering forces there. Mass-weighted noise on every DOF
+  is linear modal analysis (`D = 1 / gamma^2`), and a single DOF is its
+  Green's function; both are tested.
+
 ## [0.1.10] - 2026-10-08
 
 ### Added
